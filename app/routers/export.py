@@ -5,6 +5,7 @@ import shutil
 import uuid
 import zipfile
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, UploadFile, File
 from pydantic import BaseModel
