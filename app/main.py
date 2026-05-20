@@ -37,7 +37,7 @@ app.include_router(export.router)
 
 def _seed_initial_data():
     """seed/data.json が存在し、DB が空なら初期データを投入する"""
-    seed_dir = Path("seed")
+    seed_dir = Path(__file__).resolve().parent.parent / "seed"
     seed_file = seed_dir / "data.json"
     if not seed_file.exists():
         return
