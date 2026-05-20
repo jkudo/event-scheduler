@@ -27,6 +27,7 @@
             <button class="tab" :class="{ active: tab === 'algorithm' }" @click="switchTab('algorithm')">配置アルゴリズム</button>
             <button class="tab" :class="{ active: tab === 'io' }" @click="switchTab('io')">エクスポート/インポート</button>
             <button class="tab" :class="{ active: tab === 'settings' }" @click="switchTab('settings')">設定</button>
+            <button class="tab" :class="{ active: tab === 'help' }" @click="switchTab('help')">利用方法</button>
         </div>
 
         <!-- ===== 部屋管理 ===== -->
@@ -1240,6 +1241,148 @@
                 </div>
                 <div v-if="resetMsg" :style="{marginTop:'12px',padding:'10px 16px',borderRadius:'6px',fontSize:'0.9rem',background: resetMsgError ? '#fce4ec' : '#e8f5e9', color: resetMsgError ? '#c62828' : '#2e7d32'}">
                     {{ resetMsg }}
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" :class="{ active: tab === 'help' }">
+            <h2>利用方法</h2>
+
+            <div style="max-width:900px">
+                <!-- 概要 -->
+                <div style="background:#e3f2fd;border-radius:8px;padding:20px;margin-bottom:24px">
+                    <h3 style="margin:0 0 8px;color:#1565c0">Conference Scheduler とは</h3>
+                    <p style="margin:0;font-size:0.95rem;color:#333;line-height:1.7">カンファレンスやイベントの運営に必要な、部屋・セッション・スタッフの管理と配置を一元的に行えるツールです。データはすべてサーバー上に保存され、複数人で同時にアクセスできます。</p>
+                </div>
+
+                <!-- 推奨ワークフロー -->
+                <div style="margin-bottom:28px">
+                    <h3 style="margin:0 0 16px;color:#333">推奨ワークフロー</h3>
+                    <div style="display:flex;flex-direction:column;gap:2px">
+                        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#fafafa;border-radius:6px">
+                            <span style="background:#1a73e8;color:#fff;border-radius:50%;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">1</span>
+                            <div><strong>部屋管理</strong>で会場の部屋を登録（名前・定員・階数）</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#fafafa;border-radius:6px">
+                            <span style="background:#1a73e8;color:#fff;border-radius:50%;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">2</span>
+                            <div><strong>会場地図</strong>で会場のフロアマップを登録（参加者の案内用）</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#fafafa;border-radius:6px">
+                            <span style="background:#1a73e8;color:#fff;border-radius:50%;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">3</span>
+                            <div><strong>セッション管理</strong>でセッションを登録（タイトル・登壇者・時間・部屋・カテゴリ）。LTセッションは登壇者を個別追加可能</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#fafafa;border-radius:6px">
+                            <span style="background:#1a73e8;color:#fff;border-radius:50%;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">4</span>
+                            <div><strong>スタッフ管理</strong>でスタッフを登録（スキル・英語対応・稼働可能時間・希望セッション）</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#fafafa;border-radius:6px">
+                            <span style="background:#1a73e8;color:#fff;border-radius:50%;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">5</span>
+                            <div><strong>配置アルゴリズム</strong>でスタッフの自動配置を実行。手動調整は<strong>セッション配置</strong>タブで</div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#fafafa;border-radius:6px">
+                            <span style="background:#1a73e8;color:#fff;border-radius:50%;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">6</span>
+                            <div><strong>配置表</strong>・<strong>受付案内</strong>・<strong>懇親会担当</strong>で当日運営に必要な情報を確認・印刷</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 各タブの説明 -->
+                <div style="margin-bottom:28px">
+                    <h3 style="margin:0 0 16px;color:#333">各タブの機能</h3>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.92rem">
+                        <thead>
+                            <tr style="background:#f5f5f5">
+                                <th style="text-align:left;padding:10px 12px;border-bottom:2px solid #ddd;width:170px">タブ名</th>
+                                <th style="text-align:left;padding:10px 12px;border-bottom:2px solid #ddd">説明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid #eee">
+                                <td style="padding:10px 12px;font-weight:600">部屋管理</td>
+                                <td style="padding:10px 12px">会場の部屋を登録・編集・削除。名前、定員（人数）、階数を設定できます。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee;background:#fafafa">
+                                <td style="padding:10px 12px;font-weight:600">全体スケジュール</td>
+                                <td style="padding:10px 12px">全部屋のタイムテーブルを一覧表示。全体のスケジュール確認や印刷に使用します。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee">
+                                <td style="padding:10px 12px;font-weight:600">会場地図</td>
+                                <td style="padding:10px 12px">会場のフロアマップ画像を登録。受付案内の印刷物に含まれます。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee;background:#fafafa">
+                                <td style="padding:10px 12px;font-weight:600">セッション管理</td>
+                                <td style="padding:10px 12px">セッションの登録・編集。カテゴリ（一般/LT/基調講演/全体）、登壇者情報（写真・所属・肩書）、必要スタッフ数、英語セッションフラグを設定。「必要スタッフ計算」ボタンで定員ベースの推奨値を算出できます。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee">
+                                <td style="padding:10px 12px;font-weight:600">スタッフ管理</td>
+                                <td style="padding:10px 12px">運営スタッフの登録。スキル（音響/配信/受付等）、英語対応可否、最大稼働時間、経験回数、対応可能時間帯、希望セッションを設定できます。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee;background:#fafafa">
+                                <td style="padding:10px 12px;font-weight:600">セッション配置</td>
+                                <td style="padding:10px 12px">各セッションにスタッフを手動で割り当て・解除。ドロップダウンからスタッフを選択して配置します。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee">
+                                <td style="padding:10px 12px;font-weight:600">配置表</td>
+                                <td style="padding:10px 12px">スタッフ配置の一覧をマトリクス形式で表示。スタッフ×時間帯の一覧表として印刷できます。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee;background:#fafafa">
+                                <td style="padding:10px 12px;font-weight:600">受付案内</td>
+                                <td style="padding:10px 12px">受付スタッフ向けの案内シート。セッション一覧・会場地図・受付担当者の情報をまとめて印刷できます。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee">
+                                <td style="padding:10px 12px;font-weight:600">懇親会担当</td>
+                                <td style="padding:10px 12px">懇親会セッションに配置されたスタッフの一覧と担当詳細を表示します。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee;background:#fafafa">
+                                <td style="padding:10px 12px;font-weight:600">配置アルゴリズム</td>
+                                <td style="padding:10px 12px">スタッフの自動配置を実行。スキルマッチ・英語対応・稼働時間・希望を考慮して最適配置を算出します。結果はプレビュー後に適用できます。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee">
+                                <td style="padding:10px 12px;font-weight:600">エクスポート/インポート</td>
+                                <td style="padding:10px 12px">Excel出力（スケジュール表・スタッフ配置表）、バックアップ（ZIP形式で全データ保存・復元）、connpass用のMarkdown出力（タイムライン・登壇者テンプレート）に対応。</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #eee;background:#fafafa">
+                                <td style="padding:10px 12px;font-weight:600">設定</td>
+                                <td style="padding:10px 12px">全データの初期化（パスワード必要）。バックアップを取ってから実行してください。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- セッションカテゴリ -->
+                <div style="margin-bottom:28px">
+                    <h3 style="margin:0 0 12px;color:#333">セッションカテゴリについて</h3>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px">
+                        <div style="background:#e3f2fd;padding:10px 16px;border-radius:6px;flex:1;min-width:180px">
+                            <strong style="color:#1565c0">general（一般）</strong>
+                            <p style="margin:4px 0 0;font-size:0.85rem;color:#555">通常の講演セッション</p>
+                        </div>
+                        <div style="background:#fff3e0;padding:10px 16px;border-radius:6px;flex:1;min-width:180px">
+                            <strong style="color:#e65100">keynote（基調講演）</strong>
+                            <p style="margin:4px 0 0;font-size:0.85rem;color:#555">基調講演・メインセッション</p>
+                        </div>
+                        <div style="background:#f3e5f5;padding:10px 16px;border-radius:6px;flex:1;min-width:180px">
+                            <strong style="color:#7b1fa2">lt（LT）</strong>
+                            <p style="margin:4px 0 0;font-size:0.85rem;color:#555">ライトニングトーク。複数登壇者を個別登録可能</p>
+                        </div>
+                        <div style="background:#e8f5e9;padding:10px 16px;border-radius:6px;flex:1;min-width:180px">
+                            <strong style="color:#2e7d32">overall（全体）</strong>
+                            <p style="margin:4px 0 0;font-size:0.85rem;color:#555">休憩・懇親会等。connpass出力では除外されます</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div style="margin-bottom:28px">
+                    <h3 style="margin:0 0 12px;color:#333">Tips</h3>
+                    <ul style="margin:0;padding-left:20px;font-size:0.92rem;line-height:2;color:#444">
+                        <li>セッション一覧・配置表でセッション名をクリックすると詳細ポップアップが表示されます</li>
+                        <li>スタッフ写真をクリックすると拡大表示されます</li>
+                        <li>受付案内タブは印刷に最適化されています（ブラウザの印刷機能を使用）</li>
+                        <li>バックアップZIPにはすべてのデータと画像が含まれます。定期的にエクスポートすることを推奨します</li>
+                        <li>connpass出力ではBase URLを設定すると、登壇者写真のURLが自動生成されます</li>
+                        <li>配置アルゴリズムは何度でも実行可能です。プレビューで確認してから適用してください</li>
+                    </ul>
                 </div>
             </div>
         </div>
