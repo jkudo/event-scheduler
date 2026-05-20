@@ -1,8 +1,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
-.header { background: #1a73e8; color: white; padding: 16px 24px; }
-.header h1 { font-size: 1.4rem; }
 .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.app-title { font-size: 1.4rem; color: #1a73e8; margin-bottom: 12px; }
 .tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
 .tab { padding: 10px 20px; background: #ddd; border: none; border-radius: 6px 6px 0 0;
        cursor: pointer; font-size: 0.95rem; }

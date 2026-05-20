@@ -14,7 +14,7 @@ from .models import (
     Room, Session as SessionModel, LTTalk, Staff, StaffSkill,
     StaffPreferredSession, StaffAvailability, VenueMap, Assignment,
 )
-from .routers import rooms, sessions, staffs, assignments, venue_maps, export, auth
+from .routers import rooms, sessions, staffs, assignments, venue_maps, export, auth, settings
 
 Base.metadata.create_all(bind=engine)
 
@@ -40,6 +40,7 @@ app.include_router(staffs.router)
 app.include_router(assignments.router)
 app.include_router(venue_maps.router)
 app.include_router(export.router)
+app.include_router(settings.router)
 
 
 def _seed_initial_data():

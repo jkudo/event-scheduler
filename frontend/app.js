@@ -209,6 +209,59 @@ createApp({
         const resetMsg = ref('');
         const resetMsgError = ref(false);
         const resetPassword = ref('');
+
+        // --- Settings ---
+        const appTitle = ref('カンファレンス スケジューラー');
+        const settingsForm = reactive({ app_title: '' });
+        const settingsMsg = ref('');
+        const pwForm = reactive({ current: '', newPw: '' });
+        const pwMsg = ref('');
+        const pwMsgError = ref(false);
+
+        async function loadSettings() {
+            try {
+                const data = await fetch(API + '/api/settings/').then(r => r.json());
+                if (data.app_title) {
+                    appTitle.value = data.app_title;
+                    settingsForm.app_title = data.app_title;
+                    document.title = data.app_title;
+                }
+            } catch (e) { /* ignore */ }
+        }
+        async function saveSettings() {
+            settingsMsg.value = '';
+            try {
+                await fetch(API + '/api/settings/', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ app_title: settingsForm.app_title })
+                });
+                appTitle.value = settingsForm.app_title;
+                document.title = settingsForm.app_title;
+                settingsMsg.value = '保存しました';
+            } catch (e) { settingsMsg.value = '保存に失敗しました'; }
+        }
+        async function changePassword() {
+            pwMsg.value = ''; pwMsgError.value = false;
+            try {
+                const resp = await fetch(API + '/api/settings/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: pwForm.current, new_password: pwForm.newPw })
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    pwMsg.value = data.message;
+                    pwMsgError.value = false;
+                    pwForm.current = ''; pwForm.newPw = '';
+                } else {
+                    pwMsg.value = data.detail || 'パスワード変更に失敗しました';
+                    pwMsgError.value = true;
+                }
+            } catch (e) {
+                pwMsg.value = '通信エラー'; pwMsgError.value = true;
+            }
+        }
         function onBackupFileChange(e) {
             const f = e.target.files[0];
             if (f) { backupFile.value = f; backupFileName.value = f.name; }
@@ -586,9 +639,9 @@ createApp({
             return entry.assigned_staff.some(a => a.staff.id === staffId);
         }
         // プルダウン用: 各タブに関連するスタッフ一覧
-        const matrixStaffOptions = computed(() => staffs.value.filter(s => s.role === 'session'));
-        const rcStaffOptions = computed(() => staffs.value.filter(s => s.role === 'reception'));
-        const scStaffOptions = computed(() => staffs.value.filter(s => s.role === 'social'));
+        const matrixStaffOptions = computed(() => staffs.value);
+        const rcStaffOptions = computed(() => staffs.value);
+        const scStaffOptions = computed(() => staffs.value);
 
         const filteredMatrixSchedule = computed(() => {
             if (!matrixStaffFilter.value) return sessionSchedule.value;
@@ -1299,7 +1352,7 @@ createApp({
             return _hasStaff(entry, allStaffFilter.value) ? 1 : 0.15;
         }
 
-        onMounted(() => { loadRooms(); });
+        onMounted(() => { loadRooms(); loadSettings(); });
 
         return {
             tab, rooms, sessions, staffs, schedule, staffAssignments,
@@ -1330,6 +1383,8 @@ createApp({
             exportExcel, exportBackup, backupFileName, ioMsg, ioMsgError, onBackupFileChange, importBackup,
             connpassTimeline, speakerTemplate, connpassBaseUrl, generateConnpassTimeline, generateSpeakerTemplate, copyToClipboard,
             resetAllData, resetMsg, resetMsgError, resetPassword,
+            appTitle, settingsForm, settingsMsg, saveSettings,
+            pwForm, pwMsg, pwMsgError, changePassword,
             matrixStaffFilter, rcStaffFilter, scStaffFilter,
             matrixStaffOptions, rcStaffOptions, scStaffOptions,
             allStaffFilter, allSchedule, allConfig, allColumns, allGridStyle, allLabels, allSessionStyle, allSessionBg, allSessionOpacity,

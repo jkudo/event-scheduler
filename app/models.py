@@ -124,6 +124,14 @@ class LTTalk(Base):
     session = relationship("Session", back_populates="lt_talks")
 
 
+class AppSetting(Base):
+    """アプリケーション設定 (key-value)"""
+    __tablename__ = "app_settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=False, default="")
+
+
 class Assignment(Base):
     __tablename__ = "assignments"
 
