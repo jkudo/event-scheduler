@@ -2,9 +2,9 @@ import io
 import json
 import os
 import shutil
+import uuid
 import zipfile
 from datetime import datetime
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, UploadFile, File
 from pydantic import BaseModel
@@ -16,13 +16,12 @@ from openpyxl.utils import get_column_letter
 from PIL import Image as PILImage
 from sqlalchemy.orm import Session, joinedload
 
+from ..config import UPLOAD_DIR
 from ..database import get_db
 from ..models import (
     Session as SessionModel, Staff, Assignment, Room, VenueMap,
     LTTalk, StaffSkill, StaffPreferredSession, StaffAvailability,
 )
-
-UPLOAD_DIR = Path("uploads")
 router = APIRouter(prefix="/api/export", tags=["export"])
 
 HEADER_FONT = Font(bold=True, color="FFFFFF", size=11)
@@ -657,8 +656,6 @@ def export_backup(db: Session = Depends(get_db)):
 @router.post("/restore")
 async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """ZIP バックアップから全データを復元（既存データは全削除）"""
-    import uuid
-
     raw = await file.read()
     buf = io.BytesIO(raw)
 

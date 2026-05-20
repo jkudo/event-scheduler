@@ -1,13 +1,11 @@
 import uuid
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
 
+from ..config import UPLOAD_DIR
 from ..database import get_db
 from ..models import Staff, StaffSkill, StaffPreferredSession, StaffAvailability
-
-UPLOAD_DIR = Path("uploads")
 from ..models import Session as SessionModel
 from ..schemas import (
     StaffCreate,

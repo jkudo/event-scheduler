@@ -1,16 +1,14 @@
 import uuid
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
+from ..config import UPLOAD_DIR
 from ..database import get_db
 from ..models import VenueMap
 from ..schemas import VenueMapResponse
 
 router = APIRouter(prefix="/api/venue-maps", tags=["venue-maps"])
-
-UPLOAD_DIR = Path("uploads")
 
 
 @router.get("/", response_model=list[VenueMapResponse])

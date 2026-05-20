@@ -1,10 +1,10 @@
 import uuid
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session, joinedload
 
+from ..config import UPLOAD_DIR
 from ..database import get_db
 from ..models import Session as SessionModel, Room, LTTalk, Staff, StaffAvailability
 from ..schemas import SessionCreate, SessionResponse, LTTalkCreate, LTTalkResponse
@@ -19,8 +19,6 @@ def _parse_dt(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
-
-UPLOAD_DIR = Path("uploads")
 
 
 @router.get("/", response_model=list[SessionResponse])
