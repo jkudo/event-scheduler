@@ -1,0 +1,214 @@
+from datetime import datetime
+from pydantic import BaseModel, model_validator
+
+
+# --- VenueMap ---
+class VenueMapResponse(BaseModel):
+    id: int
+    title: str
+    image: str
+    order: int
+
+    model_config = {"from_attributes": True}
+
+
+# --- Room ---
+class RoomCreate(BaseModel):
+    name: str
+    capacity: int
+    floor: int = 1
+
+
+class RoomResponse(BaseModel):
+    id: int
+    name: str
+    capacity: int
+    floor: int
+
+    model_config = {"from_attributes": True}
+
+
+# --- Session ---
+class SessionCreate(BaseModel):
+    title: str
+    description: str = ""
+    notes: str = ""
+    speaker: str
+    speaker_kana: str = ""
+    speaker_photo: str = ""
+    speaker_org: str = ""
+    speaker_title: str = ""
+    speaker_profile: str = ""
+    start_time: datetime
+    end_time: datetime
+    room_id: int
+    required_staff: int = 1
+    category: str = "general"
+    english_required: bool = False
+
+
+class SessionResponse(BaseModel):
+    id: int
+    title: str
+    description: str
+    notes: str
+    speaker: str
+    speaker_kana: str
+    speaker_photo: str
+    speaker_org: str
+    speaker_title: str
+    speaker_profile: str
+    start_time: datetime
+    end_time: datetime
+    room_id: int
+    required_staff: int
+    category: str
+    english_required: bool
+    room: RoomResponse | None = None
+    lt_talks: list["LTTalkResponse"] = []
+
+    model_config = {"from_attributes": True}
+
+
+# --- LT Talk ---
+class LTTalkCreate(BaseModel):
+    title: str
+    speaker: str
+    speaker_kana: str = ""
+    speaker_org: str = ""
+    speaker_title: str = ""
+    order: int = 0
+
+
+class LTTalkResponse(BaseModel):
+    id: int
+    session_id: int
+    title: str
+    speaker: str
+    speaker_kana: str
+    speaker_org: str
+    speaker_title: str
+    order: int
+
+    model_config = {"from_attributes": True}
+
+
+# --- Staff ---
+class StaffSkillResponse(BaseModel):
+    id: int
+    skill: str
+
+    model_config = {"from_attributes": True}
+
+
+class StaffPreferredSessionCreate(BaseModel):
+    session_id: int
+    priority: int = 1
+
+
+class StaffPreferredSessionResponse(BaseModel):
+    id: int
+    session_id: int
+    priority: int
+    session: SessionResponse | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class StaffAvailabilityCreate(BaseModel):
+    start_time: datetime
+    end_time: datetime
+
+    @model_validator(mode="after")
+    def validate_time_range(self):
+        if self.start_time >= self.end_time:
+            raise ValueError("start_time must be before end_time")
+        return self
+
+
+class StaffAvailabilityResponse(BaseModel):
+    id: int
+    start_time: datetime
+    end_time: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StaffCreate(BaseModel):
+    name: str
+    slack_name: str = ""
+    english_ok: bool = False
+    role: str = "general"
+    max_hours: int = 8
+    experience_count: int = 0
+    skills: list[str] = []
+    preferred_sessions: list[StaffPreferredSessionCreate] = []
+    availabilities: list[StaffAvailabilityCreate] = []
+
+
+class StaffUpdate(BaseModel):
+    name: str
+    slack_name: str = ""
+    english_ok: bool = False
+    role: str = "general"
+    max_hours: int = 8
+    experience_count: int = 0
+    skills: list[str] = []
+
+
+class StaffResponse(BaseModel):
+    id: int
+    name: str
+    slack_name: str
+    photo: str
+    english_ok: bool
+    role: str
+    max_hours: int
+    experience_count: int
+    skills: list[StaffSkillResponse] = []
+    preferred_sessions: list[StaffPreferredSessionResponse] = []
+    availabilities: list[StaffAvailabilityResponse] = []
+
+    model_config = {"from_attributes": True}
+
+
+# --- Assignment ---
+class AssignmentResponse(BaseModel):
+    id: int
+    session_id: int
+    staff_id: int
+    role: str
+    session: SessionResponse | None = None
+    staff: StaffResponse | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class AssignmentCreate(BaseModel):
+    session_id: int
+    staff_id: int
+    role: str = "support"
+
+
+# --- Schedule output ---
+class AssignedStaffEntry(BaseModel):
+    assignment_id: int
+    staff: StaffResponse
+
+
+class ScheduleEntry(BaseModel):
+    session: SessionResponse
+    assigned_staff: list[AssignedStaffEntry]
+
+
+class ScheduleResponse(BaseModel):
+    schedule: list[ScheduleEntry]
+
+
+class StaffScheduleEntry(BaseModel):
+    staff: StaffResponse
+    assigned_sessions: list[SessionResponse]
+
+
+class StaffScheduleResponse(BaseModel):
+    staff_assignments: list[StaffScheduleEntry]

@@ -1,0 +1,2602 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カンファレンス スケジューラー</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+        .header { background: #1a73e8; color: white; padding: 16px 24px; }
+        .header h1 { font-size: 1.4rem; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; background: #ddd; border: none; border-radius: 6px 6px 0 0;
+               cursor: pointer; font-size: 0.95rem; }
+        .tab.active { background: white; font-weight: bold; }
+        .panel { display: none; background: white; border-radius: 0 8px 8px 8px; padding: 24px;
+                 box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+        .panel.active { display: block; }
+        h2 { margin-bottom: 16px; font-size: 1.2rem; }
+        h3 { margin: 16px 0 8px; font-size: 1rem; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        button.btn { padding: 10px 20px; background: #1a73e8; color: white; border: none;
+                     border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+        button.btn:hover { background: #1557b0; }
+        button.btn-danger { background: #d93025; }
+        button.btn-danger:hover { background: #b3261e; }
+        button.btn-success { background: #0d904f; }
+        button.btn-success:hover { background: #0a7a42; }
+        button.btn-sm { padding: 4px 12px; font-size: 0.8rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 0.9rem; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;
+                 background: #e8f0fe; color: #1a73e8; margin: 2px; }
+        .badge.warn { background: #fce8e6; color: #d93025; }
+        .badge.pref { background: #fef7e0; color: #b06000; }
+        .badge.avail { background: #e6f4ea; color: #137333; }
+        .schedule-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+        .schedule-card h3 { font-size: 1rem; margin-bottom: 8px; margin-top: 0; }
+        .schedule-card .meta { color: #666; font-size: 0.85rem; margin-bottom: 8px; }
+        .schedule-card .staff-list { display: flex; flex-wrap: wrap; gap: 4px; }
+        .msg { padding: 12px; border-radius: 4px; margin-bottom: 12px; }
+        .msg.success { background: #e6f4ea; color: #137333; }
+        .msg.error { background: #fce8e6; color: #c5221f; }
+        .del-btn { background: none; border: none; color: #d93025; cursor: pointer; font-size: 0.85rem; }
+        .detail-section { background: #f8f9fa; border-radius: 6px; padding: 12px; margin-top: 12px; }
+        .detail-section h4 { font-size: 0.9rem; margin-bottom: 8px; }
+        .inline-form { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 8px; }
+        .inline-form .form-group { margin-bottom: 0; }
+        .staff-detail-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .speaker-photo { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; vertical-align: middle; }
+        .speaker-photo-placeholder { width: 48px; height: 48px; border-radius: 50%; background: #e0e0e0;
+            display: inline-flex; align-items: center; justify-content: center; color: #999; font-size: 1.2rem; vertical-align: middle; }
+        .photo-preview { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+        .btn-sm.edit-btn { background: #f9ab00; color: #fff; }
+        .btn-sm.edit-btn:hover { background: #e09900; }
+        .lt-talks-list { background: #f0f7ff; border: 1px solid #b8d4f0; border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+        .lt-talks-list h4 { margin: 0 0 8px; font-size: 0.9rem; color: #1a73e8; }
+        .lt-talk-item { background: #fff; border: 1px solid #d0d0d0; border-radius: 4px; padding: 8px 10px; margin-bottom: 6px;
+                         display: flex; align-items: center; gap: 8px; }
+        .lt-talk-item .lt-talk-fields { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+        .lt-talk-item input { padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85rem; }
+        .lt-talk-item .lt-num { font-weight: 700; color: #1a73e8; min-width: 20px; text-align: center; }
+        .lt-talk-item .del-btn { flex-shrink: 0; }
+
+        /* ===== タイムライングリッド（Excel結合セル風） ===== */
+        .tl-wrapper { overflow-x: auto; margin-bottom: 24px; }
+        .tl-grid {
+            display: grid;
+            gap: 0;
+            border: 2px solid #999;
+            position: relative;
+            min-width: 700px;
+        }
+        /* ヘッダー */
+        .tl-corner {
+            grid-row: 1; grid-column: 1;
+            background: #f0f0f0; font-weight: 700; font-size: 0.85rem;
+            display: flex; align-items: center; justify-content: center;
+            border-right: 2px solid #999; border-bottom: 2px solid #999;
+        }
+        .tl-room-header {
+            grid-row: 1;
+            background: #1a73e8; color: #fff;
+            font-weight: 700; font-size: 0.85rem;
+            display: flex; align-items: center; justify-content: center;
+            padding: 6px 4px;
+            border-right: 1px solid #a0c0ff; border-bottom: 2px solid #999;
+        }
+        .tl-room-header:last-of-type { border-right: none; }
+        /* 時間ラベル（30分ごと） */
+        .tl-time-label {
+            grid-column: 1;
+            font-size: 0.75rem; font-weight: 600; color: #444;
+            padding: 2px 6px 0 6px;
+            border-right: 2px solid #999;
+            border-bottom: 1px solid #d0d0d0;
+            display: flex; align-items: flex-start;
+            background: #f8f8f8;
+        }
+        .tl-time-label.hour-mark {
+            border-bottom: 2px solid #aaa;
+            background: #f0f0f0;
+        }
+        .tl-time-label.quarter-mark {
+            border-bottom: 1px dashed #e0e0e0;
+        }
+        /* 背景セル（Excel罫線風） */
+        .tl-bg-cell {
+            border-right: 1px solid #e0e0e0;
+            border-bottom: 1px solid #ececec;
+            background: #fff;
+        }
+        .tl-bg-cell.hour-mark { border-bottom: 2px solid #ccc; }
+        .tl-bg-cell.half-mark { border-bottom: 1px solid #d8d8d8; }
+        .tl-bg-cell.quarter-mark { border-bottom: 1px dashed #e8e8e8; }
+        /* セッションブロック（結合セル風） */
+        .tl-session {
+            z-index: 3;
+            background: linear-gradient(135deg, #e8f0fe 0%, #d2e3fc 100%);
+            border: 2px solid #1a73e8;
+            border-radius: 3px;
+            padding: 6px 8px;
+            margin: 1px 2px;
+            overflow-y: auto;
+            display: flex; flex-direction: column; gap: 2px;
+            cursor: pointer;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+        .tl-session-time {
+            font-size: 0.7rem; color: #1a73e8; font-weight: 700;
+        }
+        .tl-session-title {
+            font-weight: 700; font-size: 0.8rem; color: #1a237e;
+            line-height: 1.2;
+        }
+        .tl-session-speaker {
+            font-size: 0.75rem; color: #555;
+        }
+        .tl-session-staff {
+            display: flex; flex-wrap: wrap; gap: 2px; margin-top: auto;
+        }
+        .tl-session-staff .badge { font-size: 0.7rem; padding: 1px 6px; }
+        /* 休憩ブロック */
+        .tl-break {
+            z-index: 2;
+            background: repeating-linear-gradient(
+                -45deg, #fff8e1, #fff8e1 4px, #fff3c4 4px, #fff3c4 8px
+            );
+            border: 1px dashed #d4a017;
+            border-radius: 2px;
+            margin: 1px 2px;
+            display: flex; align-items: center; justify-content: center;
+            color: #b08000; font-weight: 700; font-size: 0.8rem;
+        }
+        /* 凡例 */
+        .tl-legend {
+            display: flex; gap: 16px; margin-bottom: 12px; font-size: 0.8rem; align-items: center; flex-wrap: wrap;
+        }
+        .tl-legend-item { display: flex; align-items: center; gap: 4px; }
+        .tl-legend-swatch {
+            width: 20px; height: 14px; border-radius: 2px; border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="header" style="display:flex;align-items:center;justify-content:space-between;padding:0 24px">
+        <h1>カンファレンス スケジューラー</h1>
+    </div>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab" :class="{ active: tab === 'rooms' }" @click="switchTab('rooms')">部屋管理</button>
+            <button class="tab" :class="{ active: tab === 'all-matrix' }" @click="switchTab('all-matrix')">全体スケジュール</button>
+            <button class="tab" :class="{ active: tab === 'venue-maps' }" @click="switchTab('venue-maps')">会場地図</button>
+            <button class="tab" :class="{ active: tab === 'sessions' }" @click="switchTab('sessions')">セッション管理</button>
+            <button class="tab" :class="{ active: tab === 'staffs' }" @click="switchTab('staffs')">スタッフ管理</button>
+            <button class="tab" :class="{ active: tab === 'schedule' }" @click="switchTab('schedule')">セッション配置</button>
+            <button class="tab" :class="{ active: tab === 'matrix' }" @click="switchTab('matrix')">配置表</button>
+            <button class="tab" :class="{ active: tab === 'reception' }" @click="switchTab('reception')">受付案内</button>
+            <button class="tab" :class="{ active: tab === 'social' }" @click="switchTab('social')">懇親会担当</button>
+            <button class="tab" :class="{ active: tab === 'algorithm' }" @click="switchTab('algorithm')">配置アルゴリズム</button>
+            <button class="tab" :class="{ active: tab === 'io' }" @click="switchTab('io')">エクスポート/インポート</button>
+        </div>
+
+        <!-- ===== 部屋管理 ===== -->
+        <div class="panel" :class="{ active: tab === 'rooms' }">
+            <h2>部屋管理</h2>
+            <div class="form-row">
+                <div class="form-group"><label>部屋名</label><input v-model="roomForm.name" placeholder="例: ホールA"></div>
+                <div class="form-group"><label>定員</label><input v-model.number="roomForm.capacity" type="number" placeholder="100"></div>
+                <div class="form-group"><label>階</label><input v-model.number="roomForm.floor" type="number" placeholder="1"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+                <button class="btn" @click="submitRoom">{{ roomForm.editId ? '更新' : '追加' }}</button>
+                <button v-if="roomForm.editId" class="btn btn-danger" @click="cancelEditRoom">キャンセル</button>
+            </div>
+            <table>
+                <thead><tr><th>ID</th><th>部屋名</th><th>階</th><th>定員</th><th></th></tr></thead>
+                <tbody>
+                    <tr v-for="r in rooms" :key="r.id">
+                        <td>{{ r.id }}</td><td>{{ r.name }}</td><td>{{ r.floor }}F</td><td>{{ r.capacity }}</td>
+                        <td>
+                            <button class="btn btn-sm edit-btn" @click="editRoom(r)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteRoom(r.id)">削除</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ===== 会場地図 ===== -->
+        <div class="panel" :class="{ active: tab === 'venue-maps' }">
+            <h2>会場地図</h2>
+            <div class="form-row">
+                <div class="form-group"><label>タイトル</label><input v-model="venueMapForm.title" placeholder="例: 1F フロアマップ"></div>
+                <div class="form-group"><label>表示順</label><input v-model.number="venueMapForm.order" type="number" placeholder="0"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>地図画像</label>
+                    <input type="file" ref="venueMapInput" accept="image/jpeg,image/png,image/gif,image/webp" @change="onVenueMapChange">
+                    <div style="margin-top:8px">
+                        <img v-if="venueMapPreview" :src="venueMapPreview" style="max-width:200px;max-height:120px;border-radius:4px;border:1px solid #ccc">
+                        <div v-if="venueMapForm.editId && venueMapForm.currentImage && !venueMapPreview" style="font-size:0.8rem;color:#666">
+                            <img :src="venueMapForm.currentImage" style="max-width:200px;max-height:120px;border-radius:4px;border:1px solid #ccc">
+                            <br>新しい画像を選択しない場合、現在の地図が維持されます
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+                <button class="btn" @click="submitVenueMap">{{ venueMapForm.editId ? '更新' : '追加' }}</button>
+                <button v-if="venueMapForm.editId" class="btn btn-danger" @click="cancelEditVenueMap">キャンセル</button>
+            </div>
+
+            <div v-if="!venueMaps.length" style="color:#888;font-size:0.9rem">地図が登録されていません。</div>
+            <div v-for="m in venueMaps" :key="m.id" style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <h3 style="margin:0">{{ m.title }}</h3>
+                    <div>
+                        <button class="btn btn-sm edit-btn" @click="editVenueMap(m)" style="margin-right:4px">編集</button>
+                        <button class="del-btn" @click="deleteVenueMap(m.id)">削除</button>
+                    </div>
+                </div>
+                <img :src="m.image" style="max-width:100%;max-height:400px;border-radius:4px;border:1px solid #ddd;cursor:pointer" @click="mapModal=m">
+            </div>
+
+            <!-- 地図拡大モーダル -->
+            <div v-if="mapModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="mapModal=null">
+                <div style="background:#fff;border-radius:8px;padding:20px;max-width:90vw;max-height:90vh;overflow:auto;position:relative">
+                    <h3 style="margin-bottom:12px">{{ mapModal.title }}</h3>
+                    <img :src="mapModal.image" style="max-width:80vw;max-height:70vh;border-radius:4px">
+                    <br><button class="btn btn-sm" style="margin-top:12px" @click="mapModal=null">閉じる</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== セッション管理 ===== -->
+        <div class="panel" :class="{ active: tab === 'sessions' }">
+            <h2>セッション管理</h2>
+            <div class="form-row">
+                <div class="form-group"><label>タイトル</label><input v-model="sessForm.title" placeholder="例: Kubernetes実践入門"></div>
+            </div>
+            <!-- 通常セッション: 登壇者情報 -->
+            <template v-if="!['lt','reception','social'].includes(sessForm.category)">
+                <div class="form-row">
+                    <div class="form-group"><label>登壇者名</label><input v-model="sessForm.speaker" placeholder="例: 山田 太郎"></div>
+                    <div class="form-group"><label>ふりがな</label><input v-model="sessForm.speaker_kana" placeholder="例: やまだ たろう"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>所属</label><input v-model="sessForm.speaker_org" placeholder="例: 株式会社○○"></div>
+                    <div class="form-group"><label>肩書き</label><input v-model="sessForm.speaker_title" placeholder="例: CTO"></div>
+                </div>
+                <div class="form-group"><label>プロフィール</label><textarea v-model="sessForm.speaker_profile" rows="2" placeholder="例: 10年以上のクラウドインフラ経験を持つエンジニア。著書に『実践Kubernetes入門』など。"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>登壇者写真</label>
+                        <input type="file" ref="sessPhoto" accept="image/jpeg,image/png,image/gif,image/webp" @change="onPhotoChange">
+                        <div style="margin-top:8px">
+                            <img v-if="sessPhotoPreview" :src="sessPhotoPreview" class="photo-preview">
+                            <div v-if="sessForm.editId && sessForm.currentPhoto && !sessPhotoPreview" style="font-size:0.8rem;color:#666">
+                                <img :src="sessForm.currentPhoto" class="photo-preview">
+                                <br>新しい写真を選択しない場合、現在の写真が維持されます
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <div class="form-row">
+                <div class="form-group"><label>開始時刻</label><input v-model="sessForm.start_time" type="datetime-local"></div>
+                <div class="form-group"><label>終了時刻</label><input v-model="sessForm.end_time" type="datetime-local"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>部屋</label>
+                    <select v-model.number="sessForm.room_id">
+                        <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>カテゴリ</label>
+                    <select v-model="sessForm.category">
+                        <option value="general">一般</option>
+                        <option value="tech">技術</option>
+                        <option value="workshop">ワークショップ</option>
+                        <option value="keynote">基調講演</option>
+                        <option value="lt">LT</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>必要スタッフ数</label><input v-model.number="sessForm.required_staff" type="number" placeholder="例: 2"></div>
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:22px">
+                    <label style="margin:0"><input type="checkbox" v-model="sessForm.english_required" style="width:16px;height:16px;cursor:pointer"> 英語対応必要</label>
+                </div>
+            </div>
+            <div class="form-group"><label>セッション説明</label><textarea v-model="sessForm.description" rows="2" placeholder="例: コンテナオーケストレーションの基礎から実践的なデプロイ手法まで解説します。"></textarea></div>
+            <div class="form-group"><label>備考</label><textarea v-model="sessForm.notes" rows="2" placeholder="例: プロジェクター2台使用。講演者用に水を準備。"></textarea></div>
+
+            <!-- LTセッション: 登壇者リスト -->
+            <div v-if="sessForm.category === 'lt'" class="lt-talks-list">
+                <h4>LT登壇者一覧</h4>
+                <div v-for="(talk, idx) in ltTalks" :key="idx" class="lt-talk-item">
+                    <span class="lt-num">{{ idx + 1 }}</span>
+                    <div class="lt-talk-fields">
+                        <input v-model="talk.title" placeholder="トークタイトル" style="flex:2;min-width:140px">
+                        <input v-model="talk.speaker" placeholder="登壇者名" style="flex:1;min-width:100px">
+                        <input v-model="talk.speaker_kana" placeholder="ふりがな" style="flex:1;min-width:100px">
+                        <input v-model="talk.speaker_org" placeholder="所属" style="flex:1;min-width:100px">
+                        <input v-model="talk.speaker_title" placeholder="肩書き" style="flex:1;min-width:80px">
+                    </div>
+                    <button class="del-btn" @click="ltTalks.splice(idx, 1)">✕</button>
+                </div>
+                <button class="btn btn-sm" @click="addLTTalk" style="margin-top:4px">＋ 登壇者を追加</button>
+            </div>
+            <div style="display:flex;gap:8px">
+                <button class="btn" @click="submitSession">{{ sessForm.editId ? '更新' : '追加' }}</button>
+                <button v-if="sessForm.editId" class="btn btn-danger" @click="cancelEditSession">キャンセル</button>
+            </div>
+            <div style="margin:12px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <button class="btn btn-success" @click="calcRequiredStaff">必要スタッフ数を自動計算</button>
+                <span v-if="calcStaffMsg" style="font-size:0.85rem;color:#137333">{{ calcStaffMsg }}</span>
+            </div>
+            <div v-if="calcStaffSummary" style="margin:0 0 12px;padding:10px 16px;background:#e8f5e9;border-radius:6px;display:flex;gap:24px;align-items:center;font-size:0.95rem">
+                <span><strong>最小必要人数:</strong> {{ calcStaffSummary.min }}人 <span style="color:#666;font-size:0.85rem">（全セッションをカバーできるギリギリの人数）</span></span>
+                <span><strong>休憩込み必要人数:</strong> {{ calcStaffSummary.comfortable }}人 <span style="color:#666;font-size:0.85rem">（1セッション担当後に休憩を挟める人数）</span></span>
+            </div>
+            <table>
+                <thead><tr><th>ID</th><th>登壇者</th><th>タイトル</th><th>時間</th><th>部屋</th><th>カテゴリ</th><th>必要人数</th><th>英語</th><th></th></tr></thead>
+                <tbody>
+                    <template v-for="s in sessions.filter(s => !['reception','social','overall'].includes(s.category))" :key="s.id">
+                    <tr>
+                        <td>{{ s.id }}</td>
+                        <td style="text-align:center">
+                            <template v-if="s.category === 'lt' && s.lt_talks && s.lt_talks.length">
+                                <span style="font-size:0.8rem">LT ({{ s.lt_talks.length }}名)</span>
+                            </template>
+                            <template v-else>
+                                <img v-if="s.speaker_photo" :src="s.speaker_photo" :alt="s.speaker" class="speaker-photo">
+                                <span v-else class="speaker-photo-placeholder">{{ s.speaker.charAt(0) }}</span>
+                                <br><span style="font-size:0.8rem">{{ s.speaker }}</span>
+                            </template>
+                        </td>
+                        <td>
+                            <a href="#" @click.prevent="toggleSessionDetail(s.id)" style="color:#1a73e8;text-decoration:none;font-weight:600">{{ s.title }}</a>
+                        </td>
+                        <td>{{ fmt(s.start_time) }} - {{ fmt(s.end_time) }}</td>
+                        <td>{{ s.room ? s.room.name : s.room_id }}</td>
+                        <td><span class="badge">{{ catLabel(s.category) }}</span></td>
+                        <td>{{ s.required_staff }}</td>
+                        <td><span v-if="s.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
+                        <td>
+                            <button class="btn btn-sm edit-btn" @click="editSession(s)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteSession(s.id)">削除</button>
+                        </td>
+                    </tr>
+                    </template>
+                </tbody>
+            </table>
+
+        </div>
+
+        <!-- ===== スタッフ管理 ===== -->
+        <div class="panel" :class="{ active: tab === 'staffs' }">
+            <h2>スタッフ管理</h2>
+            <div class="form-row">
+                <div class="form-group"><label>名前</label><input v-model="staffForm.name" placeholder="例: 山田 太郎"></div>
+                <div class="form-group"><label>Slack名</label><input v-model="staffForm.slack_name" placeholder="例: @yamada-taro"></div>
+                <div class="form-group">
+                    <label>担当</label>
+                    <select v-model="staffForm.role">
+                        <option value="session">セッション</option>
+                        <option value="reception">受付</option>
+                        <option value="social">懇親会</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>参加回数</label>
+                    <input v-model.number="staffForm.experience_count" type="number" min="0" placeholder="0=初参加">
+                    <span style="font-size:0.75rem;color:#888">0 = 初めて（経験者と一緒に配置されます）</span>
+                </div>
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:20px">
+                    <label style="margin:0"><input type="checkbox" v-model="staffForm.english_ok" style="width:16px;height:16px;cursor:pointer"> 英語対応可</label>
+                </div>
+            </div>
+
+            <!-- 活動可能時間（新規・編集共通） -->
+            <div class="detail-section" style="margin-top:12px;padding:12px;background:#f8f9fa;border-radius:6px">
+                <h4 style="margin-top:0">活動可能時間</h4>
+                <!-- 編集時: サーバー保存済みの時間帯 -->
+                <template v-if="staffForm.editId">
+                    <template v-if="editingStaffAvails.length">
+                        <span class="badge avail" v-for="a in editingStaffAvails" :key="a.id" style="display:inline-flex;align-items:center;gap:4px">
+                            {{ fmt(a.start_time) }} - {{ fmtShort(a.end_time) }}
+                            <button class="del-btn" style="font-size:0.75rem;padding:0 4px" @click="removeAvail(staffForm.editId, a.id)">x</button>
+                        </span>
+                    </template>
+                    <span v-if="!editingStaffAvails.length" style="color:#999;font-size:0.85rem">制限なし（終日対応可能）</span>
+                    <div class="inline-form" style="margin-top:8px">
+                        <div class="form-group"><input v-model="availForms[staffForm.editId].start" type="datetime-local"></div>
+                        <div class="form-group"><input v-model="availForms[staffForm.editId].end" type="datetime-local"></div>
+                        <button class="btn btn-sm" @click="addAvail(staffForm.editId)">追加</button>
+                    </div>
+                </template>
+                <!-- 新規登録時: ローカルリストで管理 -->
+                <template v-else>
+                    <template v-if="newStaffAvails.length">
+                        <span class="badge avail" v-for="(a, idx) in newStaffAvails" :key="idx" style="display:inline-flex;align-items:center;gap:4px">
+                            {{ fmt(a.start_time) }} - {{ fmtShort(a.end_time) }}
+                            <button class="del-btn" style="font-size:0.75rem;padding:0 4px" @click="newStaffAvails.splice(idx, 1)">x</button>
+                        </span>
+                    </template>
+                    <span v-if="!newStaffAvails.length" style="color:#999;font-size:0.85rem">制限なし（終日対応可能）</span>
+                    <div class="inline-form" style="margin-top:8px">
+                        <div class="form-group"><input v-model="newAvailForm.start" type="datetime-local"></div>
+                        <div class="form-group"><input v-model="newAvailForm.end" type="datetime-local"></div>
+                        <button class="btn btn-sm" @click="addNewStaffAvail">追加</button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- 希望セッション（新規・編集共通） -->
+            <div class="detail-section" style="margin-top:8px;padding:12px;background:#f8f9fa;border-radius:6px">
+                <h4 style="margin-top:0">希望セッション</h4>
+                <!-- 編集時: サーバー保存済み -->
+                <template v-if="staffForm.editId">
+                    <template v-if="editingStaffPrefs.length">
+                        <span class="badge pref" v-for="p in editingStaffPrefs" :key="p.id" style="display:inline-flex;align-items:center;gap:4px">
+                            第{{ p.priority }}希望: {{ p.session ? p.session.title : 'セッション ' + p.session_id }}
+                            <button class="del-btn" style="font-size:0.75rem;padding:0 4px" @click="removePref(staffForm.editId, p.id)">x</button>
+                        </span>
+                    </template>
+                    <span v-if="!editingStaffPrefs.length" style="color:#999;font-size:0.85rem">希望セッション未設定</span>
+                    <div class="inline-form" style="margin-top:8px">
+                        <div class="form-group" style="flex:2">
+                            <select v-model.number="prefForms[staffForm.editId].session_id">
+                                <option v-for="ss in sessions" :key="ss.id" :value="ss.id">{{ ss.title }} ({{ fmt(ss.start_time) }})</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex:1">
+                            <input v-model.number="prefForms[staffForm.editId].priority" type="number" min="1" placeholder="優先度" style="width:80px">
+                        </div>
+                        <button class="btn btn-sm" @click="addPref(staffForm.editId)">追加</button>
+                    </div>
+                </template>
+                <!-- 新規登録時: ローカルリストで管理 -->
+                <template v-else>
+                    <template v-if="newStaffPrefs.length">
+                        <span class="badge pref" v-for="(p, idx) in newStaffPrefs" :key="idx" style="display:inline-flex;align-items:center;gap:4px">
+                            第{{ p.priority }}希望: {{ sessionTitle(p.session_id) }}
+                            <button class="del-btn" style="font-size:0.75rem;padding:0 4px" @click="newStaffPrefs.splice(idx, 1)">x</button>
+                        </span>
+                    </template>
+                    <span v-if="!newStaffPrefs.length" style="color:#999;font-size:0.85rem">希望セッション未設定</span>
+                    <div class="inline-form" style="margin-top:8px">
+                        <div class="form-group" style="flex:2">
+                            <select v-model.number="newPrefForm.session_id">
+                                <option v-for="ss in sessions" :key="ss.id" :value="ss.id">{{ ss.title }} ({{ fmt(ss.start_time) }})</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex:1">
+                            <input v-model.number="newPrefForm.priority" type="number" min="1" placeholder="優先度" style="width:80px">
+                        </div>
+                        <button class="btn btn-sm" @click="addNewStaffPref">追加</button>
+                    </div>
+                </template>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="btn" @click="submitStaff">{{ staffForm.editId ? '更新' : '追加' }}</button>
+                <button v-if="staffForm.editId" class="btn btn-danger" @click="cancelEditStaff">キャンセル</button>
+            </div>
+
+            <div style="margin-top:20px">
+                <div v-for="s in staffs" :key="s.id" class="staff-detail-card">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <img v-if="s.photo" :src="s.photo" :alt="s.name" class="speaker-photo" style="cursor:pointer"
+                                 @click="document.getElementById('staffPhotoInput_'+s.id).click()">
+                            <span v-else class="speaker-photo-placeholder" style="cursor:pointer"
+                                  @click="document.getElementById('staffPhotoInput_'+s.id).click()">{{ s.name.charAt(0) }}</span>
+                            <input type="file" :id="'staffPhotoInput_'+s.id" accept="image/jpeg,image/png,image/gif,image/webp"
+                                   style="display:none" @change="uploadStaffPhoto(s.id, $event)">
+                            <h3 style="margin:0">
+                                {{ s.name }}
+                                <span class="badge">{{ catLabel(s.role) }}</span>
+                                <span v-if="s.english_ok" class="badge" style="background:#e0f2f1;color:#00695c">EN</span>
+                                <span v-if="s.slack_name" style="font-weight:normal;font-size:0.85rem;color:#666">{{ s.slack_name }}</span>
+                                <span v-if="s.experience_count === 0" class="badge warn">初参加</span>
+                                <span v-else class="badge avail">{{ s.experience_count }}回目</span>
+                                <span class="badge" style="background:#e8f0fe;color:#1a73e8">担当: {{ staffAssignCount[s.id] || 0 }}件</span>
+                            </h3>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm edit-btn" @click="editStaff(s)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteStaff(s.id)">削除</button>
+                        </div>
+                    </div>
+                    <div style="margin-top:4px">
+                        <span style="font-size:0.8rem;color:#666">活動可能時間: </span>
+                        <template v-if="s.availabilities.length">
+                            <span class="badge avail" v-for="a in s.availabilities" :key="a.id">
+                                {{ fmt(a.start_time) }} - {{ fmtShort(a.end_time) }}
+                            </span>
+                        </template>
+                        <span v-else style="color:#999;font-size:0.85rem">制限なし（終日対応可能）</span>
+                    </div>
+                    <div v-if="s.preferred_sessions.length" style="margin-top:4px">
+                        <span style="font-size:0.8rem;color:#666">希望: </span>
+                        <span class="badge pref" v-for="p in sortedPrefs(s.preferred_sessions)" :key="p.id">
+                            第{{ p.priority }}希望: {{ p.session ? p.session.title : 'セッション ' + p.session_id }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== セッション配置 ===== -->
+        <div class="panel" :class="{ active: tab === 'schedule' }">
+            <h2>セッション配置</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                <button class="btn btn-success" @click="autoAssign">全セッション自動配置</button>
+                <button class="btn btn-success" @click="autoAssignSelected" :disabled="!selectedSessions.size" :style="{ background: selectedSessions.size ? '#0d7a42' : '#aaa', cursor: selectedSessions.size ? 'pointer' : 'not-allowed' }">選択したセッションを再配置 <span v-if="selectedSessions.size">({{ selectedSessions.size }}件)</span></button>
+                <button class="btn btn-sm" @click="toggleSelectAll" style="background:#666">{{ selectedSessions.size === sessionSchedule.length ? '全解除' : '全選択' }}</button>
+                <button class="btn btn-danger" @click="clearAssignments" style="margin-left:auto">配置をクリア</button>
+            </div>
+            <div style="margin-top:12px">
+                <div v-if="scheduleMsg" class="msg" :class="scheduleMsg.type">{{ scheduleMsg.text }}</div>
+                <div v-if="scheduleMsgError" class="msg error">{{ scheduleMsgError }}</div>
+            </div>
+            <div style="margin-top:16px">
+                <p v-if="!sessionSchedule.length">セッションがまだ登録されていません。</p>
+                <div v-for="e in sessionSchedule" :key="e.session.id" class="schedule-card">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <input type="checkbox" :checked="selectedSessions.has(e.session.id)" @change="toggleSessionSelect(e.session.id)" style="width:18px;height:18px;cursor:pointer">
+                        <h3 style="margin:0"><a href="#" @click.prevent="toggleSessionDetail(e.session.id)" style="color:#1a73e8;text-decoration:none">{{ e.session.title }}</a></h3>
+                    </div>
+                    <div class="meta" style="display:flex;align-items:center;gap:8px">
+                        <img v-if="e.session.speaker_photo" :src="e.session.speaker_photo" class="speaker-photo" style="cursor:pointer" @click="toggleSessionDetail(e.session.id)">
+                        <span v-else class="speaker-photo-placeholder" style="cursor:pointer" @click="toggleSessionDetail(e.session.id)">{{ e.session.speaker.charAt(0) }}</span>
+                        <span>
+                            {{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }} |
+                            {{ e.session.room ? e.session.room.name : '' }} |
+                            登壇者: {{ e.session.speaker }} |
+                            <span class="badge">{{ catLabel(e.session.category) }}</span>
+                        </span>
+                    </div>
+                    <div class="staff-list" style="align-items:center">
+                        <strong>担当スタッフ:</strong>
+                        <template v-if="e.assigned_staff.length">
+                            <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                {{ a.staff.name }} ({{ catLabel(a.staff.role) }})
+                                <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">✕</button>
+                            </span>
+                        </template>
+                        <span v-else class="badge warn">未配置</span>
+                        <span style="margin-left:8px;display:inline-flex;align-items:center;gap:4px">
+                            <select v-model.number="assignStaffSelect[e.session.id]" style="padding:4px 8px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px">
+                                <option :value="0">＋ スタッフ追加</option>
+                                <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }} ({{ catLabel(s.role) }})</option>
+                            </select>
+                            <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:4px 10px">追加</button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 配置表 ===== -->
+        <div class="panel" :class="{ active: tab === 'matrix' }">
+            <h2>配置表</h2>
+
+            <!-- スタッフフィルター -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <label style="font-weight:600;font-size:0.9rem">スタッフ絞り込み:</label>
+                <select v-model.number="matrixStaffFilter" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
+                    <option :value="0">全員表示</option>
+                    <option v-for="s in matrixStaffOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
+                </select>
+                <span v-if="matrixStaffFilter" style="font-size:0.85rem;color:#666">{{ filteredMatrixSchedule.length }}/{{ sessionSchedule.length }}件</span>
+            </div>
+
+            <!-- 配置マトリクス -->
+            <h3 style="margin-top:0">配置マトリクス</h3>
+            <p v-if="!sessionSchedule.length">セッションがまだ登録されていません。</p>
+            <template v-else>
+                <div class="tl-legend">
+                    <span style="font-weight:600">凡例:</span>
+                    <span class="tl-legend-item">
+                        <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8"></span>
+                        セッション
+                    </span>
+                    <span class="tl-legend-item">
+                        <span class="tl-legend-swatch" style="background:repeating-linear-gradient(-45deg,#fff8e1,#fff8e1 3px,#fff3c4 3px,#fff3c4 6px);border-color:#d4a017"></span>
+                        休憩
+                    </span>
+                </div>
+
+                <div class="tl-wrapper">
+                    <div class="tl-grid" :style="tlGridStyle">
+                        <div class="tl-corner">時間</div>
+                        <div v-for="([rid, rname], ci) in tlRooms" :key="'rh'+rid"
+                             class="tl-room-header" :style="{gridColumn: ci+2}">
+                            {{ rname }}
+                        </div>
+                        <template v-for="(lbl, i) in tlLabels" :key="'t'+i">
+                            <div class="tl-time-label"
+                                 :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
+                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
+                                {{ lbl.text }}
+                            </div>
+                            <div v-for="([rid], ci) in tlRooms" :key="'bg'+i+'-'+rid"
+                                 class="tl-bg-cell"
+                                 :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
+                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
+                            </div>
+                        </template>
+                        <div v-for="entry in sessionSchedule" :key="'s'+entry.session.id"
+                             class="tl-session" :style="{...tlSessionStyle(entry), opacity: matrixSessionOpacity(entry)}"
+                             @click="toggleSessionDetail(entry.session.id)">
+                            <div class="tl-session-time">
+                                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
+                            </div>
+                            <div class="tl-session-title">{{ entry.session.title }}</div>
+                            <div v-if="entry.session.category === 'lt' && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
+                                <span v-for="t in entry.session.lt_talks" :key="t.id" style="display:block;font-size:0.7rem">{{ t.speaker }} - {{ t.title }}</span>
+                            </div>
+                            <div v-else class="tl-session-speaker">{{ entry.session.speaker }}</div>
+                            <div class="tl-session-staff">
+                                <template v-if="entry.assigned_staff.length">
+                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
+                                </template>
+                                <span v-else class="badge warn">未配置</span>
+                            </div>
+                        </div>
+                        <div v-for="(brk, bi) in tlBreaks" :key="'brk'+bi"
+                             class="tl-break" :style="brk.style">
+                            休憩
+                        </div>
+                    </div>
+                </div>
+
+            </template>
+
+            <!-- スタッフ別詳細 -->
+            <h3 style="margin-top:24px">スタッフ別詳細</h3>
+            <p v-if="!staffAssignments.length">スタッフがまだ登録されていません。</p>
+            <div v-for="e in staffAssignments" :key="e.staff.id" class="schedule-card"
+                 v-show="!matrixStaffFilter || e.staff.id === matrixStaffFilter">
+                <h3>{{ e.staff.name }} <span class="badge">{{ catLabel(e.staff.role) }}</span></h3>
+                <div v-if="e.staff.availabilities && e.staff.availabilities.length" style="margin-bottom:8px">
+                    <strong>活動可能時間:</strong>
+                    <span class="badge avail" v-for="a in e.staff.availabilities" :key="a.id">
+                        {{ fmt(a.start_time) }} - {{ fmtShort(a.end_time) }}
+                    </span>
+                </div>
+                <template v-if="e.assigned_sessions.length">
+                    <table>
+                        <thead><tr><th>セッション</th><th>時間</th><th>部屋</th></tr></thead>
+                        <tbody>
+                            <tr v-for="s in e.assigned_sessions" :key="s.id">
+                                <td>{{ s.title }}</td>
+                                <td>{{ fmt(s.start_time) }} - {{ fmt(s.end_time) }}</td>
+                                <td>{{ s.room ? s.room.name : '' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </template>
+                <p v-else style="color:#666;margin-top:8px">担当セッションなし</p>
+            </div>
+        </div>
+
+        <!-- ===== 受付案内 ===== -->
+        <div class="panel" :class="{ active: tab === 'reception' }">
+            <h2>受付案内</h2>
+
+            <!-- 受付登録フォーム -->
+            <h3 style="margin-top:0">受付の登録</h3>
+            <div class="form-row">
+                <div class="form-group"><label>受付名</label><input v-model="rcForm.title" placeholder="例: メイン受付"></div>
+                <div class="form-group"><label>必要スタッフ数</label><input v-model.number="rcForm.required_staff" type="number" min="1" placeholder="2"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>開始時刻</label><input v-model="rcForm.start_time" type="datetime-local"></div>
+                <div class="form-group"><label>終了時刻</label><input v-model="rcForm.end_time" type="datetime-local"></div>
+                <div class="form-group"><label>場所</label>
+                    <select v-model.number="rcForm.room_id">
+                        <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>英語対応</label>
+                    <label style="margin:0;display:flex;align-items:center;gap:4px;padding-top:4px"><input type="checkbox" v-model="rcForm.english_required" style="width:16px;height:16px;cursor:pointer"> 必要</label>
+                </div>
+            </div>
+            <div class="form-group"><label>備考</label><textarea v-model="rcForm.notes" rows="2" placeholder="例: 参加者名簿を準備"></textarea></div>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+                <button class="btn" @click="submitReception">{{ rcForm.editId ? '更新' : '追加' }}</button>
+                <button v-if="rcForm.editId" class="btn btn-danger" @click="cancelEditReception">キャンセル</button>
+            </div>
+
+            <!-- 自動配置ボタン -->
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
+                <button class="btn btn-success" @click="autoAssignReception" :disabled="!receptionSessions.length" :style="{ background: receptionSessions.length ? '#0d7a42' : '#aaa', cursor: receptionSessions.length ? 'pointer' : 'not-allowed' }">受付スタッフ自動配置</button>
+                <span v-if="rcAssignMsg" style="font-size:0.85rem;color:#137333">{{ rcAssignMsg }}</span>
+            </div>
+
+            <!-- スタッフフィルター -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <label style="font-weight:600;font-size:0.9rem">スタッフ絞り込み:</label>
+                <select v-model.number="rcStaffFilter" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
+                    <option :value="0">全員表示</option>
+                    <option v-for="s in rcStaffOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
+                </select>
+                <span v-if="rcStaffFilter" style="font-size:0.85rem;color:#666">{{ filteredReceptionSessions.length }}/{{ receptionSessions.length }}件</span>
+            </div>
+
+            <!-- 受付マトリクス -->
+            <template v-if="receptionSessions.length">
+                <h3>受付配置マトリクス</h3>
+                <div class="tl-wrapper">
+                    <div class="tl-grid" :style="rcGridStyle">
+                        <div class="tl-corner">時間</div>
+                        <div v-for="([rid, rname], ci) in rcRooms" :key="'rcrh'+rid"
+                             class="tl-room-header" :style="{gridColumn: ci+2}" style="background:#388e3c">
+                            {{ rname }}
+                        </div>
+                        <template v-for="(lbl, i) in rcLabels" :key="'rct'+i">
+                            <div class="tl-time-label"
+                                 :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
+                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
+                                {{ lbl.text }}
+                            </div>
+                            <div v-for="([rid], ci) in rcRooms" :key="'rcbg'+i+'-'+rid"
+                                 class="tl-bg-cell"
+                                 :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
+                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
+                            </div>
+                        </template>
+                        <div v-for="entry in receptionSessions" :key="'rcs'+entry.session.id"
+                             class="tl-session" :style="{...rcSessionStyle(entry), opacity: rcSessionOpacity(entry)}"
+                             style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-color:#388e3c;cursor:pointer"
+                             @click="rcSelectedSession = (rcSelectedSession === entry.session.id ? null : entry.session.id)">
+                            <div class="tl-session-time" style="color:#388e3c">
+                                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
+                            </div>
+                            <div class="tl-session-title" style="color:#1b5e20">{{ entry.session.title }}</div>
+                            <div class="tl-session-staff">
+                                <template v-if="entry.assigned_staff.length">
+                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">
+                                        {{ a.staff.name }}
+                                        <span v-if="a.staff.english_ok" style="font-size:0.65rem;color:#00695c">(EN)</span>
+                                    </span>
+                                </template>
+                                <span v-else class="badge warn">未配置</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 受付マトリクス詳細ポップアップ -->
+                <div v-if="rcSelectedEntry" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="rcSelectedSession=null">
+                    <div style="background:#fff;border-radius:12px;padding:24px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                            <h3 style="margin:0 0 12px 0">{{ rcSelectedEntry.session.title }}</h3>
+                            <button @click="rcSelectedSession=null" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#666;padding:0 4px">&#10005;</button>
+                        </div>
+                        <div style="font-size:0.9rem;color:#555;margin-bottom:12px">
+                            {{ fmt(rcSelectedEntry.session.start_time) }} - {{ fmt(rcSelectedEntry.session.end_time) }} |
+                            {{ rcSelectedEntry.session.room ? rcSelectedEntry.session.room.name : '' }}
+                            <span v-if="rcSelectedEntry.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c;margin-left:4px">英語対応</span>
+                        </div>
+                        <div v-if="rcSelectedEntry.session.notes" style="margin-bottom:12px">
+                            <strong style="font-size:0.85rem">備考:</strong>
+                            <p style="margin:4px 0;font-size:0.85rem;white-space:pre-wrap;color:#666">{{ rcSelectedEntry.session.notes }}</p>
+                        </div>
+                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                            <strong style="font-size:0.85rem">担当スタッフ:</strong>
+                            <template v-if="rcSelectedEntry.assigned_staff.length">
+                                <span class="badge" v-for="a in rcSelectedEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                    {{ a.staff.name }}
+                                    <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
+                                    <button @click="removeAssignment(a.assignment_id); rcSelectedSession=null" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                </span>
+                            </template>
+                            <span v-else class="badge warn">未配置</span>
+                            <span style="font-size:0.85rem;color:#888;margin-left:8px">（必要: {{ rcSelectedEntry.session.required_staff }}名）</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- 受付一覧テーブル -->
+            <h3>受付一覧</h3>
+            <p v-if="!receptionSessions.length" style="color:#888">受付がまだ登録されていません。</p>
+            <table v-else>
+                <thead><tr><th>受付名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>担当スタッフ</th><th></th></tr></thead>
+                <tbody>
+                    <tr v-for="e in receptionSessions" :key="'rctbl-'+e.session.id"
+                        v-show="!rcStaffFilter || _hasStaff(e, rcStaffFilter)">
+                        <td><strong>{{ e.session.title }}</strong></td>
+                        <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
+                        <td>{{ e.session.room ? e.session.room.name : '' }}</td>
+                        <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
+                        <td>{{ e.session.required_staff }}</td>
+                        <td>
+                            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+                                <template v-if="e.assigned_staff.length">
+                                    <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                        {{ a.staff.name }}
+                                        <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
+                                        <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                    </span>
+                                </template>
+                                <span v-else class="badge warn">未配置</span>
+                                <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                    <option :value="0">＋追加</option>
+                                    <option v-for="s in availableStaffs(e, 'reception')" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                </select>
+                                <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm edit-btn" @click="editReception(e.session)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteReception(e.session.id)">削除</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ===== 懇親会担当 ===== -->
+        <div class="panel" :class="{ active: tab === 'social' }">
+            <h2>懇親会担当</h2>
+
+            <!-- 役割登録フォーム -->
+            <h3 style="margin-top:0">役割の登録</h3>
+            <div class="form-row">
+                <div class="form-group"><label>役割名</label><input v-model="scForm.title" placeholder="例: 会場設営、ドリンク担当、司会"></div>
+                <div class="form-group"><label>必要スタッフ数</label><input v-model.number="scForm.required_staff" type="number" min="1" placeholder="2"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>開始時刻</label><input v-model="scForm.start_time" type="datetime-local"></div>
+                <div class="form-group"><label>終了時刻</label><input v-model="scForm.end_time" type="datetime-local"></div>
+                <div class="form-group"><label>場所</label>
+                    <select v-model.number="scForm.room_id">
+                        <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>英語対応</label>
+                    <label style="margin:0;display:flex;align-items:center;gap:4px;padding-top:4px"><input type="checkbox" v-model="scForm.english_required" style="width:16px;height:16px;cursor:pointer"> 必要</label>
+                </div>
+            </div>
+            <div class="form-group"><label>備考</label><textarea v-model="scForm.notes" rows="2" placeholder="例: ケータリング業者との連携が必要"></textarea></div>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+                <button class="btn" @click="submitSocial">{{ scForm.editId ? '更新' : '追加' }}</button>
+                <button v-if="scForm.editId" class="btn btn-danger" @click="cancelEditSocial">キャンセル</button>
+            </div>
+
+            <!-- 自動配置ボタン -->
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
+                <button class="btn btn-success" @click="autoAssignSocial" :disabled="!socialSessions.length" :style="{ background: socialSessions.length ? '#0d7a42' : '#aaa', cursor: socialSessions.length ? 'pointer' : 'not-allowed' }">懇親会スタッフ自動配置</button>
+                <span v-if="scAssignMsg" style="font-size:0.85rem;color:#137333">{{ scAssignMsg }}</span>
+            </div>
+
+            <!-- スタッフフィルター -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <label style="font-weight:600;font-size:0.9rem">スタッフ絞り込み:</label>
+                <select v-model.number="scStaffFilter" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
+                    <option :value="0">全員表示</option>
+                    <option v-for="s in scStaffOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
+                </select>
+                <span v-if="scStaffFilter" style="font-size:0.85rem;color:#666">{{ filteredSocialSessions.length }}/{{ socialSessions.length }}件</span>
+            </div>
+
+            <!-- 懇親会マトリクス -->
+            <template v-if="socialSessions.length">
+                <h3>懇親会配置マトリクス</h3>
+                <div class="tl-wrapper">
+                    <div class="tl-grid" :style="scGridStyle">
+                        <div class="tl-corner">時間</div>
+                        <div v-for="([rid, rname], ci) in scRooms" :key="'scrh'+rid"
+                             class="tl-room-header" :style="{gridColumn: ci+2}" style="background:#7b1fa2">
+                            {{ rname }}
+                        </div>
+                        <template v-for="(lbl, i) in scLabels" :key="'sct'+i">
+                            <div class="tl-time-label"
+                                 :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
+                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
+                                {{ lbl.text }}
+                            </div>
+                            <div v-for="([rid], ci) in scRooms" :key="'scbg'+i+'-'+rid"
+                                 class="tl-bg-cell"
+                                 :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
+                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
+                            </div>
+                        </template>
+                        <div v-for="entry in socialSessions" :key="'scs'+entry.session.id"
+                             class="tl-session" :style="{...scSessionStyle(entry), opacity: scSessionOpacity(entry)}"
+                             style="background:linear-gradient(135deg,#f3e5f5,#e1bee7);border-color:#7b1fa2;cursor:pointer"
+                             @click="scSelectedSession = (scSelectedSession === entry.session.id ? null : entry.session.id)">
+                            <div class="tl-session-time" style="color:#7b1fa2">
+                                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
+                            </div>
+                            <div class="tl-session-title" style="color:#4a148c">{{ entry.session.title }}</div>
+                            <div class="tl-session-staff">
+                                <template v-if="entry.assigned_staff.length">
+                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">
+                                        {{ a.staff.name }}
+                                        <span v-if="a.staff.english_ok" style="font-size:0.65rem;color:#00695c">(EN)</span>
+                                    </span>
+                                </template>
+                                <span v-else class="badge warn">未配置</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 懇親会マトリクス詳細ポップアップ -->
+                <div v-if="scSelectedEntry" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="scSelectedSession=null">
+                    <div style="background:#fff;border-radius:12px;padding:24px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                            <h3 style="margin:0 0 12px 0">{{ scSelectedEntry.session.title }}</h3>
+                            <button @click="scSelectedSession=null" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#666;padding:0 4px">&#10005;</button>
+                        </div>
+                        <div style="font-size:0.9rem;color:#555;margin-bottom:12px">
+                            {{ fmt(scSelectedEntry.session.start_time) }} - {{ fmt(scSelectedEntry.session.end_time) }} |
+                            {{ scSelectedEntry.session.room ? scSelectedEntry.session.room.name : '' }}
+                            <span v-if="scSelectedEntry.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c;margin-left:4px">英語対応</span>
+                        </div>
+                        <div v-if="scSelectedEntry.session.notes" style="margin-bottom:12px">
+                            <strong style="font-size:0.85rem">備考:</strong>
+                            <p style="margin:4px 0;font-size:0.85rem;white-space:pre-wrap;color:#666">{{ scSelectedEntry.session.notes }}</p>
+                        </div>
+                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                            <strong style="font-size:0.85rem">担当スタッフ:</strong>
+                            <template v-if="scSelectedEntry.assigned_staff.length">
+                                <span class="badge" v-for="a in scSelectedEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                    {{ a.staff.name }}
+                                    <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
+                                    <button @click="removeAssignment(a.assignment_id); scSelectedSession=null" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                </span>
+                            </template>
+                            <span v-else class="badge warn">未配置</span>
+                            <span style="font-size:0.85rem;color:#888;margin-left:8px">（必要: {{ scSelectedEntry.session.required_staff }}名）</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- 役割一覧 -->
+            <h3>役割一覧</h3>
+            <p v-if="!socialSessions.length" style="color:#888">懇親会の役割がまだ登録されていません。</p>
+            <table v-else>
+                <thead><tr><th>役割名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>担当スタッフ</th><th></th></tr></thead>
+                <tbody>
+                    <tr v-for="e in socialSessions" :key="'sctbl-'+e.session.id"
+                        v-show="!scStaffFilter || _hasStaff(e, scStaffFilter)">
+                        <td><strong>{{ e.session.title }}</strong></td>
+                        <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
+                        <td>{{ e.session.room ? e.session.room.name : '' }}</td>
+                        <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
+                        <td>{{ e.session.required_staff }}</td>
+                        <td>
+                            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+                                <template v-if="e.assigned_staff.length">
+                                    <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                        {{ a.staff.name }}
+                                        <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
+                                        <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                    </span>
+                                </template>
+                                <span v-else class="badge warn">未配置</span>
+                                <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                    <option :value="0">＋追加</option>
+                                    <option v-for="s in availableStaffs(e, 'social')" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                </select>
+                                <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm edit-btn" @click="editSocial(e.session)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteSocial(e.session.id)">削除</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ===== 全体スケジュール ===== -->
+        <div class="panel" :class="{ active: tab === 'all-matrix' }">
+            <h2>全体スケジュール</h2>
+
+            <!-- 全体スケジュール登録フォーム -->
+            <details style="margin-bottom:16px;border:1px solid #ffe0b2;border-radius:8px;padding:4px 12px;background:#fff8e1">
+                <summary style="cursor:pointer;font-weight:600;padding:8px 0;color:#e65100">全体スケジュールの登録</summary>
+                <div style="padding:8px 0">
+                    <div class="form-row">
+                        <div class="form-group"><label>タイトル</label><input v-model="allOvForm.title" placeholder="例: 集合時間、開場、昼休み"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>開始時刻</label><input v-model="allOvForm.start_time" type="datetime-local"></div>
+                        <div class="form-group"><label>終了時刻</label><input v-model="allOvForm.end_time" type="datetime-local"></div>
+                    </div>
+                    <div class="form-group"><label>備考</label><textarea v-model="allOvForm.notes" rows="2" placeholder="例: 正面入口に集合"></textarea></div>
+                    <div style="display:flex;gap:8px;margin-bottom:8px">
+                        <button class="btn" style="background:#e65100" @click="submitAllOverall">{{ allOvForm.editId ? '更新' : '追加' }}</button>
+                        <button v-if="allOvForm.editId" class="btn btn-danger" @click="cancelAllOverall">キャンセル</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- 自動配置・操作ボタン -->
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px">
+                <button class="btn btn-success" @click="autoAssignAll" :disabled="!allSchedule.length">全体自動配置</button>
+                <button class="btn btn-danger" @click="clearAssignments" style="margin-left:auto">配置をクリア</button>
+            </div>
+            <div v-if="allAssignMsg" style="font-size:0.85rem;color:#137333;margin-bottom:8px">{{ allAssignMsg }}</div>
+
+            <!-- スタッフフィルター -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <label style="font-weight:600;font-size:0.9rem">スタッフ絞り込み:</label>
+                <select v-model.number="allStaffFilter" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
+                    <option :value="0">全員表示</option>
+                    <option v-for="s in staffs" :key="s.id" :value="s.id">{{ s.name }} ({{ catLabel(s.role) }})</option>
+                </select>
+            </div>
+
+            <!-- 凡例 -->
+            <div class="tl-legend" style="margin-bottom:12px">
+                <span style="font-weight:600">凡例:</span>
+                <span class="tl-legend-item">
+                    <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-color:#e65100"></span>
+                    全体
+                </span>
+                <span class="tl-legend-item">
+                    <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8"></span>
+                    セッション
+                </span>
+                <span class="tl-legend-item">
+                    <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-color:#388e3c"></span>
+                    受付
+                </span>
+                <span class="tl-legend-item">
+                    <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#f3e5f5,#e1bee7);border-color:#7b1fa2"></span>
+                    懇親会
+                </span>
+            </div>
+
+            <p v-if="!allSchedule.length">セッションがまだ登録されていません。</p>
+            <template v-else>
+                <div class="tl-wrapper">
+                    <div class="tl-grid" :style="allGridStyle">
+                        <div class="tl-corner">時間</div>
+                        <div v-for="(col, ci) in allColumns" :key="'arh'+col.id"
+                             class="tl-room-header" :style="{gridColumn: ci+2, background: col.type==='overall' ? '#e65100' : col.type==='reception' ? '#388e3c' : col.type==='social' ? '#7b1fa2' : ''}">
+                            {{ col.name }}
+                        </div>
+                        <template v-for="(lbl, i) in allLabels" :key="'at'+i">
+                            <div class="tl-time-label"
+                                 :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
+                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
+                                {{ lbl.text }}
+                            </div>
+                            <div v-for="(col, ci) in allColumns" :key="'abg'+i+'-'+col.id"
+                                 class="tl-bg-cell"
+                                 :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
+                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
+                            </div>
+                        </template>
+                        <div v-for="entry in allSchedule" :key="'as'+entry.session.id"
+                             class="tl-session" :style="{...allSessionStyle(entry), opacity: allSessionOpacity(entry), ...allSessionBg(entry.session.category), cursor:'pointer'}"
+                             @click="allSelectedSession = (allSelectedSession === entry.session.id ? null : entry.session.id)">
+                            <div class="tl-session-time">
+                                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
+                            </div>
+                            <div class="tl-session-title">{{ entry.session.title }}</div>
+                            <div class="tl-session-staff">
+                                <template v-if="entry.assigned_staff.length">
+                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
+                                </template>
+                                <span v-else class="badge warn">未配置</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- マトリクス詳細ポップアップ（配置管理付き） -->
+                <div v-if="allSelectedEntry" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="allSelectedSession=null">
+                    <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                            <h3 style="margin:0 0 12px 0">{{ allSelectedEntry.session.title }}</h3>
+                            <button @click="allSelectedSession=null" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#666;padding:0 4px">&#10005;</button>
+                        </div>
+                        <div style="font-size:0.9rem;color:#555;margin-bottom:12px">
+                            {{ fmt(allSelectedEntry.session.start_time) }} - {{ fmt(allSelectedEntry.session.end_time) }} |
+                            {{ allSelectedEntry.session.room ? allSelectedEntry.session.room.name : '' }} |
+                            <span class="badge">{{ catLabel(allSelectedEntry.session.category) }}</span>
+                            <span v-if="allSelectedEntry.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c;margin-left:4px">英語対応</span>
+                        </div>
+                        <div v-if="allSelectedEntry.session.notes" style="margin-bottom:12px">
+                            <strong style="font-size:0.85rem">備考:</strong>
+                            <p style="margin:4px 0;font-size:0.85rem;white-space:pre-wrap;color:#666">{{ allSelectedEntry.session.notes }}</p>
+                        </div>
+                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
+                            <strong style="font-size:0.85rem">担当スタッフ:</strong>
+                            <span style="font-size:0.85rem;color:#888;margin-left:8px">（必要: {{ allSelectedEntry.session.required_staff }}名）</span>
+                            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:8px">
+                                <template v-if="allSelectedEntry.assigned_staff.length">
+                                    <span class="badge" v-for="a in allSelectedEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                        {{ a.staff.name }}
+                                        <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
+                                        <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                    </span>
+                                </template>
+                                <span v-else class="badge warn">未配置</span>
+                                <select v-model.number="assignStaffSelect[allSelectedEntry.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                    <option :value="0">＋追加</option>
+                                    <option v-for="s in availableStaffs(allSelectedEntry)" :key="s.id" :value="s.id">{{ s.name }} ({{ catLabel(s.role) }})</option>
+                                </select>
+                                <button v-if="assignStaffSelect[allSelectedEntry.session.id]" class="btn btn-sm" @click="addAssignment(allSelectedEntry.session.id)" style="padding:2px 8px">追加</button>
+                            </div>
+                        </div>
+                        <!-- 受付・懇親会の編集・削除 -->
+                        <div v-if="allSelectedEntry.session.category === 'overall'" style="margin-top:16px;padding-top:12px;border-top:1px solid #e0e0e0;display:flex;gap:8px">
+                            <button class="btn btn-sm edit-btn" @click="editAllEntry(allSelectedEntry.session)">編集</button>
+                            <button class="del-btn" @click="deleteAllEntry(allSelectedEntry.session.id, allSelectedEntry.session.category)">削除</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- 全体一覧テーブル -->
+            <h3>全スケジュール一覧</h3>
+            <table v-if="allSchedule.length">
+                <thead><tr><th>カテゴリ</th><th>タイトル</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>担当スタッフ</th></tr></thead>
+                <tbody>
+                    <tr v-for="e in allSchedule" :key="'alltbl-'+e.session.id"
+                        v-show="!allStaffFilter || _hasStaff(e, allStaffFilter)">
+                        <td><span class="badge" :style="e.session.category==='reception' ? 'background:#e8f5e9;color:#1b5e20' : e.session.category==='social' ? 'background:#f3e5f5;color:#4a148c' : ''">{{ catLabel(e.session.category) }}</span></td>
+                        <td><a href="#" @click.prevent="allSelectedSession = e.session.id" style="color:#1a73e8;text-decoration:none"><strong>{{ e.session.title }}</strong></a></td>
+                        <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
+                        <td>{{ e.session.room ? e.session.room.name : '' }}</td>
+                        <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
+                        <td>{{ e.session.required_staff }}</td>
+                        <td>
+                            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+                                <template v-if="e.assigned_staff.length">
+                                    <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                        {{ a.staff.name }}
+                                        <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                    </span>
+                                </template>
+                                <span v-else class="badge warn">未配置</span>
+                                <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                    <option :value="0">＋追加</option>
+                                    <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }} ({{ catLabel(s.role) }})</option>
+                                </select>
+                                <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ===== 配置アルゴリズム ===== -->
+        <div class="panel" :class="{ active: tab === 'algorithm' }">
+            <h2>配置アルゴリズム説明</h2>
+            <p style="color:#555;margin-bottom:20px">自動配置ボタンを押した際に実行されるスタッフ配置アルゴリズムの仕組みを説明します。</p>
+
+            <!-- 全体フロー -->
+            <div style="background:#e8f0fe;border-radius:8px;padding:16px 20px;margin-bottom:20px">
+                <h3 style="margin:0 0 12px;color:#1a73e8">全体フロー</h3>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                    <span style="background:#1a73e8;color:#fff;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:600">1. 既存配置クリア</span>
+                    <span style="color:#999;font-size:1.2rem">&rarr;</span>
+                    <span style="background:#1a73e8;color:#fff;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:600">2. セッション順にループ</span>
+                    <span style="color:#999;font-size:1.2rem">&rarr;</span>
+                    <span style="background:#1a73e8;color:#fff;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:600">3. スタッフをスコアリング</span>
+                    <span style="color:#999;font-size:1.2rem">&rarr;</span>
+                    <span style="background:#1a73e8;color:#fff;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:600">4. 上位から配置</span>
+                    <span style="color:#999;font-size:1.2rem">&rarr;</span>
+                    <span style="background:#1a73e8;color:#fff;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:600">5. 初心者制約の調整</span>
+                </div>
+            </div>
+
+            <!-- ロール判定 -->
+            <div style="background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;padding:16px 20px;margin-bottom:16px">
+                <h3 style="margin:0 0 8px;font-size:1rem">ロールによるフィルタリング</h3>
+                <p style="margin:0 0 8px;font-size:0.9rem;color:#555">セッションのカテゴリに応じて、対応するロールのスタッフのみが候補になります。</p>
+                <table style="font-size:0.85rem">
+                    <thead><tr><th>セッションカテゴリ</th><th>対象スタッフロール</th></tr></thead>
+                    <tbody>
+                        <tr><td>一般 / 技術 / WS / 基調講演 / LT</td><td><span class="badge">セッション</span></td></tr>
+                        <tr><td>受付</td><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">受付</span></td></tr>
+                        <tr><td>懇親会</td><td><span class="badge" style="background:#f3e5f5;color:#4a148c">懇親会</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 必須チェック -->
+            <div style="background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;padding:16px 20px;margin-bottom:16px">
+                <h3 style="margin:0 0 8px;font-size:1rem">配置前の必須チェック</h3>
+                <ul style="margin:0;padding-left:20px;font-size:0.9rem;color:#555;line-height:1.8">
+                    <li><strong>活動可能時間:</strong> スタッフの活動可能時間帯にセッション全体が収まること（未設定の場合は制約なし）</li>
+                    <li><strong>時間重複:</strong> 既に配置済みの別セッションと時間が重複しないこと</li>
+                    <li><strong>最大稼働時間:</strong> スタッフの合計稼働時間が上限を超えないこと</li>
+                    <li><strong>最低配置人数:</strong> 各セッションに最低2名を配置（設定値が2未満の場合でも2名）</li>
+                </ul>
+            </div>
+
+            <!-- スコアリング -->
+            <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:16px 20px;margin-bottom:16px">
+                <h3 style="margin:0 0 12px;font-size:1rem;color:#e65100">スコアリング（優先度の計算）</h3>
+                <p style="margin:0 0 12px;font-size:0.9rem;color:#555">各スタッフに対してスコアを計算し、スコアが高い順に配置します。</p>
+                <table style="font-size:0.85rem">
+                    <thead><tr><th>項目</th><th>スコア</th><th>説明</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>希望セッション</strong></td><td style="color:#1a73e8;font-weight:700">最大 +100</td><td>優先度1 = +100, 優先度2 = +80, 優先度3 = +60 ...</td></tr>
+                        <tr><td><strong>英語対応</strong></td><td style="color:#1a73e8;font-weight:700">+50</td><td>英語対応が必要なセッションで、英語OKスタッフの場合</td></tr>
+                        <tr><td><strong>担当件数均等化</strong></td><td style="color:#d93025;font-weight:700">-5 / 件</td><td>既に担当しているセッション数に応じて減点（負荷分散）</td></tr>
+                        <tr><td><strong>階移動ペナルティ</strong></td><td style="color:#d93025;font-weight:700">-3 / 階</td><td>直前セッションの部屋と階が異なる場合、階差分だけ減点</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 初心者制約 -->
+            <div style="background:#fce4ec;border:1px solid #ef9a9a;border-radius:8px;padding:16px 20px;margin-bottom:16px">
+                <h3 style="margin:0 0 8px;font-size:1rem;color:#c62828">初心者制約（2段階）</h3>
+                <div style="font-size:0.9rem;color:#555;line-height:1.8">
+                    <p style="margin:0 0 8px"><strong>第1段階: 配置時の優先確保</strong></p>
+                    <ul style="margin:0 0 12px;padding-left:20px">
+                        <li>未経験の初心者（経験回数=0）が候補にいる場合、まず経験者を1名優先的に配置</li>
+                        <li>その後、残り枠を通常のスコア順で埋める</li>
+                    </ul>
+                    <p style="margin:0 0 8px"><strong>第2段階: 配置後のスワップ調整</strong></p>
+                    <ul style="margin:0;padding-left:20px">
+                        <li>全セッションの配置完了後、初心者のみで構成されたセッションがないかチェック</li>
+                        <li>該当がある場合、同時間帯の別セッションに配置された経験者とスワップ（入れ替え）</li>
+                        <li>スワップ先のセッションに経験者が残ることを保証（経験者が1人しかいない場合はスワップしない）</li>
+                    </ul>
+                    <p style="margin:8px 0 0;font-size:0.85rem;color:#888">※ 一度経験者と組んでセッションを担当した初心者は「訓練済み」として、以降は経験者扱いになります。</p>
+                </div>
+            </div>
+
+            <!-- 必要スタッフ数の自動計算 -->
+            <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:16px 20px;margin-bottom:16px">
+                <h3 style="margin:0 0 8px;font-size:1rem;color:#2e7d32">必要スタッフ数の自動計算</h3>
+                <p style="margin:0 0 8px;font-size:0.9rem;color:#555">「セッション管理」タブの「必要スタッフ数を自動計算」ボタンで実行されるロジックです。</p>
+                <table style="font-size:0.85rem">
+                    <thead><tr><th>指標</th><th>計算方法</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>セッション別必要人数</strong></td>
+                            <td>活動可能スタッフ数 &divide; 同時開催セッション数（最低2名、最大3名）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>最小必要人数</strong></td>
+                            <td>全時間帯で「稼働中セッションの必要人数合計」の最大値</td>
+                        </tr>
+                        <tr>
+                            <td><strong>休憩込み必要人数</strong></td>
+                            <td>上記に加え、直前30分以内に終了したセッション担当者（休憩中）も加算した最大値</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 手動配置の制約 -->
+            <div style="background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;padding:16px 20px;margin-bottom:16px">
+                <h3 style="margin:0 0 8px;font-size:1rem">手動配置の制約</h3>
+                <ul style="margin:0;padding-left:20px;font-size:0.9rem;color:#555;line-height:1.8">
+                    <li>プルダウンには時間が重複しないスタッフのみ表示されます</li>
+                    <li>バックエンドでも時間重複を二重チェックし、重複があればエラーメッセージで通知します</li>
+                    <li>同一スタッフを同一セッションに重複配置することはできません</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ===== エクスポート/インポート ===== -->
+        <div class="panel" :class="{ active: tab === 'io' }">
+            <h2>エクスポート / インポート</h2>
+
+            <!-- Excelエクスポート -->
+            <div style="background:#e8f0fe;border:1px solid #a8c7fa;border-radius:8px;padding:20px;margin-bottom:20px">
+                <h3 style="margin:0 0 8px;color:#1a73e8">Excelエクスポート</h3>
+                <p style="margin:0 0 12px;font-size:0.9rem;color:#555">全データをExcelファイルとしてエクスポートします。全体スケジュールマトリクス、セッション管理、スタッフ管理、受付案内、懇親会担当の各シートが含まれます。</p>
+                <button class="btn" style="background:#1a73e8;font-size:1rem;padding:10px 24px" @click="exportExcel">Excelファイルをダウンロード</button>
+            </div>
+
+            <!-- バックアップエクスポート -->
+            <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:20px;margin-bottom:20px">
+                <h3 style="margin:0 0 8px;color:#2e7d32">バックアップエクスポート</h3>
+                <p style="margin:0 0 12px;font-size:0.9rem;color:#555">全データ（部屋、セッション、スタッフ、配置、画像を含む）をZIPファイルとしてエクスポートします。インポートで復元できます。</p>
+                <button class="btn" style="background:#2e7d32;font-size:1rem;padding:10px 24px" @click="exportBackup">バックアップをダウンロード</button>
+            </div>
+
+            <!-- インポート -->
+            <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:20px;margin-bottom:20px">
+                <h3 style="margin:0 0 8px;color:#e65100">バックアップインポート</h3>
+                <p style="margin:0 0 4px;font-size:0.9rem;color:#555">バックアップZIPファイルからデータを復元します。</p>
+                <p style="margin:0 0 12px;font-size:0.85rem;color:#d93025;font-weight:600">※ 現在の全データは削除され、バックアップの内容で上書きされます。</p>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <label style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#fff;border:2px dashed #e65100;border-radius:8px;cursor:pointer;font-size:0.95rem;color:#e65100;font-weight:600">
+                        ZIPファイルを選択
+                        <input type="file" accept=".zip" style="display:none" @change="onBackupFileChange">
+                    </label>
+                    <span v-if="backupFileName" style="font-size:0.9rem;color:#333">{{ backupFileName }}</span>
+                </div>
+                <div v-if="backupFileName" style="margin-top:12px">
+                    <button class="btn btn-danger" style="font-size:1rem;padding:10px 24px" @click="importBackup">インポート実行</button>
+                </div>
+                <div v-if="ioMsg" :style="{marginTop:'12px',padding:'10px 16px',borderRadius:'6px',fontSize:'0.9rem',background: ioMsgError ? '#fce4ec' : '#e8f5e9', color: ioMsgError ? '#c62828' : '#2e7d32'}">
+                    {{ ioMsg }}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- セッション詳細ポップアップ（全タブ共通） -->
+    <div v-if="sessDetailSession" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="sessDetailSession=null">
+        <div style="background:#fff;border-radius:12px;padding:28px;max-width:640px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <h3 style="margin:0 0 16px 0;font-size:1.3rem">{{ sessDetailSession.title }}</h3>
+                <button @click="sessDetailSession=null" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#666;padding:0 4px">&#10005;</button>
+            </div>
+
+            <!-- 登壇者情報 -->
+            <template v-if="sessDetailSession.category === 'lt' && sessDetailSession.lt_talks && sessDetailSession.lt_talks.length">
+                <div style="margin-bottom:16px">
+                    <strong style="font-size:0.9rem;color:#555">LT登壇者一覧</strong>
+                    <div v-for="(t, idx) in sessDetailSession.lt_talks" :key="t.id" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0">
+                        <span style="font-weight:700;color:#1a73e8;min-width:24px">{{ idx + 1 }}.</span>
+                        <div>
+                            <strong>{{ t.speaker }}</strong>
+                            <span v-if="t.speaker_org || t.speaker_title" style="color:#666;font-size:0.85rem"> ({{ [t.speaker_title, t.speaker_org].filter(Boolean).join(' / ') }})</span>
+                            <br><span style="color:#555;font-size:0.85rem">{{ t.title }}</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <template v-else>
+                <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:8px">
+                    <img v-if="sessDetailSession.speaker_photo" :src="sessDetailSession.speaker_photo" :alt="sessDetailSession.speaker"
+                         style="width:180px;height:180px;border-radius:8px;object-fit:cover;border:2px solid #e0e0e0;flex-shrink:0">
+                    <div v-else style="width:180px;height:180px;border-radius:8px;background:#1a73e8;display:flex;align-items:center;justify-content:center;font-size:3rem;color:#fff;font-weight:700;flex-shrink:0">
+                        {{ sessDetailSession.speaker.charAt(0) }}
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:1.3rem;font-weight:700">{{ sessDetailSession.speaker }}</div>
+                        <div v-if="sessDetailSession.speaker_kana" style="font-size:0.85rem;color:#888;margin-top:2px">{{ sessDetailSession.speaker_kana }}</div>
+                        <div v-if="sessDetailSession.speaker_title || sessDetailSession.speaker_org" style="font-size:0.95rem;color:#555;margin-top:6px">
+                            {{ [sessDetailSession.speaker_title, sessDetailSession.speaker_org].filter(Boolean).join(' / ') }}
+                        </div>
+                        <div v-if="sessDetailSession.speaker_profile" style="font-size:0.85rem;color:#666;margin-top:10px;line-height:1.6">{{ sessDetailSession.speaker_profile }}</div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- セッション情報 -->
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;font-size:0.9rem">
+                <div style="display:flex;align-items:center;gap:4px;color:#555">
+                    <strong>時間:</strong> {{ fmt(sessDetailSession.start_time) }} - {{ fmt(sessDetailSession.end_time) }}
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;color:#555">
+                    <strong>部屋:</strong> {{ sessDetailSession.room ? sessDetailSession.room.name : '' }}
+                </div>
+                <div>
+                    <span class="badge">{{ catLabel(sessDetailSession.category) }}</span>
+                    <span v-if="sessDetailSession.english_required" class="badge" style="background:#e0f2f1;color:#00695c;margin-left:4px">EN</span>
+                </div>
+                <div style="color:#555"><strong>必要人数:</strong> {{ sessDetailSession.required_staff }}名</div>
+            </div>
+
+            <div v-if="sessDetailSession.description" style="margin-bottom:12px;padding:12px;background:#f8f9fa;border-radius:6px">
+                <strong style="font-size:0.85rem;color:#333">セッション説明</strong>
+                <p style="margin:6px 0 0;font-size:0.9rem;white-space:pre-wrap;line-height:1.6">{{ sessDetailSession.description }}</p>
+            </div>
+            <div v-if="sessDetailSession.notes" style="margin-bottom:12px;padding:12px;background:#fff8e1;border-radius:6px">
+                <strong style="font-size:0.85rem;color:#e65100">備考</strong>
+                <p style="margin:6px 0 0;font-size:0.9rem;white-space:pre-wrap;line-height:1.6;color:#666">{{ sessDetailSession.notes }}</p>
+            </div>
+            <div v-if="!sessDetailSession.description && !sessDetailSession.notes && !sessDetailSession.speaker_profile && sessDetailSession.category !== 'lt'" style="color:#aaa;font-size:0.85rem">詳細情報なし</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+createApp({
+    setup() {
+        const API = '';
+        const CATEGORY_LABELS = { general: '一般', tech: '技術', workshop: 'ワークショップ', keynote: '基調講演', lt: 'LT', reception: '受付', social: '懇親会', session: 'セッション', overall: '全体' };
+        const SLOT_MIN = 5; // 5分刻み
+
+        const tab = ref('rooms');
+        const rooms = ref([]);
+        const sessions = ref([]);
+        const staffs = ref([]);
+        const schedule = ref([]);
+        const staffAssignments = ref([]);
+        const scheduleMsg = ref(null);
+        const scheduleMsgError = ref('');
+        const sessPhotoPreview = ref('');
+        const sessPhoto = ref(null);
+        const matrixStaffFilter = ref(0);
+        const rcStaffFilter = ref(0);
+        const scStaffFilter = ref(0);
+
+        const roomForm = reactive({ editId: null, name: '', capacity: null, floor: 1 });
+        const venueMaps = ref([]);
+        const sessDetailSession = ref(null);
+        const venueMapForm = reactive({ editId: null, title: '', order: 0, currentImage: '' });
+        const venueMapPreview = ref('');
+        const venueMapInput = ref(null);
+        const mapModal = ref(null);
+        const sessForm = reactive({
+            editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
+            room_id: null, category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '',
+            speaker_org: '', speaker_title: '', speaker_profile: ''
+        });
+        const ltTalks = reactive([]);
+        const staffForm = reactive({ editId: null, name: '', slack_name: '', role: 'session', experience_count: 0, english_ok: false });
+        const prefForms = reactive({});
+        const availForms = reactive({});
+
+        // --- ユーティリティ ---
+        function catLabel(cat) { return CATEGORY_LABELS[cat] || cat; }
+        function fmt(dt) {
+            return new Date(dt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+        function fmtShort(dt) {
+            return new Date(dt).toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        }
+        function sortedPrefs(prefs) { return [...prefs].sort((a, b) => a.priority - b.priority); }
+        function toLocalInput(dt) {
+            const d = new Date(dt);
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        // --- API ---
+        async function loadRooms() { rooms.value = await (await fetch(API + '/api/rooms/')).json(); }
+        async function loadVenueMaps() { venueMaps.value = await (await fetch(API + '/api/venue-maps/')).json(); }
+        async function loadSessions() { sessions.value = await (await fetch(API + '/api/sessions/')).json(); }
+        async function loadStaffs() {
+            const data = await (await fetch(API + '/api/staffs/')).json();
+            staffs.value = data;
+            data.forEach(s => {
+                if (!prefForms[s.id]) prefForms[s.id] = { session_id: null, priority: 1 };
+                if (!availForms[s.id]) availForms[s.id] = { start: '', end: '' };
+            });
+        }
+        async function loadSchedule() {
+            schedule.value = ((await (await fetch(API + '/api/assignments/schedule')).json()).schedule || []);
+        }
+        async function loadStaffAssignments() {
+            staffAssignments.value = ((await (await fetch(API + '/api/assignments/staff-schedule')).json()).staff_assignments || []);
+        }
+
+        function exportExcel() {
+            window.open(API + '/api/export/excel', '_blank');
+        }
+        function exportBackup() {
+            window.open(API + '/api/export/backup', '_blank');
+        }
+        const backupFile = ref(null);
+        const backupFileName = ref('');
+        const ioMsg = ref('');
+        const ioMsgError = ref(false);
+        function onBackupFileChange(e) {
+            const f = e.target.files[0];
+            if (f) { backupFile.value = f; backupFileName.value = f.name; }
+            ioMsg.value = '';
+        }
+        async function importBackup() {
+            if (!backupFile.value) return;
+            if (!confirm('現在の全データが削除され、バックアップの内容で上書きされます。\nこの操作は取り消せません。よろしいですか？')) return;
+            ioMsg.value = 'インポート中...';
+            ioMsgError.value = false;
+            const fd = new FormData();
+            fd.append('file', backupFile.value);
+            try {
+                const res = await fetch(API + '/api/export/restore', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (res.ok) {
+                    ioMsg.value = `インポート完了: 部屋 ${data.rooms}件, セッション ${data.sessions}件, スタッフ ${data.staffs}件, 配置 ${data.assignments}件`;
+                    ioMsgError.value = false;
+                    backupFile.value = null;
+                    backupFileName.value = '';
+                    await loadRooms(); await loadSessions(); await loadStaffs(); await loadSchedule();
+                } else {
+                    ioMsg.value = data.detail || 'インポートに失敗しました';
+                    ioMsgError.value = true;
+                }
+            } catch (e) {
+                ioMsg.value = 'インポートに失敗しました: ' + e.message;
+                ioMsgError.value = true;
+            }
+        }
+
+        async function switchTab(name) {
+            tab.value = name;
+            if (name === 'rooms') await loadRooms();
+            if (name === 'venue-maps') await loadVenueMaps();
+            if (name === 'sessions') { await loadRooms(); await loadSessions(); }
+            if (name === 'staffs') { await loadSessions(); await loadStaffs(); await loadSchedule(); }
+            if (name === 'schedule') { await loadStaffs(); await loadSchedule(); await loadStaffAssignments(); }
+            if (name === 'matrix') { await loadStaffs(); await loadSchedule(); await loadStaffAssignments(); }
+            if (name === 'all-matrix') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); }
+            if (name === 'reception') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); if (!rcForm.room_id && rooms.value.length) rcForm.room_id = rooms.value[0].id; }
+            if (name === 'social') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); if (!scForm.room_id && rooms.value.length) scForm.room_id = rooms.value[0].id; }
+        }
+
+        // --- 部屋 ---
+        function cancelEditRoom() {
+            Object.assign(roomForm, { editId: null, name: '', capacity: null, floor: 1 });
+        }
+        function editRoom(r) {
+            Object.assign(roomForm, { editId: r.id, name: r.name, capacity: r.capacity, floor: r.floor });
+        }
+        async function submitRoom() {
+            const payload = { name: roomForm.name, capacity: roomForm.capacity, floor: roomForm.floor };
+            if (roomForm.editId) {
+                await fetch(API + `/api/rooms/${roomForm.editId}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                await fetch(API + '/api/rooms/', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            }
+            cancelEditRoom();
+            await loadRooms();
+        }
+        async function deleteRoom(id) { await fetch(API + `/api/rooms/${id}`, { method: 'DELETE' }); await loadRooms(); }
+
+        // --- 会場地図 ---
+        function onVenueMapChange(e) {
+            const file = e.target.files[0];
+            venueMapPreview.value = file ? URL.createObjectURL(file) : '';
+        }
+        function cancelEditVenueMap() {
+            Object.assign(venueMapForm, { editId: null, title: '', order: 0, currentImage: '' });
+            venueMapPreview.value = '';
+            if (venueMapInput.value) venueMapInput.value.value = '';
+        }
+        function editVenueMap(m) {
+            Object.assign(venueMapForm, { editId: m.id, title: m.title, order: m.order, currentImage: m.image });
+            venueMapPreview.value = '';
+            if (venueMapInput.value) venueMapInput.value.value = '';
+        }
+        async function submitVenueMap() {
+            const fd = new FormData();
+            fd.append('title', venueMapForm.title);
+            fd.append('order', venueMapForm.order);
+            if (venueMapInput.value && venueMapInput.value.files[0]) fd.append('image', venueMapInput.value.files[0]);
+            if (venueMapForm.editId) {
+                await fetch(API + `/api/venue-maps/${venueMapForm.editId}`, { method: 'PUT', body: fd });
+            } else {
+                await fetch(API + '/api/venue-maps/', { method: 'POST', body: fd });
+            }
+            cancelEditVenueMap();
+            await loadVenueMaps();
+        }
+        async function deleteVenueMap(id) { await fetch(API + `/api/venue-maps/${id}`, { method: 'DELETE' }); await loadVenueMaps(); }
+
+        // --- セッション ---
+        function toggleSessionDetail(id) {
+            if (sessDetailSession.value && sessDetailSession.value.id === id) {
+                sessDetailSession.value = null;
+            } else {
+                // セッション管理・配置どちらからでも検索
+                let s = sessions.value.find(s => s.id === id);
+                if (!s) {
+                    const entry = schedule.value.find(e => e.session.id === id);
+                    if (entry) s = entry.session;
+                }
+                sessDetailSession.value = s || null;
+            }
+        }
+        function onPhotoChange(e) {
+            const file = e.target.files[0];
+            sessPhotoPreview.value = file ? URL.createObjectURL(file) : '';
+        }
+        function addLTTalk() {
+            ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '' });
+        }
+        function cancelEditSession() {
+            Object.assign(sessForm, {
+                editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
+                room_id: rooms.value.length ? rooms.value[0].id : null,
+                category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '',
+                speaker_org: '', speaker_title: '', speaker_profile: ''
+            });
+            ltTalks.splice(0);
+            sessPhotoPreview.value = '';
+            if (sessPhoto.value) sessPhoto.value.value = '';
+        }
+        function editSession(s) {
+            Object.assign(sessForm, {
+                editId: s.id, title: s.title, speaker: s.speaker, speaker_kana: s.speaker_kana || '',
+                start_time: toLocalInput(s.start_time), end_time: toLocalInput(s.end_time),
+                room_id: s.room_id, category: s.category,
+                required_staff: s.required_staff, english_required: !!s.english_required, description: s.description || '', notes: s.notes || '',
+                currentPhoto: s.speaker_photo || '',
+                speaker_org: s.speaker_org || '', speaker_title: s.speaker_title || '',
+                speaker_profile: s.speaker_profile || ''
+            });
+            ltTalks.splice(0);
+            if (s.lt_talks && s.lt_talks.length) {
+                s.lt_talks.forEach(t => ltTalks.push({
+                    title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana || '',
+                    speaker_org: t.speaker_org || '', speaker_title: t.speaker_title || ''
+                }));
+            }
+            sessPhotoPreview.value = '';
+            if (sessPhoto.value) sessPhoto.value.value = '';
+        }
+        async function submitSession() {
+            const fd = new FormData();
+            fd.append('title', sessForm.title);
+            // LT/受付/懇親会の場合、speakerは自動設定
+            if (sessForm.category === 'lt' && ltTalks.length) {
+                fd.append('speaker', ltTalks.map(t => t.speaker).filter(Boolean).join(', '));
+            } else if (['reception', 'social'].includes(sessForm.category)) {
+                fd.append('speaker', '-');
+            } else {
+                fd.append('speaker', sessForm.speaker);
+            }
+            fd.append('speaker_kana', sessForm.speaker_kana);
+            fd.append('speaker_org', sessForm.speaker_org);
+            fd.append('speaker_title', sessForm.speaker_title);
+            fd.append('speaker_profile', sessForm.speaker_profile);
+            const st = sessForm.start_time; const et = sessForm.end_time;
+            fd.append('start_time', st.length === 16 ? st + ':00' : st);
+            fd.append('end_time', et.length === 16 ? et + ':00' : et);
+            fd.append('room_id', sessForm.room_id);
+            fd.append('category', sessForm.category);
+            fd.append('required_staff', sessForm.required_staff);
+            fd.append('english_required', sessForm.english_required);
+            fd.append('description', sessForm.description);
+            fd.append('notes', sessForm.notes);
+            if (sessPhoto.value && sessPhoto.value.files[0]) fd.append('speaker_photo', sessPhoto.value.files[0]);
+
+            let sessionId = sessForm.editId;
+            if (sessionId) {
+                await fetch(API + `/api/sessions/${sessionId}`, { method: 'PUT', body: fd });
+            } else {
+                const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+                const created = await res.json();
+                sessionId = created.id;
+            }
+            // LTトーク保存
+            if (sessForm.category === 'lt' && ltTalks.length) {
+                const talks = ltTalks.map((t, i) => ({
+                    title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana,
+                    speaker_org: t.speaker_org, speaker_title: t.speaker_title, order: i
+                }));
+                await fetch(API + `/api/sessions/${sessionId}/lt-talks`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(talks)
+                });
+            }
+            cancelEditSession();
+            await loadSessions();
+        }
+        async function deleteSession(id) { await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' }); await loadSessions(); }
+
+        const calcStaffMsg = ref('');
+        const calcStaffSummary = ref(null);
+        async function calcRequiredStaff() {
+            const data = await (await fetch(API + '/api/sessions/calc-required-staff', { method: 'POST' })).json();
+            calcStaffMsg.value = data.message;
+            calcStaffSummary.value = {
+                min: data.min_total_staff,
+                comfortable: data.comfortable_total_staff,
+            };
+            await loadSessions();
+        }
+
+        // --- スタッフ ---
+        const newStaffAvails = reactive([]);
+        const newAvailForm = reactive({ start: '', end: '' });
+        function addNewStaffAvail() {
+            if (!newAvailForm.start || !newAvailForm.end) return;
+            newStaffAvails.push({ start_time: newAvailForm.start + ':00', end_time: newAvailForm.end + ':00' });
+            newAvailForm.start = '';
+            newAvailForm.end = '';
+        }
+
+        const newStaffPrefs = reactive([]);
+        const newPrefForm = reactive({ session_id: null, priority: 1 });
+        function addNewStaffPref() {
+            if (!newPrefForm.session_id) return;
+            newStaffPrefs.push({ session_id: newPrefForm.session_id, priority: newPrefForm.priority || 1 });
+            newPrefForm.session_id = null;
+            newPrefForm.priority = 1;
+        }
+        function sessionTitle(id) {
+            const s = sessions.value.find(s => s.id === id);
+            return s ? s.title : 'セッション ' + id;
+        }
+
+        const staffAssignCount = computed(() => {
+            const counts = {};
+            schedule.value.forEach(e => {
+                e.assigned_staff.forEach(a => {
+                    counts[a.staff.id] = (counts[a.staff.id] || 0) + 1;
+                });
+            });
+            return counts;
+        });
+
+        const editingStaffPrefs = computed(() => {
+            if (!staffForm.editId) return [];
+            const s = staffs.value.find(s => s.id === staffForm.editId);
+            return s ? sortedPrefs(s.preferred_sessions) : [];
+        });
+        const editingStaffAvails = computed(() => {
+            if (!staffForm.editId) return [];
+            const s = staffs.value.find(s => s.id === staffForm.editId);
+            return s ? s.availabilities : [];
+        });
+
+        async function submitStaff() {
+            const payload = { name: staffForm.name, slack_name: staffForm.slack_name, role: staffForm.role, experience_count: staffForm.experience_count, english_ok: staffForm.english_ok };
+            if (staffForm.editId) {
+                await fetch(API + `/api/staffs/${staffForm.editId}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                payload.availabilities = newStaffAvails.map(a => ({ start_time: a.start_time, end_time: a.end_time }));
+                payload.preferred_sessions = newStaffPrefs.map(p => ({ session_id: p.session_id, priority: p.priority }));
+                await fetch(API + '/api/staffs/', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            }
+            cancelEditStaff();
+            await loadStaffs();
+        }
+        function editStaff(s) {
+            staffForm.editId = s.id;
+            staffForm.name = s.name;
+            staffForm.slack_name = s.slack_name || '';
+            staffForm.role = s.role || 'session';
+            staffForm.experience_count = s.experience_count;
+            staffForm.english_ok = !!s.english_ok;
+        }
+        function cancelEditStaff() {
+            Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: 'session', experience_count: 0, english_ok: false });
+            newStaffAvails.splice(0);
+            newAvailForm.start = '';
+            newAvailForm.end = '';
+            newStaffPrefs.splice(0);
+            newPrefForm.session_id = null;
+            newPrefForm.priority = 1;
+        }
+        async function deleteStaff(id) { await fetch(API + `/api/staffs/${id}`, { method: 'DELETE' }); await loadStaffs(); }
+        async function uploadStaffPhoto(staffId, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('photo', file);
+            const res = await fetch(API + `/api/staffs/${staffId}/photo`, { method: 'POST', body: fd });
+            if (res.ok) { await loadStaffs(); } else { alert('写真のアップロードに失敗しました'); }
+            event.target.value = '';
+        }
+        async function addPref(staffId) {
+            const f = prefForms[staffId];
+            await fetch(API + `/api/staffs/${staffId}/preferred-sessions`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: f.session_id, priority: f.priority })
+            });
+            await loadStaffs();
+        }
+        async function removePref(staffId, prefId) {
+            await fetch(API + `/api/staffs/${staffId}/preferred-sessions/${prefId}`, { method: 'DELETE' }); await loadStaffs();
+        }
+        async function addAvail(staffId) {
+            const f = availForms[staffId];
+            if (!f.start || !f.end) return;
+            await fetch(API + `/api/staffs/${staffId}/availabilities`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ start_time: f.start + ':00', end_time: f.end + ':00' })
+            });
+            await loadStaffs();
+        }
+        async function removeAvail(staffId, availId) {
+            await fetch(API + `/api/staffs/${staffId}/availabilities/${availId}`, { method: 'DELETE' }); await loadStaffs();
+        }
+
+        // --- スケジュール (手動配置) ---
+        const sessionSchedule = computed(() => {
+            return schedule.value.filter(e => !['reception', 'social', 'overall'].includes(e.session.category));
+        });
+        const receptionSessions = computed(() => {
+            return schedule.value.filter(e => e.session.category === 'reception');
+        });
+        const socialSessions = computed(() => {
+            return schedule.value.filter(e => e.session.category === 'social');
+        });
+
+        function _hasStaff(entry, staffId) {
+            if (!staffId) return true;
+            return entry.assigned_staff.some(a => a.staff.id === staffId);
+        }
+        // プルダウン用: 各タブに関連するスタッフ一覧
+        const matrixStaffOptions = computed(() => staffs.value.filter(s => s.role === 'session'));
+        const rcStaffOptions = computed(() => staffs.value.filter(s => s.role === 'reception'));
+        const scStaffOptions = computed(() => staffs.value.filter(s => s.role === 'social'));
+
+        const filteredMatrixSchedule = computed(() => {
+            if (!matrixStaffFilter.value) return sessionSchedule.value;
+            return sessionSchedule.value.filter(e => _hasStaff(e, matrixStaffFilter.value));
+        });
+        const filteredReceptionSessions = computed(() => {
+            if (!rcStaffFilter.value) return receptionSessions.value;
+            return receptionSessions.value.filter(e => _hasStaff(e, rcStaffFilter.value));
+        });
+        const filteredSocialSessions = computed(() => {
+            if (!scStaffFilter.value) return socialSessions.value;
+            return socialSessions.value.filter(e => _hasStaff(e, scStaffFilter.value));
+        });
+        function matrixSessionOpacity(entry) {
+            if (!matrixStaffFilter.value) return 1;
+            return _hasStaff(entry, matrixStaffFilter.value) ? 1 : 0.15;
+        }
+        function rcSessionOpacity(entry) {
+            if (!rcStaffFilter.value) return 1;
+            return _hasStaff(entry, rcStaffFilter.value) ? 1 : 0.15;
+        }
+        function scSessionOpacity(entry) {
+            if (!scStaffFilter.value) return 1;
+            return _hasStaff(entry, scStaffFilter.value) ? 1 : 0.15;
+        }
+
+        const assignStaffSelect = reactive({});
+        const selectedSessions = reactive(new Set());
+        function toggleSessionSelect(id) {
+            if (selectedSessions.has(id)) selectedSessions.delete(id);
+            else selectedSessions.add(id);
+        }
+        function toggleSelectAll() {
+            const filtered = sessionSchedule.value;
+            if (selectedSessions.size === filtered.length) {
+                selectedSessions.clear();
+            } else {
+                filtered.forEach(e => selectedSessions.add(e.session.id));
+            }
+        }
+
+        function availableStaffs(entry, role) {
+            const assignedIds = new Set(entry.assigned_staff.map(a => a.staff.id));
+            const targetRole = role || 'session';
+            const sessStart = new Date(entry.session.start_time);
+            const sessEnd = new Date(entry.session.end_time);
+            // 全スケジュールからスタッフごとの割り当て済み時間帯を収集
+            const staffBusyMap = {};
+            for (const e of schedule.value) {
+                for (const a of e.assigned_staff) {
+                    if (!staffBusyMap[a.staff.id]) staffBusyMap[a.staff.id] = [];
+                    staffBusyMap[a.staff.id].push({ start: new Date(e.session.start_time), end: new Date(e.session.end_time) });
+                }
+            }
+            return staffs.value.filter(s => {
+                if (assignedIds.has(s.id)) return false;
+                if (s.role !== targetRole) return false;
+                // 時間重複チェック
+                const busy = staffBusyMap[s.id] || [];
+                for (const b of busy) {
+                    if (sessStart < b.end && sessEnd > b.start) return false;
+                }
+                return true;
+            });
+        }
+        async function addAssignment(sessionId) {
+            const staffId = assignStaffSelect[sessionId];
+            if (!staffId) return;
+            const res = await fetch(API + '/api/assignments/', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId, staff_id: staffId })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.detail || '配置に失敗しました');
+                return;
+            }
+            assignStaffSelect[sessionId] = 0;
+            await loadSchedule();
+        }
+        async function removeAssignment(assignmentId) {
+            await fetch(API + `/api/assignments/${assignmentId}`, { method: 'DELETE' });
+            await loadSchedule();
+        }
+
+        async function autoAssign() {
+            if (!confirm('スタッフを自動配置します。現在の配置はすべて上書きされます。よろしいですか？')) return;
+            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            })).json();
+            scheduleMsg.value = { type: 'success', text: `配置完了: ${data.fully_assigned}/${data.total_sessions} セッション` };
+            scheduleMsgError.value = data.understaffed && data.understaffed.length
+                ? '人員不足: ' + data.understaffed.map(u => u.session_title).join(', ') : '';
+            selectedSessions.clear();
+            await loadSchedule();
+        }
+        async function autoAssignSelected() {
+            const ids = [...selectedSessions];
+            if (!confirm(`選択した${ids.length}件のセッションを再配置します。よろしいですか？`)) return;
+            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_ids: ids })
+            })).json();
+            scheduleMsg.value = { type: 'success', text: `再配置完了: ${data.fully_assigned}/${data.total_sessions} セッション` };
+            scheduleMsgError.value = data.understaffed && data.understaffed.length
+                ? '人員不足: ' + data.understaffed.map(u => u.session_title).join(', ') : '';
+            selectedSessions.clear();
+            await loadSchedule();
+        }
+        async function clearAssignments() {
+            if (!confirm('すべての配置をクリアします。よろしいですか？')) return;
+            await fetch(API + '/api/assignments/', { method: 'DELETE' });
+            scheduleMsg.value = { type: 'success', text: '配置をクリアしました' };
+            scheduleMsgError.value = '';
+            await loadSchedule();
+        }
+
+        // ====================================================================
+        //  受付管理
+        // ====================================================================
+        const rcForm = reactive({
+            editId: null, title: '', start_time: '', end_time: '',
+            room_id: null, required_staff: 2, english_required: false, notes: ''
+        });
+        const rcAssignMsg = ref('');
+
+        function cancelEditReception() {
+            Object.assign(rcForm, {
+                editId: null, title: '', start_time: '', end_time: '',
+                room_id: rooms.value.length ? rooms.value[0].id : null,
+                required_staff: 2, english_required: false, notes: ''
+            });
+        }
+        function editReception(s) {
+            Object.assign(rcForm, {
+                editId: s.id, title: s.title,
+                start_time: toLocalInput(s.start_time), end_time: toLocalInput(s.end_time),
+                room_id: s.room_id, required_staff: s.required_staff,
+                english_required: !!s.english_required, notes: s.notes || ''
+            });
+        }
+        async function submitReception() {
+            const fd = new FormData();
+            fd.append('title', rcForm.title);
+            fd.append('speaker', '-');
+            const st = rcForm.start_time; const et = rcForm.end_time;
+            fd.append('start_time', st.length === 16 ? st + ':00' : st);
+            fd.append('end_time', et.length === 16 ? et + ':00' : et);
+            fd.append('room_id', rcForm.room_id);
+            fd.append('category', 'reception');
+            fd.append('required_staff', rcForm.required_staff);
+            fd.append('english_required', rcForm.english_required);
+            fd.append('notes', rcForm.notes);
+            fd.append('description', '');
+            fd.append('speaker_kana', '');
+            fd.append('speaker_org', '');
+            fd.append('speaker_title', '');
+            fd.append('speaker_profile', '');
+            if (rcForm.editId) {
+                await fetch(API + `/api/sessions/${rcForm.editId}`, { method: 'PUT', body: fd });
+            } else {
+                await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+            }
+            cancelEditReception();
+            await loadSessions();
+            await loadSchedule();
+        }
+        async function deleteReception(id) {
+            if (!confirm('この受付を削除します。よろしいですか？')) return;
+            await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
+            await loadSessions();
+            await loadSchedule();
+        }
+        async function autoAssignReception() {
+            if (!confirm('受付スタッフを自動配置します。現在の受付配置は上書きされます。よろしいですか？')) return;
+            const ids = receptionSessions.value.map(e => e.session.id);
+            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_ids: ids })
+            })).json();
+            rcAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
+            await loadSchedule();
+        }
+
+        // ====================================================================
+        //  懇親会管理
+        // ====================================================================
+        const scForm = reactive({
+            editId: null, title: '', start_time: '', end_time: '',
+            room_id: null, required_staff: 2, english_required: false, notes: ''
+        });
+        const scAssignMsg = ref('');
+
+        function cancelEditSocial() {
+            Object.assign(scForm, {
+                editId: null, title: '', start_time: '', end_time: '',
+                room_id: rooms.value.length ? rooms.value[0].id : null,
+                required_staff: 2, english_required: false, notes: ''
+            });
+        }
+        function editSocial(s) {
+            Object.assign(scForm, {
+                editId: s.id, title: s.title,
+                start_time: toLocalInput(s.start_time), end_time: toLocalInput(s.end_time),
+                room_id: s.room_id, required_staff: s.required_staff,
+                english_required: !!s.english_required, notes: s.notes || ''
+            });
+        }
+        async function submitSocial() {
+            const fd = new FormData();
+            fd.append('title', scForm.title);
+            fd.append('speaker', '-');
+            const st = scForm.start_time; const et = scForm.end_time;
+            fd.append('start_time', st.length === 16 ? st + ':00' : st);
+            fd.append('end_time', et.length === 16 ? et + ':00' : et);
+            fd.append('room_id', scForm.room_id);
+            fd.append('category', 'social');
+            fd.append('required_staff', scForm.required_staff);
+            fd.append('english_required', scForm.english_required);
+            fd.append('notes', scForm.notes);
+            fd.append('description', '');
+            fd.append('speaker_kana', '');
+            fd.append('speaker_org', '');
+            fd.append('speaker_title', '');
+            fd.append('speaker_profile', '');
+            if (scForm.editId) {
+                await fetch(API + `/api/sessions/${scForm.editId}`, { method: 'PUT', body: fd });
+            } else {
+                await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+            }
+            cancelEditSocial();
+            await loadSessions();
+            await loadSchedule();
+        }
+        async function deleteSocial(id) {
+            if (!confirm('この役割を削除します。よろしいですか？')) return;
+            await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
+            await loadSessions();
+            await loadSchedule();
+        }
+        async function autoAssignSocial() {
+            if (!confirm('懇親会スタッフを自動配置します。現在の懇親会配置は上書きされます。よろしいですか？')) return;
+            const ids = socialSessions.value.map(e => e.session.id);
+            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_ids: ids })
+            })).json();
+            scAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
+            await loadSchedule();
+        }
+
+        // ====================================================================
+        //  タイムライングリッド (5分刻み、Excel結合セル風)
+        // ====================================================================
+
+        // タイムライン設定（セッションカテゴリのみ）
+        const tlConfig = computed(() => {
+            if (!sessionSchedule.value.length) return null;
+            const slotMs = SLOT_MIN * 60 * 1000;
+            let minT = Infinity, maxT = -Infinity;
+            sessionSchedule.value.forEach(e => {
+                const s = new Date(e.session.start_time).getTime();
+                const end = new Date(e.session.end_time).getTime();
+                if (s < minT) minT = s;
+                if (end > maxT) maxT = end;
+            });
+            minT = Math.floor(minT / slotMs) * slotMs;
+            maxT = Math.ceil(maxT / slotMs) * slotMs;
+            return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
+        });
+
+        // 部屋一覧（セッションカテゴリのみ）
+        const tlRooms = computed(() => {
+            const map = new Map();
+            sessionSchedule.value.forEach(e => {
+                const r = e.session.room;
+                if (r && !map.has(r.id)) map.set(r.id, r.name);
+            });
+            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+        });
+
+        // グリッドスタイル
+        const tlGridStyle = computed(() => {
+            const cfg = tlConfig.value;
+            if (!cfg) return {};
+            return {
+                gridTemplateColumns: `70px repeat(${tlRooms.value.length}, 1fr)`,
+                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
+            };
+        });
+
+        // 時間 → グリッド行番号
+        function timeToRow(dt) {
+            const cfg = tlConfig.value;
+            const t = new Date(dt).getTime();
+            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2; // +2: header(1) + 1-based
+        }
+
+        // 15分ごとの時間ラベル + 背景セル
+        const tlLabels = computed(() => {
+            const cfg = tlConfig.value;
+            if (!cfg) return [];
+            const labels = [];
+            const slotsPerLabel = 15 / SLOT_MIN; // 3スロット = 15分
+            const labelCount = cfg.totalSlots / slotsPerLabel;
+            for (let i = 0; i < labelCount; i++) {
+                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
+                const mins = t.getMinutes();
+                labels.push({
+                    text: (mins === 0 || mins === 30)
+                        ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+                        : '',
+                    gridRow: i * slotsPerLabel + 2,
+                    span: slotsPerLabel,
+                    isHour: mins === 0,
+                    isHalf: mins === 30,
+                    isQuarter: mins === 15 || mins === 45,
+                });
+            }
+            return labels;
+        });
+
+        // セッションのグリッドスタイル
+        function tlSessionStyle(entry) {
+            const startRow = timeToRow(entry.session.start_time);
+            const endRow = timeToRow(entry.session.end_time);
+            const ci = tlRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
+            return {
+                gridRow: `${startRow} / ${endRow}`,
+                gridColumn: `${ci + 2}`,
+            };
+        }
+
+        // 部屋ごとのセッション一覧（セッションカテゴリのみ）
+        const tlRoomSessions = computed(() => {
+            const map = new Map();
+            tlRooms.value.forEach(([rid]) => map.set(rid, []));
+            sessionSchedule.value.forEach(e => {
+                const rid = e.session.room_id;
+                if (map.has(rid)) map.get(rid).push(e.session);
+            });
+            map.forEach(list => list.sort((a, b) => new Date(a.start_time) - new Date(b.start_time)));
+            return map;
+        });
+
+        // 休憩ブロック（部屋ごと、セッション間の隙間）
+        const tlBreaks = computed(() => {
+            const cfg = tlConfig.value;
+            if (!cfg) return [];
+            const breaks = [];
+            tlRooms.value.forEach(([rid], ci) => {
+                const sessList = tlRoomSessions.value.get(rid) || [];
+                for (let i = 0; i < sessList.length - 1; i++) {
+                    const gapStartMs = new Date(sessList[i].end_time).getTime();
+                    const gapEndMs = new Date(sessList[i + 1].start_time).getTime();
+                    if (gapEndMs > gapStartMs) {
+                        const startRow = timeToRow(sessList[i].end_time);
+                        const endRow = timeToRow(sessList[i + 1].start_time);
+                        if (endRow > startRow) {
+                            breaks.push({
+                                style: {
+                                    gridRow: `${startRow} / ${endRow}`,
+                                    gridColumn: `${ci + 2}`,
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+            return breaks;
+        });
+
+
+        // ===== 受付マトリクス =====
+        const rcConfig = computed(() => {
+            if (!receptionSessions.value.length) return null;
+            const slotMs = SLOT_MIN * 60 * 1000;
+            let minT = Infinity, maxT = -Infinity;
+            receptionSessions.value.forEach(e => {
+                const s = new Date(e.session.start_time).getTime();
+                const end = new Date(e.session.end_time).getTime();
+                if (s < minT) minT = s;
+                if (end > maxT) maxT = end;
+            });
+            minT = Math.floor(minT / slotMs) * slotMs;
+            maxT = Math.ceil(maxT / slotMs) * slotMs;
+            return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
+        });
+        const rcRooms = computed(() => {
+            const map = new Map();
+            receptionSessions.value.forEach(e => {
+                const r = e.session.room;
+                if (r && !map.has(r.id)) map.set(r.id, r.name);
+            });
+            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+        });
+        const rcGridStyle = computed(() => {
+            const cfg = rcConfig.value;
+            if (!cfg) return {};
+            return {
+                gridTemplateColumns: `70px repeat(${rcRooms.value.length}, 1fr)`,
+                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
+            };
+        });
+        function rcTimeToRow(dt) {
+            const cfg = rcConfig.value;
+            const t = new Date(dt).getTime();
+            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
+        }
+        const rcLabels = computed(() => {
+            const cfg = rcConfig.value;
+            if (!cfg) return [];
+            const labels = [];
+            const slotsPerLabel = 15 / SLOT_MIN;
+            const labelCount = cfg.totalSlots / slotsPerLabel;
+            for (let i = 0; i < labelCount; i++) {
+                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
+                const mins = t.getMinutes();
+                labels.push({
+                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
+                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
+                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
+                });
+            }
+            return labels;
+        });
+        function rcSessionStyle(entry) {
+            const startRow = rcTimeToRow(entry.session.start_time);
+            const endRow = rcTimeToRow(entry.session.end_time);
+            const ci = rcRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
+            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
+        }
+        const rcSelectedSession = ref(null);
+        const rcSelectedEntry = computed(() => {
+            if (!rcSelectedSession.value) return null;
+            return receptionSessions.value.find(e => e.session.id === rcSelectedSession.value) || null;
+        });
+
+        // --- 懇親会マトリクス ---
+        const scConfig = computed(() => {
+            if (!socialSessions.value.length) return null;
+            const slotMs = SLOT_MIN * 60 * 1000;
+            let minT = Infinity, maxT = -Infinity;
+            socialSessions.value.forEach(e => {
+                const s = new Date(e.session.start_time).getTime();
+                const end = new Date(e.session.end_time).getTime();
+                if (s < minT) minT = s;
+                if (end > maxT) maxT = end;
+            });
+            minT = Math.floor(minT / slotMs) * slotMs;
+            maxT = Math.ceil(maxT / slotMs) * slotMs;
+            return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
+        });
+        const scRooms = computed(() => {
+            const map = new Map();
+            socialSessions.value.forEach(e => {
+                const r = e.session.room;
+                if (r && !map.has(r.id)) map.set(r.id, r.name);
+            });
+            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+        });
+        const scGridStyle = computed(() => {
+            const cfg = scConfig.value;
+            if (!cfg) return {};
+            return {
+                gridTemplateColumns: `70px repeat(${scRooms.value.length}, 1fr)`,
+                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
+            };
+        });
+        function scTimeToRow(dt) {
+            const cfg = scConfig.value;
+            const t = new Date(dt).getTime();
+            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
+        }
+        const scLabels = computed(() => {
+            const cfg = scConfig.value;
+            if (!cfg) return [];
+            const labels = [];
+            const slotsPerLabel = 15 / SLOT_MIN;
+            const labelCount = cfg.totalSlots / slotsPerLabel;
+            for (let i = 0; i < labelCount; i++) {
+                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
+                const mins = t.getMinutes();
+                labels.push({
+                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
+                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
+                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
+                });
+            }
+            return labels;
+        });
+        function scSessionStyle(entry) {
+            const startRow = scTimeToRow(entry.session.start_time);
+            const endRow = scTimeToRow(entry.session.end_time);
+            const ci = scRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
+            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
+        }
+        const scSelectedSession = ref(null);
+        const scSelectedEntry = computed(() => {
+            if (!scSelectedSession.value) return null;
+            return socialSessions.value.find(e => e.session.id === scSelectedSession.value) || null;
+        });
+
+        // --- 全体スケジュール ---
+        const allStaffFilter = ref(0);
+        const allSelectedSession = ref(null);
+        const allSelectedEntry = computed(() => {
+            if (!allSelectedSession.value) return null;
+            return allSchedule.value.find(e => e.session.id === allSelectedSession.value) || null;
+        });
+        const allAssignMsg = ref('');
+
+        // 全体スケジュール登録フォーム
+        const allOvForm = reactive({
+            editId: null, title: '', start_time: '', end_time: '', notes: ''
+        });
+        function cancelAllOverall() {
+            Object.assign(allOvForm, { editId: null, title: '', start_time: '', end_time: '', notes: '' });
+        }
+        async function submitAllOverall() {
+            const fd = new FormData();
+            fd.append('title', allOvForm.title);
+            fd.append('speaker', '-');
+            const st = allOvForm.start_time; const et = allOvForm.end_time;
+            fd.append('start_time', st.length === 16 ? st + ':00' : st);
+            fd.append('end_time', et.length === 16 ? et + ':00' : et);
+            fd.append('room_id', rooms.value.length ? rooms.value[0].id : 1);
+            fd.append('category', 'overall');
+            fd.append('required_staff', 0);
+            fd.append('english_required', false);
+            fd.append('notes', allOvForm.notes);
+            fd.append('description', ''); fd.append('speaker_kana', '');
+            fd.append('speaker_org', ''); fd.append('speaker_title', ''); fd.append('speaker_profile', '');
+            if (allOvForm.editId) {
+                await fetch(API + `/api/sessions/${allOvForm.editId}`, { method: 'PUT', body: fd });
+            } else {
+                await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+            }
+            cancelAllOverall();
+            await loadSessions(); await loadSchedule();
+        }
+
+        // ポップアップから全体スケジュールの編集
+        function editAllEntry(s) {
+            allSelectedSession.value = null;
+            if (s.category === 'overall') {
+                Object.assign(allOvForm, {
+                    editId: s.id, title: s.title,
+                    start_time: toLocalInput(s.start_time), end_time: toLocalInput(s.end_time),
+                    notes: s.notes || ''
+                });
+            }
+        }
+        async function deleteAllEntry(id, category) {
+            const labels = { reception: '受付', social: '懇親会', overall: '全体スケジュール' };
+            const label = labels[category] || 'この項目';
+            if (!confirm(`この${label}を削除します。よろしいですか？`)) return;
+            allSelectedSession.value = null;
+            await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
+            await loadSessions(); await loadSchedule();
+        }
+
+        async function autoAssignAll() {
+            if (!confirm('全体を自動配置します。現在の配置は上書きされます。よろしいですか？')) return;
+            const ids = allSchedule.value.map(e => e.session.id);
+            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_ids: ids })
+            })).json();
+            allAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
+            await loadSchedule();
+        }
+        const allSchedule = computed(() => schedule.value);
+        const allConfig = computed(() => {
+            if (!allSchedule.value.length) return null;
+            const slotMs = SLOT_MIN * 60 * 1000;
+            let minT = Infinity, maxT = -Infinity;
+            allSchedule.value.forEach(e => {
+                const s = new Date(e.session.start_time).getTime();
+                const end = new Date(e.session.end_time).getTime();
+                if (s < minT) minT = s;
+                if (end > maxT) maxT = end;
+            });
+            minT = Math.floor(minT / slotMs) * slotMs;
+            maxT = Math.ceil(maxT / slotMs) * slotMs;
+            return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
+        });
+        // 全体スケジュール（overall）があるか
+        const hasOverall = computed(() => allSchedule.value.some(e => e.session.category === 'overall'));
+        // セッション用の部屋（reception/social/overall除外）
+        const allSessionRooms = computed(() => {
+            const map = new Map();
+            allSchedule.value.forEach(e => {
+                if (['reception', 'social', 'overall'].includes(e.session.category)) return;
+                const r = e.session.room;
+                if (r && !map.has(r.id)) map.set(r.id, r.name);
+            });
+            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+        });
+        // 受付用の列（受付セッションのタイトルごと or 部屋ごと）
+        const allReceptionCols = computed(() => {
+            const map = new Map();
+            allSchedule.value.forEach(e => {
+                if (e.session.category !== 'reception') return;
+                const r = e.session.room;
+                if (r && !map.has(r.id)) map.set(r.id, r.name);
+            });
+            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+        });
+        // 懇親会用の列
+        const allSocialCols = computed(() => {
+            const map = new Map();
+            allSchedule.value.forEach(e => {
+                if (e.session.category !== 'social') return;
+                const r = e.session.room;
+                if (r && !map.has(r.id)) map.set(r.id, r.name);
+            });
+            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+        });
+        // 全列 = 全体 + セッション部屋 + 受付列 + 懇親会列
+        const allColumns = computed(() => {
+            const cols = [];
+            if (hasOverall.value) cols.push({ id: 'overall', name: '全体', type: 'overall' });
+            allSessionRooms.value.forEach(([id, name]) => cols.push({ id, name, type: 'session' }));
+            allReceptionCols.value.forEach(([id, name]) => cols.push({ id, name: '受付: ' + name, type: 'reception', roomId: id }));
+            allSocialCols.value.forEach(([id, name]) => cols.push({ id: 's_' + id, name: '懇親会: ' + name, type: 'social', roomId: id }));
+            return cols;
+        });
+        const allGridStyle = computed(() => {
+            const cfg = allConfig.value;
+            if (!cfg) return {};
+            const ovCount = hasOverall.value ? 1 : 0;
+            const sessionCount = allSessionRooms.value.length;
+            const rcCount = allReceptionCols.value.length;
+            const scCount = allSocialCols.value.length;
+            const colWidths = [];
+            if (ovCount) colWidths.push('1fr');
+            if (sessionCount) colWidths.push(`repeat(${sessionCount}, 1fr)`);
+            if (rcCount) colWidths.push(`repeat(${rcCount}, 1fr)`);
+            if (scCount) colWidths.push(`repeat(${scCount}, 1fr)`);
+            return {
+                gridTemplateColumns: `70px ${colWidths.join(' ')}`,
+                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
+            };
+        });
+        function allTimeToRow(dt) {
+            const cfg = allConfig.value;
+            const t = new Date(dt).getTime();
+            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
+        }
+        const allLabels = computed(() => {
+            const cfg = allConfig.value;
+            if (!cfg) return [];
+            const labels = [];
+            const slotsPerLabel = 15 / SLOT_MIN;
+            const labelCount = cfg.totalSlots / slotsPerLabel;
+            for (let i = 0; i < labelCount; i++) {
+                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
+                const mins = t.getMinutes();
+                labels.push({
+                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
+                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
+                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
+                });
+            }
+            return labels;
+        });
+        function allSessionStyle(entry) {
+            const startRow = allTimeToRow(entry.session.start_time);
+            const endRow = allTimeToRow(entry.session.end_time);
+            const cat = entry.session.category;
+            const ovOffset = hasOverall.value ? 1 : 0;
+            let ci;
+            if (cat === 'overall') {
+                ci = 0;
+            } else if (cat === 'reception') {
+                ci = ovOffset + allSessionRooms.value.length + allReceptionCols.value.findIndex(([rid]) => rid === entry.session.room_id);
+            } else if (cat === 'social') {
+                ci = ovOffset + allSessionRooms.value.length + allReceptionCols.value.length + allSocialCols.value.findIndex(([rid]) => rid === entry.session.room_id);
+            } else {
+                ci = ovOffset + allSessionRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
+            }
+            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
+        }
+        const CAT_COLORS = {
+            general: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
+            tech: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
+            workshop: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
+            keynote: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
+            lt: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
+            reception: 'background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-color:#388e3c',
+            social: 'background:linear-gradient(135deg,#f3e5f5,#e1bee7);border-color:#7b1fa2',
+        };
+        const CAT_BG = {
+            general: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+            tech: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+            workshop: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+            keynote: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+            lt: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+            reception: { background: 'linear-gradient(135deg,#e8f5e9,#c8e6c9)', borderColor: '#388e3c' },
+            social: { background: 'linear-gradient(135deg,#f3e5f5,#e1bee7)', borderColor: '#7b1fa2' },
+            overall: { background: 'linear-gradient(135deg,#fff3e0,#ffe0b2)', borderColor: '#e65100' },
+        };
+        function allSessionBg(cat) { return CAT_BG[cat] || CAT_BG.general; }
+        function allSessionOpacity(entry) {
+            if (!allStaffFilter.value) return 1;
+            return _hasStaff(entry, allStaffFilter.value) ? 1 : 0.15;
+        }
+
+        onMounted(() => { loadRooms(); });
+
+        return {
+            tab, rooms, sessions, staffs, schedule, staffAssignments,
+            scheduleMsg, scheduleMsgError, sessPhotoPreview, sessPhoto,
+            roomForm, sessForm, staffForm, prefForms, availForms, ltTalks,
+            venueMaps, venueMapForm, venueMapPreview, venueMapInput, mapModal,
+            switchTab, catLabel, fmt, fmtShort, sortedPrefs,
+            cancelEditRoom, editRoom, submitRoom, deleteRoom,
+            onVenueMapChange, cancelEditVenueMap, editVenueMap, submitVenueMap, deleteVenueMap,
+            sessDetailSession, toggleSessionDetail,
+            onPhotoChange, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
+            calcStaffMsg, calcStaffSummary, calcRequiredStaff,
+            newStaffAvails, newAvailForm, addNewStaffAvail,
+            newStaffPrefs, newPrefForm, addNewStaffPref, sessionTitle,
+            staffAssignCount, editingStaffPrefs, editingStaffAvails,
+            submitStaff, editStaff, cancelEditStaff, deleteStaff, uploadStaffPhoto, addPref, removePref, addAvail, removeAvail,
+            sessionSchedule, receptionSessions, socialSessions,
+            assignStaffSelect, availableStaffs, addAssignment, removeAssignment,
+            selectedSessions, toggleSessionSelect, toggleSelectAll,
+            autoAssign, autoAssignSelected, clearAssignments,
+            tlRooms, tlGridStyle, tlLabels, tlSessionStyle, tlBreaks,
+            rcConfig, rcRooms, rcGridStyle, rcLabels, rcSessionStyle,
+            rcSelectedSession, rcSelectedEntry,
+            rcForm, rcAssignMsg, cancelEditReception, editReception, submitReception, deleteReception, autoAssignReception,
+            scForm, scAssignMsg, cancelEditSocial, editSocial, submitSocial, deleteSocial, autoAssignSocial,
+            scConfig, scRooms, scGridStyle, scLabels, scSessionStyle,
+            scSelectedSession, scSelectedEntry,
+            exportExcel, exportBackup, backupFileName, ioMsg, ioMsgError, onBackupFileChange, importBackup,
+            matrixStaffFilter, rcStaffFilter, scStaffFilter,
+            matrixStaffOptions, rcStaffOptions, scStaffOptions,
+            allStaffFilter, allSchedule, allConfig, allColumns, allGridStyle, allLabels, allSessionStyle, allSessionBg, allSessionOpacity,
+            allSelectedSession, allSelectedEntry, allAssignMsg,
+            allOvForm, cancelAllOverall, submitAllOverall,
+            editAllEntry, deleteAllEntry, autoAssignAll,
+            filteredMatrixSchedule, filteredReceptionSessions, filteredSocialSessions,
+            matrixSessionOpacity, rcSessionOpacity, scSessionOpacity, _hasStaff,
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
