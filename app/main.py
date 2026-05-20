@@ -14,7 +14,7 @@ from .models import (
     Room, Session as SessionModel, LTTalk, Staff, StaffSkill,
     StaffPreferredSession, StaffAvailability, VenueMap, Assignment,
 )
-from .routers import rooms, sessions, staffs, assignments, venue_maps, export
+from .routers import rooms, sessions, staffs, assignments, venue_maps, export, auth
 
 Base.metadata.create_all(bind=engine)
 
@@ -27,6 +27,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Simple auth: password + optional GeoIP restriction
+import os as _os
+if _os.environ.get("APP_PASSWORD"):
+    from .auth_middleware import AuthMiddleware
+    app.add_middleware(AuthMiddleware)
+
+app.include_router(auth.router)
 app.include_router(rooms.router)
 app.include_router(sessions.router)
 app.include_router(staffs.router)
