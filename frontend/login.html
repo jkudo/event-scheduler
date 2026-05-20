@@ -24,6 +24,7 @@
         .btn-login:hover { background: #1557b0; }
         .btn-login:disabled { background: #999; cursor: not-allowed; }
         .error-msg { color: #d93025; font-size: 0.85rem; margin-top: 12px; text-align: center; display: none; }
+        .hp-field { position: absolute; left: -9999px; top: -9999px; opacity: 0; height: 0; width: 0; }
     </style>
 </head>
 <body>
@@ -32,7 +33,12 @@
             <h1>Conference Scheduler</h1>
             <p>アクセスにはパスワードが必要です</p>
         </div>
-        <form id="loginForm" onsubmit="return handleLogin(event)">
+        <form id="loginForm" onsubmit="return handleLogin(event)" autocomplete="off">
+            <!-- Honeypot: invisible to humans, bots fill this -->
+            <div class="hp-field" aria-hidden="true">
+                <label for="email">Email</label>
+                <input type="text" id="email" name="email" tabindex="-1" autocomplete="off">
+            </div>
             <div class="form-group">
                 <label for="password">パスワード</label>
                 <input type="password" id="password" placeholder="パスワードを入力" autofocus required>
@@ -45,6 +51,12 @@
     <script>
         async function handleLogin(e) {
             e.preventDefault();
+
+            // Honeypot check — if filled, silently reject (bot)
+            if (document.getElementById('email').value) {
+                return false;
+            }
+
             const btn = document.getElementById('loginBtn');
             const errEl = document.getElementById('errorMsg');
             const pw = document.getElementById('password').value;

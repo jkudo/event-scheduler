@@ -27,7 +27,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Simple auth: password + optional GeoIP restriction
+# Security: headers + rate limiting + auth
+from .security import SecurityHeadersMiddleware, RateLimitMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware)
+
 import os as _os
 if _os.environ.get("APP_PASSWORD"):
     from .auth_middleware import AuthMiddleware

@@ -11,7 +11,9 @@ from ..auth_middleware import (
     COOKIE_NAME,
     COOKIE_MAX_AGE,
     make_session_cookie,
+    _get_client_ip,
 )
+from ..security import record_login_failure, clear_login_failures
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -23,8 +25,10 @@ class LoginRequest(BaseModel):
 
 
 @router.post("/verify")
-async def verify_password(body: LoginRequest):
+async def verify_password(body: LoginRequest, request: Request):
     """Verify password and set session cookie."""
+    client_ip = _get_client_ip(request)
+
     if not APP_PASSWORD:
         return JSONResponse(
             status_code=503,
@@ -32,10 +36,14 @@ async def verify_password(body: LoginRequest):
         )
 
     if body.password != APP_PASSWORD:
+        record_login_failure(client_ip)
         return JSONResponse(
             status_code=401,
             content={"detail": "パスワードが正しくありません"},
         )
+
+    # Successful login — clear failure records
+    clear_login_failures(client_ip)
 
     session_data = {
         "authenticated": True,
@@ -53,6 +61,21 @@ async def verify_password(body: LoginRequest):
         secure=True,
     )
     return response
+
+
+@router.get("/debug")
+async def debug_info(request: Request):
+    """Temporary debug endpoint to check IP and GeoIP."""
+    from ..auth_middleware import _get_client_ip, _check_geo_jp, GEOIP_ENABLED
+    client_ip = _get_client_ip(request)
+    forwarded = request.headers.get("x-forwarded-for", "")
+    is_jp = await _check_geo_jp(client_ip) if GEOIP_ENABLED else None
+    return {
+        "client_ip": client_ip,
+        "x_forwarded_for": forwarded,
+        "geoip_enabled": GEOIP_ENABLED,
+        "is_jp": is_jp,
+    }
 
 
 @router.get("/logout")
