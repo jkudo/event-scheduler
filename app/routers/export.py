@@ -1,11 +1,13 @@
 import io
 import json
+import os
 import shutil
 import zipfile
 from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, UploadFile, File
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse, JSONResponse
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XlImage
@@ -806,3 +808,36 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
         "staffs": len(staff_map),
         "assignments": len(data.get("assignments", [])),
     }
+
+
+RESET_PASSWORD = os.environ.get("RESET_PASSWORD", "conf-reset-2026")
+
+
+class ResetRequest(BaseModel):
+    password: str
+
+
+@router.post("/reset")
+def reset_all_data(body: ResetRequest, db: Session = Depends(get_db)):
+    """全データを削除して初期化する（パスワード必須）"""
+    if body.password != RESET_PASSWORD:
+        return JSONResponse(status_code=403, content={"detail": "パスワードが正しくありません"})
+
+    db.query(Assignment).delete()
+    db.query(StaffAvailability).delete()
+    db.query(StaffPreferredSession).delete()
+    db.query(StaffSkill).delete()
+    db.query(Staff).delete()
+    db.query(LTTalk).delete()
+    db.query(SessionModel).delete()
+    db.query(VenueMap).delete()
+    db.query(Room).delete()
+    db.flush()
+
+    # uploads ディレクトリをクリア
+    if UPLOAD_DIR.exists():
+        shutil.rmtree(UPLOAD_DIR)
+    UPLOAD_DIR.mkdir(exist_ok=True)
+
+    db.commit()
+    return {"status": "ok", "message": "全データを初期化しました"}

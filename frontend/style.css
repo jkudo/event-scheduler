@@ -1,0 +1,162 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+.header { background: #1a73e8; color: white; padding: 16px 24px; }
+.header h1 { font-size: 1.4rem; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 10px 20px; background: #ddd; border: none; border-radius: 6px 6px 0 0;
+       cursor: pointer; font-size: 0.95rem; }
+.tab.active { background: white; font-weight: bold; }
+.panel { display: none; background: white; border-radius: 0 8px 8px 8px; padding: 24px;
+         box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.panel.active { display: block; }
+h2 { margin-bottom: 16px; font-size: 1.2rem; }
+h3 { margin: 16px 0 8px; font-size: 1rem; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+button.btn { padding: 10px 20px; background: #1a73e8; color: white; border: none;
+             border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+button.btn:hover { background: #1557b0; }
+button.btn-danger { background: #d93025; }
+button.btn-danger:hover { background: #b3261e; }
+button.btn-success { background: #0d904f; }
+button.btn-success:hover { background: #0a7a42; }
+button.btn-sm { padding: 4px 12px; font-size: 0.8rem; }
+table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 0.9rem; }
+th { background: #f8f9fa; font-weight: 600; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;
+         background: #e8f0fe; color: #1a73e8; margin: 2px; }
+.badge.warn { background: #fce8e6; color: #d93025; }
+.badge.pref { background: #fef7e0; color: #b06000; }
+.badge.avail { background: #e6f4ea; color: #137333; }
+.schedule-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.schedule-card h3 { font-size: 1rem; margin-bottom: 8px; margin-top: 0; }
+.schedule-card .meta { color: #666; font-size: 0.85rem; margin-bottom: 8px; }
+.schedule-card .staff-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.msg { padding: 12px; border-radius: 4px; margin-bottom: 12px; }
+.msg.success { background: #e6f4ea; color: #137333; }
+.msg.error { background: #fce8e6; color: #c5221f; }
+.del-btn { background: none; border: none; color: #d93025; cursor: pointer; font-size: 0.85rem; }
+.detail-section { background: #f8f9fa; border-radius: 6px; padding: 12px; margin-top: 12px; }
+.detail-section h4 { font-size: 0.9rem; margin-bottom: 8px; }
+.inline-form { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 8px; }
+.inline-form .form-group { margin-bottom: 0; }
+.staff-detail-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.speaker-photo { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; vertical-align: middle; }
+.speaker-photo-placeholder { width: 48px; height: 48px; border-radius: 50%; background: #e0e0e0;
+    display: inline-flex; align-items: center; justify-content: center; color: #999; font-size: 1.2rem; vertical-align: middle; }
+.photo-preview { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+.btn-sm.edit-btn { background: #f9ab00; color: #fff; }
+.btn-sm.edit-btn:hover { background: #e09900; }
+.lt-talks-list { background: #f0f7ff; border: 1px solid #b8d4f0; border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+.lt-talks-list h4 { margin: 0 0 8px; font-size: 0.9rem; color: #1a73e8; }
+.lt-talk-item { background: #fff; border: 1px solid #d0d0d0; border-radius: 4px; padding: 8px 10px; margin-bottom: 6px;
+                 display: flex; align-items: center; gap: 8px; }
+.lt-talk-item .lt-talk-fields { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+.lt-talk-item input { padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85rem; }
+.lt-talk-item .lt-num { font-weight: 700; color: #1a73e8; min-width: 20px; text-align: center; }
+.lt-talk-item .del-btn { flex-shrink: 0; }
+
+/* ===== タイムライングリッド（Excel結合セル風） ===== */
+.tl-wrapper { overflow-x: auto; margin-bottom: 24px; }
+.tl-grid {
+    display: grid;
+    gap: 0;
+    border: 2px solid #999;
+    position: relative;
+    min-width: 700px;
+}
+/* ヘッダー */
+.tl-corner {
+    grid-row: 1; grid-column: 1;
+    background: #f0f0f0; font-weight: 700; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    border-right: 2px solid #999; border-bottom: 2px solid #999;
+}
+.tl-room-header {
+    grid-row: 1;
+    background: #1a73e8; color: #fff;
+    font-weight: 700; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px 4px;
+    border-right: 1px solid #a0c0ff; border-bottom: 2px solid #999;
+}
+.tl-room-header:last-of-type { border-right: none; }
+/* 時間ラベル（30分ごと） */
+.tl-time-label {
+    grid-column: 1;
+    font-size: 0.75rem; font-weight: 600; color: #444;
+    padding: 2px 6px 0 6px;
+    border-right: 2px solid #999;
+    border-bottom: 1px solid #d0d0d0;
+    display: flex; align-items: flex-start;
+    background: #f8f8f8;
+}
+.tl-time-label.hour-mark {
+    border-bottom: 2px solid #aaa;
+    background: #f0f0f0;
+}
+.tl-time-label.quarter-mark {
+    border-bottom: 1px dashed #e0e0e0;
+}
+/* 背景セル（Excel罫線風） */
+.tl-bg-cell {
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #ececec;
+    background: #fff;
+}
+.tl-bg-cell.hour-mark { border-bottom: 2px solid #ccc; }
+.tl-bg-cell.half-mark { border-bottom: 1px solid #d8d8d8; }
+.tl-bg-cell.quarter-mark { border-bottom: 1px dashed #e8e8e8; }
+/* セッションブロック（結合セル風） */
+.tl-session {
+    z-index: 3;
+    background: linear-gradient(135deg, #e8f0fe 0%, #d2e3fc 100%);
+    border: 2px solid #1a73e8;
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin: 1px 2px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 2px;
+    cursor: pointer;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+}
+.tl-session-time {
+    font-size: 0.7rem; color: #1a73e8; font-weight: 700;
+}
+.tl-session-title {
+    font-weight: 700; font-size: 0.8rem; color: #1a237e;
+    line-height: 1.2;
+}
+.tl-session-speaker {
+    font-size: 0.75rem; color: #555;
+}
+.tl-session-staff {
+    display: flex; flex-wrap: wrap; gap: 2px; margin-top: auto;
+}
+.tl-session-staff .badge { font-size: 0.7rem; padding: 1px 6px; }
+/* 休憩ブロック */
+.tl-break {
+    z-index: 2;
+    background: repeating-linear-gradient(
+        -45deg, #fff8e1, #fff8e1 4px, #fff3c4 4px, #fff3c4 8px
+    );
+    border: 1px dashed #d4a017;
+    border-radius: 2px;
+    margin: 1px 2px;
+    display: flex; align-items: center; justify-content: center;
+    color: #b08000; font-weight: 700; font-size: 0.8rem;
+}
+/* 凡例 */
+.tl-legend {
+    display: flex; gap: 16px; margin-bottom: 12px; font-size: 0.8rem; align-items: center; flex-wrap: wrap;
+}
+.tl-legend-item { display: flex; align-items: center; gap: 4px; }
+.tl-legend-swatch {
+    width: 20px; height: 14px; border-radius: 2px; border: 1px solid #ccc;
+}
