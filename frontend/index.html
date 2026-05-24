@@ -303,8 +303,8 @@
                 </div>
                 <div class="form-group">
                     <label>過去参加回数</label>
-                    <input v-model.number="staffForm.experience_count" type="number" min="1" placeholder="過去参加回数" required>
-                    <span style="font-size:0.75rem;color:#888">1 = 初めて（経験者と一緒に配置されます）</span>
+                    <input v-model.number="staffForm.experience_count" type="number" min="0" placeholder="過去参加回数" required>
+                    <span style="font-size:0.75rem;color:#888">0 = 初めて（経験者と一緒に配置されます）</span>
                 </div>
                 <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:20px">
                     <label style="margin:0"><input type="checkbox" v-model="staffForm.english_ok" style="width:16px;height:16px;cursor:pointer"> 英語対応可</label>
@@ -413,7 +413,7 @@
                                 <span class="badge" v-for="r in (Array.isArray(s.role) ? s.role : [s.role])" :key="r">{{ catLabel(r) }}</span>
                                 <span v-if="s.english_ok" class="badge" style="background:#e0f2f1;color:#00695c">EN</span>
                                 <span v-if="s.slack_name" style="font-weight:normal;font-size:0.85rem;color:#666">{{ s.slack_name }}</span>
-                                <span v-if="s.experience_count <= 1" class="badge warn">初参加</span>
+                                <span v-if="s.experience_count === 0" class="badge warn">初参加</span>
                                 <span v-else class="badge avail">{{ s.experience_count }}回目</span>
                                 <span class="badge" style="background:#e8f0fe;color:#1a73e8">担当: {{ staffAssignCount[s.id] || 0 }}件</span>
                             </h3>
@@ -1108,7 +1108,7 @@
                 <h3>{{ e.staff.name }}
                     <span class="badge" v-for="r in (Array.isArray(e.staff.role) ? e.staff.role : [e.staff.role])" :key="r">{{ catLabel(r) }}</span>
                     <span v-if="e.staff.english_ok" class="badge" style="background:#e0f2f1;color:#00695c">EN</span>
-                    <span v-if="e.staff.experience_count <= 1" class="badge warn">初参加</span>
+                    <span v-if="e.staff.experience_count === 0" class="badge warn">初参加</span>
                     <span v-else class="badge avail">{{ e.staff.experience_count }}回目</span>
                     <span class="badge" style="background:#e8f0fe;color:#1a73e8">担当: {{ e.assigned_sessions.length }}件</span>
                 </h3>

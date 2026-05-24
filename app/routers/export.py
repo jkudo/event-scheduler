@@ -796,7 +796,7 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
             english_ok=st.get("english_ok", 0),
             role=st.get("role", "general"),
             max_hours=st.get("max_hours", 8),
-            experience_count=st.get("experience_count", 1),
+            experience_count=st.get("experience_count", 0),
         )
         db.add(db_staff)
         db.flush()

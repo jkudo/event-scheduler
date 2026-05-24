@@ -106,7 +106,7 @@ createApp({
             speaker_org: '', speaker_title: '', speaker_profile: '', group_id: null
         });
         const ltTalks = reactive([]);
-        const staffForm = reactive({ editId: null, name: '', slack_name: '', role: ['session'], experience_count: 1, english_ok: false, currentPhoto: '' });
+        const staffForm = reactive({ editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
         const roleDropdownOpen = ref(false);
         const newStaffPhotoFile = ref(null);
         const staffPhotoPreview = ref('');
@@ -897,7 +897,7 @@ createApp({
             staffPhotoPreview.value = '';
         }
         function cancelEditStaff() {
-            Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: ['session'], experience_count: 1, english_ok: false, currentPhoto: '' });
+            Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
             clearNewStaffPhoto();
             newStaffAvails.splice(0);
             newAvailForm.start = '';

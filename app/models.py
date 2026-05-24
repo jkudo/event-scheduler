@@ -70,7 +70,7 @@ class Staff(Base):
     english_ok = Column(Integer, default=0)  # 英語対応可: 1, 不可: 0
     role = Column(String, default="general")
     max_hours = Column(Integer, default=8)
-    experience_count = Column(Integer, default=1)  # 参加回数（1=初めて）
+    experience_count = Column(Integer, default=0)  # 過去参加回数（0=初めて）
 
     skills = relationship("StaffSkill", back_populates="staff", cascade="all, delete-orphan")
     preferred_sessions = relationship("StaffPreferredSession", back_populates="staff", cascade="all, delete-orphan")

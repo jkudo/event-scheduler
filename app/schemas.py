@@ -180,7 +180,7 @@ class StaffCreate(BaseModel):
     english_ok: bool = False
     role: list[str] = ["session"]
     max_hours: int = 8
-    experience_count: int = 1
+    experience_count: int = 0
     skills: list[str] = []
     preferred_sessions: list[StaffPreferredSessionCreate] = []
     availabilities: list[StaffAvailabilityCreate] = []
@@ -192,7 +192,7 @@ class StaffUpdate(BaseModel):
     english_ok: bool = False
     role: list[str] = ["session"]
     max_hours: int = 8
-    experience_count: int = 1
+    experience_count: int = 0
     skills: list[str] = []
 
 
