@@ -129,7 +129,7 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
 
     def _is_effectively_experienced(staff) -> bool:
         """経験者 or 既に1セッション経験者と組んで担当済みの初回スタッフ"""
-        if staff.experience_count > 0:
+        if staff.experience_count > 1:
             return True
         return staff.id in newcomer_trained
 
@@ -234,7 +234,7 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
         if has_exp:
             for sid in assigned_staff_ids:
                 s = next(s for s in staffs if s.id == sid)
-                if s.experience_count == 0:
+                if s.experience_count <= 1:
                     newcomer_trained.add(sid)
 
         results.append({
