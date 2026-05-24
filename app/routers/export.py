@@ -874,7 +874,9 @@ RESET_PASSWORD_DEFAULT = os.environ.get("RESET_PASSWORD", "conf-reset-2026")
 
 
 def _get_reset_password(db: Session) -> str:
-    """DB設定 > 環境変数 > デフォルト の優先順で初期化パスワードを取得"""
+    """環境変数 > DB設定 > デフォルト の優先順で初期化パスワードを取得"""
+    if os.environ.get("RESET_PASSWORD"):
+        return os.environ["RESET_PASSWORD"]
     row = db.query(AppSetting).filter(AppSetting.key == "reset_password").first()
     if row and row.value:
         return row.value
