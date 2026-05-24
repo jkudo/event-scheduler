@@ -509,7 +509,7 @@ createApp({
                     ioMsgError.value = false;
                     backupFile.value = null;
                     backupFileName.value = '';
-                    await loadRooms(); await loadSessions(); await loadStaffs(); await loadSchedule();
+                    await loadSessionGroups(); await loadCategories(); await loadRooms(); await loadSessions(); await loadStaffs(); await loadSchedule(); await loadStaffAssignments(); loadVenueMaps(); loadSettings();
                 } else {
                     ioMsg.value = data.detail || 'インポートに失敗しました';
                     ioMsgError.value = true;
@@ -537,12 +537,7 @@ createApp({
                     resetMsg.value = data.message || '全データを初期化しました';
                     resetMsgError.value = false;
                     resetPassword.value = '';
-                    rooms.value = [];
-                    sessions.value = [];
-                    staffs.value = [];
-                    schedule.value = [];
-                    staffAssignments.value = [];
-                    venueMaps.value = [];
+                    await loadSessionGroups(); await loadCategories(); await loadRooms(); await loadSessions(); await loadStaffs(); await loadSchedule(); await loadStaffAssignments(); loadVenueMaps(); loadSettings();
                 } else {
                     resetMsg.value = data.detail || '初期化に失敗しました';
                     resetMsgError.value = true;

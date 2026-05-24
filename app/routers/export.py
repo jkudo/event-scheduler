@@ -568,9 +568,10 @@ def export_backup(db: Session = Depends(get_db)):
     assignments = db.query(Assignment).order_by(Assignment.id).all()
     categories = db.query(Category).order_by(Category.order, Category.id).all()
     session_groups = db.query(SessionGroup).order_by(SessionGroup.order, SessionGroup.id).all()
+    app_settings = db.query(AppSetting).all()
 
     data = {
-        "version": 3,
+        "version": 4,
         "exported_at": datetime.now().isoformat(),
         "categories": [
             {"id": c.id, "key": c.key, "label": c.label, "color": c.color, "order": c.order}
@@ -635,6 +636,10 @@ def export_backup(db: Session = Depends(get_db)):
         "assignments": [
             {"id": a.id, "session_id": a.session_id, "staff_id": a.staff_id, "role": a.role}
             for a in assignments
+        ],
+        "settings": [
+            {"key": s.key, "value": s.value}
+            for s in app_settings
         ],
     }
 
@@ -779,7 +784,7 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
                 speaker_kana=t.get("speaker_kana", ""),
                 speaker_org=t.get("speaker_org", ""),
                 speaker_title=t.get("speaker_title", ""),
-                speaker_photo=t.get("speaker_photo", ""),
+                speaker_photo=_map_path(t.get("speaker_photo", "")),
                 order=t.get("order", 0),
             ))
 
@@ -819,6 +824,14 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
             db.add(Assignment(
                 session_id=new_sess_id, staff_id=new_staff_id, role=a.get("role", "support"),
             ))
+
+    # --- 設定 ---
+    for s in data.get("settings", []):
+        existing = db.query(AppSetting).filter(AppSetting.key == s["key"]).first()
+        if existing:
+            existing.value = s["value"]
+        else:
+            db.add(AppSetting(key=s["key"], value=s["value"]))
 
     db.commit()
 
