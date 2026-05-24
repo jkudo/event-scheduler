@@ -1136,6 +1136,18 @@ createApp({
             await fetch(API + `/api/assignments/${assignmentId}`, { method: 'DELETE' });
             await loadSchedule();
         }
+        async function setAllStaff(sessionId) {
+            const fd = new FormData();
+            fd.append('required_staff', -1);
+            await fetch(API + `/api/sessions/${sessionId}/required-staff`, { method: 'PUT', body: fd });
+            await loadSchedule();
+        }
+        async function unsetAllStaff(sessionId) {
+            const fd = new FormData();
+            fd.append('required_staff', 0);
+            await fetch(API + `/api/sessions/${sessionId}/required-staff`, { method: 'PUT', body: fd });
+            await loadSchedule();
+        }
 
         async function autoAssign() {
             if (!confirm('スタッフを自動配置します。現在の配置はすべて上書きされます。よろしいですか？')) return;
@@ -2527,7 +2539,7 @@ createApp({
             catSelectedSessions, autoAssignCategorySelected, toggleCatSessionSelect, toggleCatSelectAll,
             catGridConfig, catGridRooms, catGridStyle, catGridLabels, catSessionStyle, catSelectedSession, catSelectedEntry,
             roleOptions,
-            assignStaffSelect, availableStaffs, addAssignment, removeAssignment,
+            assignStaffSelect, availableStaffs, addAssignment, removeAssignment, setAllStaff, unsetAllStaff,
             selectedSessions, toggleSessionSelect, toggleSelectAll,
             autoAssign, autoAssignSelected, clearAssignments,
             tlRooms, tlGridStyle, tlLabels, tlSessionStyle, tlBreaks,

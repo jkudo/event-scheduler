@@ -147,8 +147,8 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
         # セッションカテゴリに対応するスタッフロールを判定
         session_role = session.category if session.category in dynamic_cat_keys else 'session'
 
-        # 全体スケジュールは自動配置をスキップ（「全員」表示のみ）
-        if session.category == 'overall':
+        # 「全員」設定（required_staff == -1）またはoverallは自動配置をスキップ
+        if session.required_staff == -1 or session.category == 'overall':
             results.append({
                 "session_id": session.id,
                 "session_title": session.title,

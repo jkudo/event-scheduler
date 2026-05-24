@@ -176,6 +176,16 @@ def move_session(session_id: int, body: SessionMoveRequest, db: Session = Depend
     return session
 
 
+@router.put("/{session_id}/required-staff")
+def update_required_staff(session_id: int, required_staff: int = Form(...), db: Session = Depends(get_db)):
+    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    session.required_staff = required_staff
+    db.commit()
+    return {"ok": True}
+
+
 @router.delete("/{session_id}", status_code=204)
 def delete_session(session_id: int, db: Session = Depends(get_db)):
     session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
