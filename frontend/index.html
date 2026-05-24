@@ -828,7 +828,7 @@
                     style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
                     :style="allGroupTab === date ? {background:'#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="allGroupTab = date">
-                    {{ date }}
+                    {{ date }}<span v-if="dateGroupLabels(date).length" style="font-weight:400;margin-left:6px;font-size:0.8rem">({{ dateGroupLabels(date).join(', ') }})</span>
                 </button>
                 <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
                     :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
@@ -1018,7 +1018,7 @@
                     style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
                     :style="allGroupTab === date ? {background:'#e65100', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="allGroupTab = date">
-                    {{ date }}
+                    {{ date }}<span v-if="dateGroupLabels(date).length" style="font-weight:400;margin-left:6px;font-size:0.8rem">({{ dateGroupLabels(date).join(', ') }})</span>
                 </button>
                 <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
                     :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"

@@ -1145,6 +1145,12 @@ createApp({
             });
             return [...dates].sort();
         }
+        // 日付に紐づくグループ名一覧
+        function dateGroupLabels(date) {
+            return sessionGroups.value
+                .filter(g => sessions.value.some(s => s.group_id === g.id && s.start_time && s.start_time.startsWith(date)))
+                .map(g => g.label);
+        }
         // 日付タブで絞り込んだグループスケジュール
         function grpDateFiltered(gid) {
             const sess = groupSchedule.value[gid] || [];
@@ -2314,7 +2320,7 @@ createApp({
             sessionSchedule,
             // セッショングループ
             sessionGroups, groupLocks, groupSessForms, groupStaffFilters, groupScheduleMsgs, groupSelectedSessions,
-            grpDateTabs, grpDates, grpDateFiltered,
+            grpDateTabs, grpDates, grpDateFiltered, dateGroupLabels,
             groupSchedule, filteredGroupSchedule, groupSessionOpacity, groupSessions,
             cancelEditGroupSession, editGroupSession, submitGroupSession, deleteGroupSession,
             autoAssignGroup, autoAssignGroupSelected, clearGroupAssignments,
