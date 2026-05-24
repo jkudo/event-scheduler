@@ -544,7 +544,8 @@ createApp({
             fd.append('file', backupFile.value);
             try {
                 const res = await fetch(API + '/api/export/restore', { method: 'POST', body: fd });
-                const data = await res.json();
+                let data;
+                try { data = await res.json(); } catch { data = { detail: 'サーバーエラー (HTTP ' + res.status + ')' }; }
                 if (res.ok) {
                     ioMsg.value = `インポート完了: 部屋 ${data.rooms}件, セッション ${data.sessions}件, スタッフ ${data.staffs}件, 配置 ${data.assignments}件`;
                     ioMsgError.value = false;

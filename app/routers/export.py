@@ -708,160 +708,166 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
     if "rooms" not in data:
         return JSONResponse(status_code=400, content={"detail": "バックアップ形式が正しくありません"})
 
-    # --- 既存データ全削除 ---
-    db.query(Assignment).delete()
-    db.query(StaffAvailability).delete()
-    db.query(StaffPreferredSession).delete()
-    db.query(StaffSkill).delete()
-    db.query(Staff).delete()
-    db.query(LTTalk).delete()
-    db.query(SessionModel).delete()
-    db.query(SessionGroup).delete()
-    db.query(Category).delete()
-    db.query(VenueMap).delete()
-    db.query(Room).delete()
-    db.flush()
-
-    # --- uploads ディレクトリをクリア＆画像ファイルを復元 ---
-    if UPLOAD_DIR.exists():
-        shutil.rmtree(UPLOAD_DIR)
-    UPLOAD_DIR.mkdir(exist_ok=True)
-
-    # ZIP 内のファイル名 → 新ファイル名のマッピング
-    file_path_map: dict[str, str] = {}
-    for zip_path, content in image_files.items():
-        original_name = Path(zip_path).name
-        ext = Path(original_name).suffix.lower()
-        new_name = f"{uuid.uuid4().hex}{ext}"
-        (UPLOAD_DIR / new_name).write_bytes(content)
-        file_path_map[f"/uploads/{original_name}"] = f"/uploads/{new_name}"
-
-    def _map_path(original: str) -> str:
-        """バックアップ内のパスを復元後のパスに変換"""
-        if not original:
-            return ""
-        return file_path_map.get(original, original)
-
-    # ID マッピング (旧ID → 新ID)
-    room_map = {}
-    session_map = {}
-    staff_map = {}
-    group_map = {}
-
-    # --- カテゴリ ---
-    for c in data.get("categories", []):
-        db.add(Category(key=c["key"], label=c["label"], color=c.get("color", "#1a73e8"), order=c.get("order", 0)))
-    db.flush()
-
-    # --- セッショングループ ---
-    for g in data.get("session_groups", []):
-        db_grp = SessionGroup(label=g["label"], date=g.get("date", ""), order=g.get("order", 0), color=g.get("color", "#1a73e8"))
-        db.add(db_grp)
+    try:
+        # --- 既存データ全削除 ---
+        db.query(Assignment).delete()
+        db.query(StaffAvailability).delete()
+        db.query(StaffPreferredSession).delete()
+        db.query(StaffSkill).delete()
+        db.query(Staff).delete()
+        db.query(LTTalk).delete()
+        db.query(SessionModel).delete()
+        db.query(SessionGroup).delete()
+        db.query(Category).delete()
+        db.query(VenueMap).delete()
+        db.query(Room).delete()
         db.flush()
-        group_map[g["id"]] = db_grp.id
 
-    # --- 部屋 ---
-    for r in data.get("rooms", []):
-        db_room = Room(name=r["name"], capacity=r["capacity"], floor=r.get("floor", 1))
-        db.add(db_room)
+        # --- uploads ディレクトリをクリア＆画像ファイルを復元 ---
+        if UPLOAD_DIR.exists():
+            shutil.rmtree(UPLOAD_DIR)
+        UPLOAD_DIR.mkdir(exist_ok=True)
+
+        # ZIP 内のファイル名 → 新ファイル名のマッピング
+        file_path_map: dict[str, str] = {}
+        for zip_path, content in image_files.items():
+            original_name = Path(zip_path).name
+            ext = Path(original_name).suffix.lower()
+            new_name = f"{uuid.uuid4().hex}{ext}"
+            (UPLOAD_DIR / new_name).write_bytes(content)
+            file_path_map[f"/uploads/{original_name}"] = f"/uploads/{new_name}"
+
+        def _map_path(original: str) -> str:
+            """バックアップ内のパスを復元後のパスに変換"""
+            if not original:
+                return ""
+            return file_path_map.get(original, original)
+
+        # ID マッピング (旧ID → 新ID)
+        room_map = {}
+        session_map = {}
+        staff_map = {}
+        group_map = {}
+
+        # --- カテゴリ ---
+        for c in data.get("categories", []):
+            db.add(Category(key=c["key"], label=c["label"], color=c.get("color", "#1a73e8"), order=c.get("order", 0)))
         db.flush()
-        room_map[r["id"]] = db_room.id
 
-    # --- 会場地図 ---
-    for v in data.get("venue_maps", []):
-        db.add(VenueMap(
-            title=v["title"], image=_map_path(v.get("image", "")), order=v.get("order", 0),
-        ))
+        # --- セッショングループ ---
+        for g in data.get("session_groups", []):
+            db_grp = SessionGroup(label=g["label"], date=g.get("date", ""), order=g.get("order", 0), color=g.get("color", "#1a73e8"))
+            db.add(db_grp)
+            db.flush()
+            group_map[g["id"]] = db_grp.id
 
-    # --- セッション ---
-    for s in data.get("sessions", []):
-        new_room_id = room_map.get(s["room_id"], s["room_id"])
-        new_group_id = group_map.get(s.get("group_id")) if s.get("group_id") else None
-        db_sess = SessionModel(
-            title=s["title"], description=s.get("description", ""),
-            notes=s.get("notes", ""), speaker=s["speaker"],
-            speaker_kana=s.get("speaker_kana", ""),
-            speaker_photo=_map_path(s.get("speaker_photo", "")),
-            speaker_org=s.get("speaker_org", ""),
-            speaker_title=s.get("speaker_title", ""),
-            speaker_profile=s.get("speaker_profile", ""),
-            start_time=datetime.fromisoformat(s["start_time"]),
-            end_time=datetime.fromisoformat(s["end_time"]),
-            room_id=new_room_id,
-            required_staff=s.get("required_staff", 1),
-            category=s.get("category", "general"),
-            english_required=s.get("english_required", 0),
-            group_id=new_group_id,
-        )
-        db.add(db_sess)
-        db.flush()
-        session_map[s["id"]] = db_sess.id
-        for t in s.get("lt_talks", []):
-            db.add(LTTalk(
-                session_id=db_sess.id, title=t["title"], speaker=t["speaker"],
-                speaker_kana=t.get("speaker_kana", ""),
-                speaker_org=t.get("speaker_org", ""),
-                speaker_title=t.get("speaker_title", ""),
-                speaker_photo=_map_path(t.get("speaker_photo", "")),
-                start_time=t.get("start_time", ""),
-                end_time=t.get("end_time", ""),
-                order=t.get("order", 0),
+        # --- 部屋 ---
+        for r in data.get("rooms", []):
+            db_room = Room(name=r["name"], capacity=r["capacity"], floor=r.get("floor", 1))
+            db.add(db_room)
+            db.flush()
+            room_map[r["id"]] = db_room.id
+
+        # --- 会場地図 ---
+        for v in data.get("venue_maps", []):
+            db.add(VenueMap(
+                title=v["title"], image=_map_path(v.get("image", "")), order=v.get("order", 0),
             ))
 
-    # --- スタッフ ---
-    for st in data.get("staffs", []):
-        db_staff = Staff(
-            name=st["name"], slack_name=st.get("slack_name", ""),
-            photo=_map_path(st.get("photo", "")),
-            english_ok=st.get("english_ok", 0),
-            role=st.get("role", "general"),
-            max_hours=st.get("max_hours", 8),
-            experience_count=st.get("experience_count", 0),
-        )
-        db.add(db_staff)
-        db.flush()
-        staff_map[st["id"]] = db_staff.id
-        for skill in st.get("skills", []):
-            db.add(StaffSkill(staff_id=db_staff.id, skill=skill))
-        for p in st.get("preferred_sessions", []):
-            new_sess_id = session_map.get(p["session_id"])
-            if new_sess_id:
-                db.add(StaffPreferredSession(
-                    staff_id=db_staff.id, session_id=new_sess_id, priority=p["priority"],
+        # --- セッション ---
+        for s in data.get("sessions", []):
+            new_room_id = room_map.get(s["room_id"], s["room_id"])
+            new_group_id = group_map.get(s.get("group_id")) if s.get("group_id") else None
+            db_sess = SessionModel(
+                title=s["title"], description=s.get("description", ""),
+                notes=s.get("notes", ""), speaker=s["speaker"],
+                speaker_kana=s.get("speaker_kana", ""),
+                speaker_photo=_map_path(s.get("speaker_photo", "")),
+                speaker_org=s.get("speaker_org", ""),
+                speaker_title=s.get("speaker_title", ""),
+                speaker_profile=s.get("speaker_profile", ""),
+                start_time=datetime.fromisoformat(s["start_time"]),
+                end_time=datetime.fromisoformat(s["end_time"]),
+                room_id=new_room_id,
+                required_staff=s.get("required_staff", 1),
+                category=s.get("category", "general"),
+                english_required=s.get("english_required", 0),
+                group_id=new_group_id,
+            )
+            db.add(db_sess)
+            db.flush()
+            session_map[s["id"]] = db_sess.id
+            for t in s.get("lt_talks", []):
+                db.add(LTTalk(
+                    session_id=db_sess.id, title=t["title"], speaker=t["speaker"],
+                    speaker_kana=t.get("speaker_kana", ""),
+                    speaker_org=t.get("speaker_org", ""),
+                    speaker_title=t.get("speaker_title", ""),
+                    speaker_photo=_map_path(t.get("speaker_photo", "")),
+                    start_time=t.get("start_time", ""),
+                    end_time=t.get("end_time", ""),
+                    order=t.get("order", 0),
                 ))
-        for a in st.get("availabilities", []):
-            db.add(StaffAvailability(
-                staff_id=db_staff.id,
-                start_time=datetime.fromisoformat(a["start_time"]),
-                end_time=datetime.fromisoformat(a["end_time"]),
-            ))
 
-    # --- 配置 ---
-    for a in data.get("assignments", []):
-        new_sess_id = session_map.get(a["session_id"])
-        new_staff_id = staff_map.get(a["staff_id"])
-        if new_sess_id and new_staff_id:
-            db.add(Assignment(
-                session_id=new_sess_id, staff_id=new_staff_id, role=a.get("role", "support"),
-            ))
+        # --- スタッフ ---
+        for st in data.get("staffs", []):
+            db_staff = Staff(
+                name=st["name"], slack_name=st.get("slack_name", ""),
+                photo=_map_path(st.get("photo", "")),
+                english_ok=st.get("english_ok", 0),
+                role=st.get("role", "general"),
+                max_hours=st.get("max_hours", 8),
+                experience_count=st.get("experience_count", 0),
+            )
+            db.add(db_staff)
+            db.flush()
+            staff_map[st["id"]] = db_staff.id
+            for skill in st.get("skills", []):
+                db.add(StaffSkill(staff_id=db_staff.id, skill=skill))
+            for p in st.get("preferred_sessions", []):
+                new_sess_id = session_map.get(p["session_id"])
+                if new_sess_id:
+                    db.add(StaffPreferredSession(
+                        staff_id=db_staff.id, session_id=new_sess_id, priority=p["priority"],
+                    ))
+            for a in st.get("availabilities", []):
+                db.add(StaffAvailability(
+                    staff_id=db_staff.id,
+                    start_time=datetime.fromisoformat(a["start_time"]),
+                    end_time=datetime.fromisoformat(a["end_time"]),
+                ))
 
-    # --- 設定 ---
-    for s in data.get("settings", []):
-        existing = db.query(AppSetting).filter(AppSetting.key == s["key"]).first()
-        if existing:
-            existing.value = s["value"]
-        else:
-            db.add(AppSetting(key=s["key"], value=s["value"]))
+        # --- 配置 ---
+        for a in data.get("assignments", []):
+            new_sess_id = session_map.get(a["session_id"])
+            new_staff_id = staff_map.get(a["staff_id"])
+            if new_sess_id and new_staff_id:
+                db.add(Assignment(
+                    session_id=new_sess_id, staff_id=new_staff_id, role=a.get("role", "support"),
+                ))
 
-    db.commit()
+        # --- 設定 ---
+        for s in data.get("settings", []):
+            existing = db.query(AppSetting).filter(AppSetting.key == s["key"]).first()
+            if existing:
+                existing.value = s["value"]
+            else:
+                db.add(AppSetting(key=s["key"], value=s["value"]))
 
-    return {
-        "status": "ok",
-        "rooms": len(room_map),
-        "sessions": len(session_map),
-        "staffs": len(staff_map),
-        "assignments": len(data.get("assignments", [])),
-    }
+        db.commit()
+
+        return {
+            "status": "ok",
+            "rooms": len(room_map),
+            "sessions": len(session_map),
+            "staffs": len(staff_map),
+            "assignments": len(data.get("assignments", [])),
+        }
+    except Exception as e:
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"detail": f"復元に失敗しました: {str(e)}"})
 
 
 RESET_PASSWORD_DEFAULT = os.environ.get("RESET_PASSWORD", "conf-reset-2026")
