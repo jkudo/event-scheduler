@@ -571,7 +571,21 @@
 
         <!-- ===== 受付案内担当（スタッフ配置） ===== -->
         <div class="panel" :class="{ active: tab === 'reception' }">
-            <h2>受付案内担当</h2>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                <h2 style="margin:0">受付案内担当</h2>
+                <button @click="receptionLocked = !receptionLocked"
+                        :style="{ background: receptionLocked ? '#e8eaed' : '#fce8e6', color: receptionLocked ? '#5f6368' : '#c5221f', border: receptionLocked ? '1px solid #dadce0' : '1px solid #c5221f', borderRadius: '20px', padding: '5px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }">
+                    <span v-if="receptionLocked">&#128274; ロック中</span>
+                    <span v-else>&#128275; 編集中</span>
+                </button>
+            </div>
+
+            <!-- 自動配置ボタン（ロック解除時のみ表示） -->
+            <div v-if="!receptionLocked" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
+                <button class="btn btn-success" @click="autoAssignReception">スタッフ自動配置</button>
+                <button class="btn btn-danger" @click="clearReceptionAssignments">配置をクリア</button>
+                <div v-if="rcAssignMsg" class="msg success" style="margin:0">{{ rcAssignMsg }}</div>
+            </div>
 
             <!-- スタッフフィルター -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -637,15 +651,17 @@
                                     <template v-if="e.assigned_staff.length">
                                         <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
                                             {{ a.staff.name }}
-                                            <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                            <button v-if="!receptionLocked" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
                                         </span>
                                     </template>
                                     <span v-else class="badge warn">未配置</span>
-                                    <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
-                                        <option :value="0">＋追加</option>
-                                        <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
-                                    </select>
-                                    <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                                    <template v-if="!receptionLocked">
+                                        <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                            <option :value="0">＋追加</option>
+                                            <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                        </select>
+                                        <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                                    </template>
                                 </div>
                             </td>
                         </tr>
@@ -705,7 +721,21 @@
 
         <!-- ===== 懇親会担当（スタッフ配置） ===== -->
         <div class="panel" :class="{ active: tab === 'social' }">
-            <h2>懇親会担当</h2>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                <h2 style="margin:0">懇親会担当</h2>
+                <button @click="socialLocked = !socialLocked"
+                        :style="{ background: socialLocked ? '#e8eaed' : '#fce8e6', color: socialLocked ? '#5f6368' : '#c5221f', border: socialLocked ? '1px solid #dadce0' : '1px solid #c5221f', borderRadius: '20px', padding: '5px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }">
+                    <span v-if="socialLocked">&#128274; ロック中</span>
+                    <span v-else>&#128275; 編集中</span>
+                </button>
+            </div>
+
+            <!-- 自動配置ボタン（ロック解除時のみ表示） -->
+            <div v-if="!socialLocked" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
+                <button class="btn btn-success" @click="autoAssignSocial">スタッフ自動配置</button>
+                <button class="btn btn-danger" @click="clearSocialAssignments">配置をクリア</button>
+                <div v-if="scAssignMsg" class="msg success" style="margin:0">{{ scAssignMsg }}</div>
+            </div>
 
             <!-- スタッフフィルター -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -771,15 +801,17 @@
                                     <template v-if="e.assigned_staff.length">
                                         <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
                                             {{ a.staff.name }}
-                                            <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                            <button v-if="!socialLocked" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
                                         </span>
                                     </template>
                                     <span v-else class="badge warn">未配置</span>
-                                    <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
-                                        <option :value="0">＋追加</option>
-                                        <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
-                                    </select>
-                                    <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                                    <template v-if="!socialLocked">
+                                        <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                            <option :value="0">＋追加</option>
+                                            <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                        </select>
+                                        <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                                    </template>
                                 </div>
                             </td>
                         </tr>

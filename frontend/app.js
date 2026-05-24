@@ -23,6 +23,8 @@ createApp({
 
         let dragDidMove = false; // suppress click after drag-and-drop
         const matrixLocked = ref(true); // ドラッグ&ドロップのロック（デフォルト: ロック）
+        const receptionLocked = ref(true);
+        const socialLocked = ref(true);
 
         const roomForm = reactive({ editId: null, name: '', capacity: null, floor: 1 });
         const venueMaps = ref([]);
@@ -839,6 +841,13 @@ createApp({
             rcAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
             await loadSchedule();
         }
+        async function clearReceptionAssignments() {
+            if (!confirm('受付のスタッフ配置をすべてクリアします。よろしいですか？')) return;
+            const ids = receptionSessions.value.flatMap(e => e.assigned_staff.map(a => a.assignment_id));
+            for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+            rcAssignMsg.value = '受付の配置をクリアしました';
+            await loadSchedule();
+        }
 
         // ====================================================================
         //  懇親会管理
@@ -904,6 +913,13 @@ createApp({
                 body: JSON.stringify({ session_ids: ids })
             })).json();
             scAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
+            await loadSchedule();
+        }
+        async function clearSocialAssignments() {
+            if (!confirm('懇親会のスタッフ配置をすべてクリアします。よろしいですか？')) return;
+            const ids = socialSessions.value.flatMap(e => e.assigned_staff.map(a => a.assignment_id));
+            for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+            scAssignMsg.value = '懇親会の配置をクリアしました';
             await loadSchedule();
         }
 
@@ -1625,8 +1641,8 @@ createApp({
             matrixLocked, drag, dragSessionStyle, onDragStart, dragCursor,
             rcConfig, rcRooms, rcGridStyle, rcLabels, rcSessionStyle,
             rcSelectedSession, rcSelectedEntry,
-            rcForm, rcAssignMsg, cancelEditReception, editReception, submitReception, deleteReception, autoAssignReception,
-            scForm, scAssignMsg, cancelEditSocial, editSocial, submitSocial, deleteSocial, autoAssignSocial,
+            receptionLocked, rcForm, rcAssignMsg, cancelEditReception, editReception, submitReception, deleteReception, autoAssignReception, clearReceptionAssignments,
+            socialLocked, scForm, scAssignMsg, cancelEditSocial, editSocial, submitSocial, deleteSocial, autoAssignSocial, clearSocialAssignments,
             scConfig, scRooms, scGridStyle, scLabels, scSessionStyle,
             scSelectedSession, scSelectedEntry,
             exportExcel, exportBackup, backupFileName, ioMsg, ioMsgError, onBackupFileChange, importBackup,
