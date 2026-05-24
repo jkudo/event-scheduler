@@ -1132,8 +1132,12 @@ createApp({
         // ====================================================================
         const groupSchedule = computed(() => {
             const result = {};
+            const dkeys = dynamicCatKeys.value;
             sessionGroups.value.forEach(g => {
-                result[g.id] = sessionSchedule.value.filter(e => e.session.group_id === g.id);
+                // セッション + 全体スケジュール（動的カテゴリは除外）
+                result[g.id] = schedule.value.filter(e =>
+                    e.session.group_id === g.id && !dkeys.includes(e.session.category)
+                );
             });
             return result;
         });
