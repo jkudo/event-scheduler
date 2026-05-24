@@ -1437,7 +1437,8 @@
                         <span style="font-weight:700;color:#1a73e8;min-width:24px">{{ idx + 1 }}.</span>
                         <div>
                             <strong>{{ t.speaker }}</strong>
-                            <span v-if="t.speaker_org || t.speaker_title" style="color:#666;font-size:0.85rem"> ({{ [t.speaker_title, t.speaker_org].filter(Boolean).join(' / ') }})</span>
+                            <span v-if="t.speaker_kana" style="color:#888;font-size:0.8rem;margin-left:4px">({{ t.speaker_kana }})</span>
+                            <span v-if="t.speaker_org || t.speaker_title" style="color:#666;font-size:0.85rem"> / {{ [t.speaker_title, t.speaker_org].filter(Boolean).join(' / ') }}</span>
                             <br><span style="color:#555;font-size:0.85rem">{{ t.title }}</span>
                         </div>
                     </div>
