@@ -29,6 +29,10 @@ def create_category(data: CategoryCreate, db: Session = Depends(get_db)):
     existing = db.query(Category).filter(Category.key == key).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Key '{key}' は既に使用されています")
+    # Shift existing items with order >= data.order
+    db.query(Category).filter(Category.order >= data.order).update(
+        {Category.order: Category.order + 1}, synchronize_session=False
+    )
     cat = Category(key=key, label=data.label, color=data.color, order=data.order)
     db.add(cat)
     db.commit()
@@ -44,9 +48,15 @@ def update_category(category_id: int, data: CategoryCreate, db: Session = Depend
     dup = db.query(Category).filter(Category.key == data.key, Category.id != category_id).first()
     if dup:
         raise HTTPException(status_code=400, detail=f"Key '{data.key}' は既に使用されています")
-    cat.key = data.key
+    if data.key:
+        cat.key = data.key
     cat.label = data.label
     cat.color = data.color
+    if cat.order != data.order:
+        # Shift others to make room
+        db.query(Category).filter(Category.order >= data.order, Category.id != category_id).update(
+            {Category.order: Category.order + 1}, synchronize_session=False
+        )
     cat.order = data.order
     db.commit()
     db.refresh(cat)

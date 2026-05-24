@@ -15,6 +15,10 @@ def list_session_groups(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=SessionGroupResponse, status_code=201)
 def create_session_group(data: SessionGroupCreate, db: Session = Depends(get_db)):
+    # Shift existing items with order >= data.order
+    db.query(SessionGroup).filter(SessionGroup.order >= data.order).update(
+        {SessionGroup.order: SessionGroup.order + 1}, synchronize_session=False
+    )
     grp = SessionGroup(label=data.label, date=data.date, order=data.order, color=data.color)
     db.add(grp)
     db.commit()
@@ -29,6 +33,11 @@ def update_session_group(group_id: int, data: SessionGroupCreate, db: Session = 
         raise HTTPException(status_code=404, detail="SessionGroup not found")
     grp.label = data.label
     grp.date = data.date
+    if grp.order != data.order:
+        # Shift others to make room
+        db.query(SessionGroup).filter(SessionGroup.order >= data.order, SessionGroup.id != group_id).update(
+            {SessionGroup.order: SessionGroup.order + 1}, synchronize_session=False
+        )
     grp.order = data.order
     grp.color = data.color
     db.commit()
