@@ -862,6 +862,7 @@ createApp({
         });
 
         async function submitStaff() {
+            if (staffForm.experience_count === null || staffForm.experience_count === '' || staffForm.experience_count < 0) { alert('過去参加回数を入力してください'); return; }
             const payload = { name: staffForm.name, slack_name: staffForm.slack_name, role: staffForm.role, experience_count: staffForm.experience_count, english_ok: staffForm.english_ok };
             if (staffForm.editId) {
                 await fetch(API + `/api/staffs/${staffForm.editId}`, {
