@@ -38,7 +38,8 @@ createApp({
                 if (!(c.key in categoryForms)) categoryForms[c.key] = { editId: null, title: '', start_time: '', end_time: '', room_id: null, required_staff: 2, english_required: false, notes: '' };
                 if (!(c.key in categoryAssignMsgs)) categoryAssignMsgs[c.key] = '';
                 if (!(c.key in categoryStaffFilters)) categoryStaffFilters[c.key] = 0;
-                if (!(c.key in catGroupTabs)) catGroupTabs[c.key] = catDates.value.length ? catDates.value[0] : 0;
+                const ckDates = catKeyDates(c.key);
+                if (!(c.key in catGroupTabs)) catGroupTabs[c.key] = ckDates.length ? ckDates[0] : 0;
                 if (!(c.key in catSelectedSessions)) catSelectedSessions[c.key] = new Set();
             });
         }
@@ -145,12 +146,10 @@ createApp({
         async function loadSessions() {
             sessions.value = await (await fetch(API + '/api/sessions/')).json();
             // セッション読み込み後、カテゴリタブのデフォルトを最初の日付に設定
-            const dates = catDates.value;
-            if (dates.length) {
-                categories.value.forEach(c => {
-                    if (catGroupTabs[c.key] === 0) catGroupTabs[c.key] = dates[0];
-                });
-            }
+            categories.value.forEach(c => {
+                const ckd = catKeyDates(c.key);
+                if (ckd.length && catGroupTabs[c.key] === 0) catGroupTabs[c.key] = ckd[0];
+            });
             // グループ担当の日付タブもデフォルト設定（未設定 or 0 の場合は最初の日付に）
             sessionGroups.value.forEach(g => {
                 if (!grpDateTabs[g.id]) {
@@ -183,7 +182,8 @@ createApp({
                     if (!grpDateTabs[g.id]) grpDateTabs[g.id] = dates[0];
                 });
                 categories.value.forEach(c => {
-                    if (!catGroupTabs[c.key]) catGroupTabs[c.key] = dates[0];
+                    const ckd = catKeyDates(c.key);
+                    if (!catGroupTabs[c.key] && ckd.length) catGroupTabs[c.key] = ckd[0];
                 });
                 if (!allGroupTab.value) allGroupTab.value = dates[0];
                 if (!overallDateTab.value) overallDateTab.value = dates[0];
@@ -1020,7 +1020,7 @@ createApp({
             if (!matrixStaffFilter.value) return sessionSchedule.value;
             return sessionSchedule.value.filter(e => _hasStaff(e, matrixStaffFilter.value));
         });
-        // カテゴリ内の日付一覧を自動検出
+        // 全セッションの日付一覧を自動検出
         const catDates = computed(() => {
             const dates = new Set();
             sessions.value.forEach(s => {
@@ -1028,6 +1028,14 @@ createApp({
             });
             return [...dates].sort();
         });
+        // 特定カテゴリのセッションがある日付のみ返す
+        function catKeyDates(catKey) {
+            const dates = new Set();
+            sessions.value.filter(s => s.category === catKey).forEach(s => {
+                if (s.start_time) dates.add(s.start_time.slice(0, 10));
+            });
+            return [...dates].sort();
+        }
         function catGroupFiltered(catKey) {
             const sess = categorySessions.value[catKey] || [];
             const tab = catGroupTabs[catKey];
@@ -2509,7 +2517,7 @@ createApp({
             grpGridConfig, grpGridRooms, grpGridStyle, grpGridLabels, grpSessionStyle, grpDragSessionStyle, onGrpDragStart, grpSelectedSession, grpSelectedEntry,
             // 動的カテゴリ
             categories, dynamicCatKeys, categoryLocks, categoryForms, categoryAssignMsgs, categoryStaffFilters,
-            categorySessions, catDates, catGroupTabs, catGroupFiltered, catTimelineByGroup, filteredCategorySessions, catSessionOpacity,
+            categorySessions, catDates, catKeyDates, catGroupTabs, catGroupFiltered, catTimelineByGroup, filteredCategorySessions, catSessionOpacity,
             cancelEditCategory, editCategory, submitCategory, deleteCategory, autoAssignCategory, clearCategoryAssignments,
             catSelectedSessions, autoAssignCategorySelected, toggleCatSessionSelect, toggleCatSelectAll,
             catGridConfig, catGridRooms, catGridStyle, catGridLabels, catSessionStyle, catSelectedSession, catSelectedEntry,
