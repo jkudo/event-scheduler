@@ -147,14 +147,14 @@ createApp({
                     if (catGroupTabs[c.key] === 0) catGroupTabs[c.key] = dates[0];
                 });
             }
-            // グループ担当の日付タブもデフォルト設定
+            // グループ担当の日付タブもデフォルト設定（未設定 or 0 の場合は最初の日付に）
             sessionGroups.value.forEach(g => {
-                if (!(g.id in grpDateTabs)) {
+                if (!grpDateTabs[g.id]) {
                     const gDates = grpDates(g.id);
                     grpDateTabs[g.id] = gDates.length ? gDates[0] : 0;
                 }
             });
-            // 全体スケジュールのデフォルトタブ
+            // 全体スケジュールのデフォルトタブ（未設定 or 0 の場合は最初の日付に）
             if (!allGroupTab.value && dates.length) {
                 allGroupTab.value = dates[0];
             }
@@ -169,6 +169,17 @@ createApp({
         }
         async function loadSchedule() {
             schedule.value = ((await (await fetch(API + '/api/assignments/schedule')).json()).schedule || []);
+            // schedule読み込み後もタブのデフォルト設定を確認
+            const dates = catDates.value;
+            if (dates.length) {
+                sessionGroups.value.forEach(g => {
+                    if (!grpDateTabs[g.id]) grpDateTabs[g.id] = dates[0];
+                });
+                categories.value.forEach(c => {
+                    if (!catGroupTabs[c.key]) catGroupTabs[c.key] = dates[0];
+                });
+                if (!allGroupTab.value) allGroupTab.value = dates[0];
+            }
         }
         async function loadStaffAssignments() {
             staffAssignments.value = ((await (await fetch(API + '/api/assignments/staff-schedule')).json()).staff_assignments || []);
