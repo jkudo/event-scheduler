@@ -16,14 +16,15 @@
             <h1 class="sidebar-title">{{ appTitle }}</h1>
             <button class="sidebar-item" :class="{ active: tab === 'all-matrix' }" @click="switchTab('all-matrix')">全体スケジュール</button>
             <button class="sidebar-item" :class="{ active: tab === 'staff-detail' }" @click="switchTab('staff-detail')">スタッフ別詳細</button>
+            <button class="sidebar-item" :class="{ active: tab === 'venue-view' }" @click="switchTab('venue-view')">会場</button>
             <div class="sidebar-section">イベント設定</div>
-            <button class="sidebar-item" :class="{ active: tab === 'rooms' }" @click="switchTab('rooms')">部屋管理</button>
-            <button class="sidebar-item" :class="{ active: tab === 'venue-maps' }" @click="switchTab('venue-maps')">会場地図</button>
+            <button class="sidebar-item" :class="{ active: tab === 'overall-manage' }" @click="switchTab('overall-manage')">全体スケジュール管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'sessions' }" @click="switchTab('sessions')">セッション管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'reception-manage' }" @click="switchTab('reception-manage')">受付管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'social-manage' }" @click="switchTab('social-manage')">懇親会管理</button>
-            <button class="sidebar-item" :class="{ active: tab === 'overall-manage' }" @click="switchTab('overall-manage')">全体スケジュール管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'staffs' }" @click="switchTab('staffs')">スタッフ管理</button>
+            <button class="sidebar-item" :class="{ active: tab === 'rooms' }" @click="switchTab('rooms')">部屋管理</button>
+            <button class="sidebar-item" :class="{ active: tab === 'venue-maps' }" @click="switchTab('venue-maps')">会場地図</button>
             <div class="sidebar-section">スタッフ配置</div>
             <button class="sidebar-item" :class="{ active: tab === 'matrix' }" @click="switchTab('matrix')">セッション担当</button>
             <button class="sidebar-item" :class="{ active: tab === 'reception' }" @click="switchTab('reception')">受付案内担当</button>
@@ -936,6 +937,24 @@
                     </table>
                 </template>
                 <p v-else style="color:#666;margin-top:8px">担当セッションなし</p>
+            </div>
+        </div>
+
+        <!-- ===== 会場（表示専用） ===== -->
+        <div class="panel" :class="{ active: tab === 'venue-view' }">
+            <h2>会場</h2>
+            <p v-if="!venueMaps.length" style="color:#888;font-size:0.9rem">会場地図が登録されていません。「会場地図」から追加してください。</p>
+            <div v-for="m in venueMaps" :key="'vv-'+m.id" style="margin-bottom:24px">
+                <h3 style="margin-bottom:8px">{{ m.title }}</h3>
+                <img :src="m.image" style="max-width:100%;max-height:500px;border-radius:6px;border:1px solid #ddd;cursor:pointer" @click="mapModal=m">
+            </div>
+            <!-- 地図拡大モーダル（共有） -->
+            <div v-if="mapModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="mapModal=null">
+                <div style="background:#fff;border-radius:8px;padding:20px;max-width:90vw;max-height:90vh;overflow:auto;position:relative">
+                    <h3 style="margin-bottom:12px">{{ mapModal.title }}</h3>
+                    <img :src="mapModal.image" style="max-width:80vw;max-height:70vh;border-radius:4px">
+                    <br><button class="btn btn-sm" style="margin-top:12px" @click="mapModal=null">閉じる</button>
+                </div>
             </div>
         </div>
 

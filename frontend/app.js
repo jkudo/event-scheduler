@@ -6,7 +6,7 @@ createApp({
         const CATEGORY_LABELS = { general: '一般', tech: '技術', workshop: 'ワークショップ', keynote: '基調講演', lt: 'LT', reception: '受付', social: '懇親会', session: 'セッション', overall: '全体' };
         const SLOT_MIN = 5; // 5分刻み
 
-        const tab = ref('rooms');
+        const tab = ref('all-matrix');
         const rooms = ref([]);
         const sessions = ref([]);
         const staffs = ref([]);
@@ -357,6 +357,7 @@ createApp({
             if (name === 'social-manage') { await loadRooms(); await loadSessions(); await loadSchedule(); if (!scForm.room_id && rooms.value.length) scForm.room_id = rooms.value[0].id; }
             if (name === 'reception') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); if (!rcForm.room_id && rooms.value.length) rcForm.room_id = rooms.value[0].id; }
             if (name === 'social') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); if (!scForm.room_id && rooms.value.length) scForm.room_id = rooms.value[0].id; }
+            if (name === 'venue-view') await loadVenueMaps();
             if (name === 'io') { await loadRooms(); await loadSessions(); }
         }
 
@@ -1623,7 +1624,7 @@ createApp({
             return _hasStaff(entry, allStaffFilter.value) ? 1 : 0.15;
         }
 
-        onMounted(() => { loadRooms(); loadSettings(); });
+        onMounted(() => { loadRooms(); loadStaffs(); loadSessions().then(() => loadSchedule()); loadSettings(); });
 
         return {
             tab, rooms, sessions, staffs, schedule, staffAssignments,
