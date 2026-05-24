@@ -239,6 +239,21 @@
         <!-- ===== スタッフ管理 ===== -->
         <div class="panel" :class="{ active: tab === 'staffs' }">
             <h2>スタッフ管理</h2>
+            <!-- 写真アップロード（編集時） -->
+            <div v-if="staffForm.editId" style="margin-bottom:12px;display:flex;align-items:center;gap:16px">
+                <div>
+                    <img v-if="staffForm.currentPhoto" :src="staffForm.currentPhoto" class="photo-preview">
+                    <span v-else class="speaker-photo-placeholder" style="width:80px;height:80px;font-size:2rem">{{ staffForm.name ? staffForm.name.charAt(0) : '?' }}</span>
+                </div>
+                <div>
+                    <label style="font-weight:600;font-size:0.9rem;display:block;margin-bottom:4px">プロフィール写真</label>
+                    <input type="file" ref="staffPhotoInput" accept="image/jpeg,image/png,image/gif,image/webp"
+                           @change="uploadStaffPhoto(staffForm.editId, $event)">
+                    <div v-if="staffForm.currentPhoto" style="margin-top:4px">
+                        <button class="del-btn" @click="deleteStaffPhoto(staffForm.editId)">写真を削除</button>
+                    </div>
+                </div>
+            </div>
             <div class="form-row">
                 <div class="form-group"><label>名前</label><input v-model="staffForm.name" placeholder="例: 山田 太郎"></div>
                 <div class="form-group"><label>Slack名</label><input v-model="staffForm.slack_name" placeholder="例: @yamada-taro"></div>

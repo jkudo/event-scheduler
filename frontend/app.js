@@ -50,7 +50,7 @@ createApp({
             speaker_org: '', speaker_title: '', speaker_profile: ''
         });
         const ltTalks = reactive([]);
-        const staffForm = reactive({ editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false });
+        const staffForm = reactive({ editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
         const roleDropdownOpen = ref(false);
         const prefForms = reactive({});
         const availForms = reactive({});
@@ -603,9 +603,10 @@ createApp({
             staffForm.role = Array.isArray(s.role) ? [...s.role] : (s.role ? s.role.split(',') : ['session']);
             staffForm.experience_count = s.experience_count;
             staffForm.english_ok = !!s.english_ok;
+            staffForm.currentPhoto = s.photo || '';
         }
         function cancelEditStaff() {
-            Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false });
+            Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
             newStaffAvails.splice(0);
             newAvailForm.start = '';
             newAvailForm.end = '';
@@ -620,8 +621,17 @@ createApp({
             const fd = new FormData();
             fd.append('photo', file);
             const res = await fetch(API + `/api/staffs/${staffId}/photo`, { method: 'POST', body: fd });
-            if (res.ok) { await loadStaffs(); } else { alert('写真のアップロードに失敗しました'); }
+            if (res.ok) {
+                await loadStaffs();
+                const updated = staffs.value.find(s => s.id === staffId);
+                if (updated && staffForm.editId === staffId) staffForm.currentPhoto = updated.photo || '';
+            } else { alert('写真のアップロードに失敗しました'); }
             event.target.value = '';
+        }
+        async function deleteStaffPhoto(staffId) {
+            await fetch(API + `/api/staffs/${staffId}/photo`, { method: 'DELETE' });
+            await loadStaffs();
+            if (staffForm.editId === staffId) staffForm.currentPhoto = '';
         }
         async function addPref(staffId) {
             const f = prefForms[staffId];
@@ -1644,7 +1654,7 @@ createApp({
             newStaffAvails, newAvailForm, addNewStaffAvail,
             newStaffPrefs, newPrefForm, addNewStaffPref, sessionTitle,
             staffAssignCount, editingStaffPrefs, editingStaffAvails,
-            submitStaff, editStaff, cancelEditStaff, deleteStaff, uploadStaffPhoto, addPref, removePref, addAvail, removeAvail,
+            submitStaff, editStaff, cancelEditStaff, deleteStaff, uploadStaffPhoto, deleteStaffPhoto, addPref, removePref, addAvail, removeAvail,
             sessionSchedule, receptionSessions, socialSessions,
             assignStaffSelect, availableStaffs, addAssignment, removeAssignment,
             selectedSessions, toggleSessionSelect, toggleSelectAll,
