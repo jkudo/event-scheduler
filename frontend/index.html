@@ -19,7 +19,7 @@
             <button class="sidebar-item" :class="{ active: tab === 'venue-view' }" @click="switchTab('venue-view')">会場</button>
             <div class="sidebar-section">イベント設定</div>
             <button class="sidebar-item" :class="{ active: tab === 'overall-manage' }" @click="switchTab('overall-manage')">全体スケジュール管理</button>
-            <button v-for="grp in sessionGroups" :key="'nav-gm-'+grp.id" class="sidebar-item" :class="{ active: tab === 'grp-'+grp.id+'-manage' }" @click="switchTab('grp-'+grp.id+'-manage')">{{ grp.label }} 管理</button>
+            <button v-for="grp in sessionGroups" :key="'nav-gm-'+grp.id" class="sidebar-item" :class="{ active: tab === 'grp-'+grp.id+'-manage' }" @click="switchTab('grp-'+grp.id+'-manage')">{{ grp.label }}管理</button>
             <button v-for="cat in categories" :key="'nav-m-'+cat.key" class="sidebar-item" :class="{ active: tab === cat.key+'-manage' }" @click="switchTab(cat.key+'-manage')">{{ cat.label }}管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'staffs' }" @click="switchTab('staffs')">スタッフ管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'rooms' }" @click="switchTab('rooms')">部屋管理</button>
@@ -115,7 +115,7 @@
         <!-- ===== 動的セッショングループ管理 ===== -->
         <template v-for="grp in sessionGroups" :key="'grpm-'+grp.id">
         <div class="panel" :class="{ active: tab === 'grp-'+grp.id+'-manage' }">
-            <h2>{{ grp.label }} 管理</h2>
+            <h2>{{ grp.label }}管理</h2>
 
             <!-- 日程タブ -->
             <div v-if="grpDates(grp.id).length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
