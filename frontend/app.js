@@ -42,6 +42,7 @@ createApp({
                 if (!(c.key in catGroupTabs)) catGroupTabs[c.key] = ckDates.length ? ckDates[0] : 0;
                 if (!(c.key in catSelectedSessions)) catSelectedSessions[c.key] = new Set();
             });
+            if (!catSettingForm.editId) catSettingForm.order = nextCatOrder();
         }
         const dynamicCatKeys = computed(() => categories.value.map(c => c.key));
         const CATEGORY_LABELS = computed(() => {
@@ -83,6 +84,7 @@ createApp({
                 if (!(g.id in groupScheduleMsgs)) groupScheduleMsgs[g.id] = '';
                 if (!(g.id in groupSelectedSessions)) groupSelectedSessions[g.id] = new Set();
             });
+            if (!grpSettingForm.editId) grpSettingForm.order = nextGrpOrder();
             // allGroupTabのデフォルトはloadSessions後に設定
         }
 
@@ -389,7 +391,8 @@ createApp({
             }
         }
         // --- カテゴリ設定管理 ---
-        const catSettingForm = reactive({ editId: null, key: '', label: '', color: '#607d8b', order: 0 });
+        function nextCatOrder() { return categories.value.length ? Math.max(...categories.value.map(c => c.order)) + 1 : 1; }
+        const catSettingForm = reactive({ editId: null, key: '', label: '', color: '#607d8b', order: 1 });
         const catSettingMsg = ref('');
         function editCatSetting(cat) {
             catSettingForm.editId = cat.id;
@@ -404,7 +407,7 @@ createApp({
             catSettingForm.key = '';
             catSettingForm.label = '';
             catSettingForm.color = '#607d8b';
-            catSettingForm.order = 0;
+            catSettingForm.order = nextCatOrder();
             catSettingMsg.value = '';
         }
         async function saveCatSetting() {
@@ -443,7 +446,8 @@ createApp({
         }
 
         // --- セッショングループ設定管理 ---
-        const grpSettingForm = reactive({ editId: null, label: '', date: '', order: 0, color: '#1a73e8' });
+        function nextGrpOrder() { return sessionGroups.value.length ? Math.max(...sessionGroups.value.map(g => g.order)) + 1 : 1; }
+        const grpSettingForm = reactive({ editId: null, label: '', date: '', order: 1, color: '#1a73e8' });
         const grpSettingMsg = ref('');
         function editGrpSetting(grp) {
             grpSettingForm.editId = grp.id;
@@ -457,7 +461,7 @@ createApp({
             grpSettingForm.editId = null;
             grpSettingForm.label = '';
             grpSettingForm.date = '';
-            grpSettingForm.order = 0;
+            grpSettingForm.order = nextGrpOrder();
             grpSettingForm.color = '#1a73e8';
             grpSettingMsg.value = '';
         }
