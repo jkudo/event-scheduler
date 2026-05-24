@@ -412,7 +412,7 @@
                                 {{ s.name }}
                                 <span class="badge" v-for="r in (Array.isArray(s.role) ? s.role : [s.role])" :key="r">{{ catLabel(r) }}</span>
                                 <span v-if="s.english_ok" class="badge" style="background:#e0f2f1;color:#00695c">EN</span>
-                                <span v-if="s.slack_name" style="font-weight:normal;font-size:0.85rem;color:#666">{{ s.slack_name }}</span>
+                                <span v-if="s.slack_name" style="font-weight:normal;font-size:0.85rem;color:#888">a.k.a {{ s.slack_name }}</span>
                                 <span v-if="s.experience_count === 0" class="badge warn">初参加</span>
                                 <span v-else class="badge avail">{{ s.experience_count }}回目</span>
                                 <span class="badge" style="background:#e8f0fe;color:#1a73e8">担当: {{ staffAssignCount[s.id] || 0 }}件</span>
