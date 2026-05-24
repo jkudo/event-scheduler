@@ -21,7 +21,7 @@ from ..config import UPLOAD_DIR
 from ..database import get_db
 from ..models import (
     Session as SessionModel, Staff, Assignment, Room, VenueMap,
-    LTTalk, StaffSkill, StaffPreferredSession, StaffAvailability,
+    LTTalk, StaffSkill, StaffPreferredSession, StaffAvailability, Category, SessionGroup,
 )
 router = APIRouter(prefix="/api/export", tags=["export"])
 
@@ -41,11 +41,10 @@ WRAP = Alignment(wrap_text=True, vertical="top")
 CENTER = Alignment(horizontal="center", vertical="center")
 
 SESSION_CATS = ("general", "tech", "workshop", "keynote", "lt")
-ROLE_LABELS = {"session": "セッション", "reception": "受付", "social": "懇親会"}
-CAT_LABELS = {
+ROLE_LABELS_BASE = {"session": "セッション"}
+CAT_LABELS_BASE = {
     "general": "一般", "tech": "技術", "workshop": "ワークショップ",
-    "keynote": "基調講演", "lt": "LT", "reception": "受付", "social": "懇親会",
-    "overall": "全体",
+    "keynote": "基調講演", "lt": "LT", "overall": "全体",
 }
 
 PHOTO_PX = 48  # Excel内の写真サイズ (px)
@@ -137,6 +136,20 @@ def export_excel(db: Session = Depends(get_db)):
         .all()
     )
 
+    # 動的カテゴリ取得
+    db_categories = db.query(Category).order_by(Category.order, Category.id).all()
+    db_session_groups = db.query(SessionGroup).order_by(SessionGroup.order, SessionGroup.id).all()
+    dynamic_cat_keys = [c.key for c in db_categories]
+    CAT_LABELS = {**CAT_LABELS_BASE, **{c.key: c.label for c in db_categories}}
+    ROLE_LABELS = {**ROLE_LABELS_BASE, **{c.key: c.label for c in db_categories}}
+
+    def _cat_header_fill(color_hex: str) -> PatternFill:
+        """カテゴリの色からヘッダー用PatternFillを生成"""
+        c = color_hex.lstrip("#").upper()
+        return PatternFill(start_color=c, end_color=c, fill_type="solid")
+
+    cat_fill_map = {c.key: _cat_header_fill(c.color) for c in db_categories}
+
     wb = Workbook()
 
     # ============================================================
@@ -154,10 +167,11 @@ def export_excel(db: Session = Depends(get_db)):
     _auto_width(ws1)
 
     # ============================================================
-    # Sheet 2: セッション管理 (reception/social 除外, 写真付き)
+    # Sheet 2: セッション管理 (動的カテゴリ除外, 写真付き)
     # ============================================================
+    group_label_map = {g.id: g.label for g in db_session_groups}
     ws2 = wb.create_sheet("セッション管理")
-    ws2.append(["ID", "写真", "タイトル", "登壇者", "ふりがな", "所属", "肩書き", "開始", "終了", "部屋", "カテゴリ", "必要人数", "英語", "説明", "備考"])
+    ws2.append(["ID", "写真", "タイトル", "登壇者", "ふりがな", "所属", "肩書き", "開始", "終了", "部屋", "カテゴリ", "グループ", "必要人数", "英語", "説明", "備考"])
     _apply_header(ws2, 1)
     # 写真列の幅を確保
     ws2.column_dimensions["B"].width = 9
@@ -181,6 +195,7 @@ def export_excel(db: Session = Depends(get_db)):
             _fmt_full(s.end_time),
             s.room.name if s.room else "",
             CAT_LABELS.get(s.category, s.category),
+            group_label_map.get(s.group_id, ""),
             s.required_staff,
             "○" if s.english_required else "",
             s.description,
@@ -262,20 +277,16 @@ def export_excel(db: Session = Depends(get_db)):
     # --- フロントエンドと同じ列構成を構築 ---
     overall_sessions = [s for s in sessions if s.category == "overall"]
     session_only = [s for s in sessions if s.category in SESSION_CATS]
-    reception_sessions = [s for s in sessions if s.category == "reception"]
-    social_sessions = [s for s in sessions if s.category == "social"]
-    all_schedule = overall_sessions + session_only + reception_sessions + social_sessions
+    # 動的カテゴリ別セッション
+    cat_sessions_map = {ck: [s for s in sessions if s.category == ck] for ck in dynamic_cat_keys}
+    all_schedule = overall_sessions + session_only
+    for ck in dynamic_cat_keys:
+        all_schedule += cat_sessions_map[ck]
 
     has_overall = len(overall_sessions) > 0
-    # セッション部屋 (overall/reception/social 除外)
+    # セッション部屋 (overall/動的カテゴリ 除外)
     sess_room_ids = dict.fromkeys(s.room_id for s in session_only if s.room)
     sess_rooms = [r for r in room_list if r.id in sess_room_ids]
-    # 受付部屋
-    rc_room_ids = dict.fromkeys(s.room_id for s in reception_sessions if s.room)
-    rc_rooms = [r for r in room_list if r.id in rc_room_ids]
-    # 懇親会部屋
-    sc_room_ids = dict.fromkeys(s.room_id for s in social_sessions if s.room)
-    sc_rooms = [r for r in room_list if r.id in sc_room_ids]
 
     # 列定義: (type, label, fill, room_id_or_None)
     columns = []
@@ -283,10 +294,14 @@ def export_excel(db: Session = Depends(get_db)):
         columns.append(("overall", "全体", HEADER_FILL_ORANGE, None))
     for r in sess_rooms:
         columns.append(("session", r.name, HEADER_FILL_INDIGO, r.id))
-    for r in rc_rooms:
-        columns.append(("reception", f"受付: {r.name}", HEADER_FILL_GREEN, r.id))
-    for r in sc_rooms:
-        columns.append(("social", f"懇親会: {r.name}", HEADER_FILL_PURPLE, r.id))
+    # 動的カテゴリの部屋列
+    for cat_obj in db_categories:
+        ck = cat_obj.key
+        cat_room_ids = dict.fromkeys(s.room_id for s in cat_sessions_map[ck] if s.room)
+        cat_rooms = [r for r in room_list if r.id in cat_room_ids]
+        fill = cat_fill_map[ck]
+        for r in cat_rooms:
+            columns.append((ck, f"{cat_obj.label}: {r.name}", fill, r.id))
 
     if not all_schedule:
         _auto_width(ws5)
@@ -364,16 +379,25 @@ def export_excel(db: Session = Depends(get_db)):
             "workshop": PatternFill(start_color="E8F0FE", end_color="E8F0FE", fill_type="solid"),
             "keynote": PatternFill(start_color="E8F0FE", end_color="E8F0FE", fill_type="solid"),
             "lt": PatternFill(start_color="E8F0FE", end_color="E8F0FE", fill_type="solid"),
-            "reception": PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid"),
-            "social": PatternFill(start_color="F3E5F5", end_color="F3E5F5", fill_type="solid"),
         }
         CAT_FONT_COLOR = {
             "overall": "E65100",
             "general": "1A73E8", "tech": "1A73E8", "workshop": "1A73E8",
             "keynote": "1A73E8", "lt": "1A73E8",
-            "reception": "1B5E20",
-            "social": "4A148C",
         }
+        # 動的カテゴリの色を追加
+        for cat_obj in db_categories:
+            ck = cat_obj.key
+            # 薄い背景色を生成（元の色を薄くする）
+            hex_color = cat_obj.color.lstrip("#").upper()
+            # セル背景: 薄い色
+            r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+            lr = min(255, r + (255 - r) * 85 // 100)
+            lg = min(255, g + (255 - g) * 85 // 100)
+            lb = min(255, b + (255 - b) * 85 // 100)
+            light_hex = f"{lr:02X}{lg:02X}{lb:02X}"
+            CAT_FILL[ck] = PatternFill(start_color=light_hex, end_color=light_hex, fill_type="solid")
+            CAT_FONT_COLOR[ck] = hex_color
 
         # --- セッションをマトリクスに配置 (セル結合) ---
         for s in all_schedule:
@@ -385,14 +409,9 @@ def export_excel(db: Session = Depends(get_db)):
                     if ctype == "overall":
                         col_idx = ci + 2
                         break
-            elif cat == "reception":
+            elif cat in dynamic_cat_keys:
                 for ci, (ctype, _, _, rid) in enumerate(columns):
-                    if ctype == "reception" and rid == s.room_id:
-                        col_idx = ci + 2
-                        break
-            elif cat == "social":
-                for ci, (ctype, _, _, rid) in enumerate(columns):
-                    if ctype == "social" and rid == s.room_id:
+                    if ctype == cat and rid == s.room_id:
                         col_idx = ci + 2
                         break
             else:  # session categories
@@ -474,58 +493,32 @@ def export_excel(db: Session = Depends(get_db)):
             ws5.column_dimensions[col_letter].width = max(label_len + 2, 18)
 
     # ============================================================
-    # Sheet 6: 受付案内
+    # 動的カテゴリ別シート
     # ============================================================
-    ws6 = wb.create_sheet("受付案内")
-    ws6.append(["受付名", "時間", "場所", "英語", "必要人数", "配置人数", "担当スタッフ", "備考"])
-    _apply_header(ws6, 1, HEADER_FILL_GREEN)
+    for cat_obj in db_categories:
+        ws_cat = wb.create_sheet(cat_obj.label)
+        ws_cat.append(["タイトル", "時間", "場所", "英語", "必要人数", "配置人数", "担当スタッフ", "備考"])
+        _apply_header(ws_cat, 1, cat_fill_map[cat_obj.key])
 
-    for s in sessions:
-        if s.category != "reception":
-            continue
-        staff_names = ", ".join(a.staff.name for a in s.assignments)
-        assigned_count = len(s.assignments)
-        status = "○" if assigned_count >= s.required_staff else f"不足({assigned_count}/{s.required_staff})"
-        ws6.append([
-            s.title,
-            f"{_fmt(s.start_time)}-{_fmt(s.end_time)}",
-            s.room.name if s.room else "",
-            "○" if s.english_required else "",
-            s.required_staff,
-            status,
-            staff_names,
-            s.notes,
-        ])
-        _apply_border(ws6, ws6.max_row)
+        for s in sessions:
+            if s.category != cat_obj.key:
+                continue
+            staff_names = ", ".join(a.staff.name for a in s.assignments)
+            assigned_count = len(s.assignments)
+            status = "○" if assigned_count >= s.required_staff else f"不足({assigned_count}/{s.required_staff})"
+            ws_cat.append([
+                s.title,
+                f"{_fmt(s.start_time)}-{_fmt(s.end_time)}",
+                s.room.name if s.room else "",
+                "○" if s.english_required else "",
+                s.required_staff,
+                status,
+                staff_names,
+                s.notes,
+            ])
+            _apply_border(ws_cat, ws_cat.max_row)
 
-    _auto_width(ws6)
-
-    # ============================================================
-    # Sheet 7: 懇親会担当
-    # ============================================================
-    ws7 = wb.create_sheet("懇親会担当")
-    ws7.append(["役割名", "時間", "場所", "英語", "必要人数", "配置人数", "担当スタッフ", "備考"])
-    _apply_header(ws7, 1, HEADER_FILL_PURPLE)
-
-    for s in sessions:
-        if s.category != "social":
-            continue
-        staff_names = ", ".join(a.staff.name for a in s.assignments)
-        assigned_count = len(s.assignments)
-        status = "○" if assigned_count >= s.required_staff else f"不足({assigned_count}/{s.required_staff})"
-        ws7.append([
-            s.title,
-            f"{_fmt(s.start_time)}-{_fmt(s.end_time)}",
-            s.room.name if s.room else "",
-            "○" if s.english_required else "",
-            s.required_staff,
-            status,
-            staff_names,
-            s.notes,
-        ])
-        _apply_border(ws7, ws7.max_row)
-
-    _auto_width(ws7)
+        _auto_width(ws_cat)
 
     # Excelファイルをバイトストリームに書き出し
     stream = io.BytesIO()
@@ -573,10 +566,20 @@ def export_backup(db: Session = Depends(get_db)):
         .all()
     )
     assignments = db.query(Assignment).order_by(Assignment.id).all()
+    categories = db.query(Category).order_by(Category.order, Category.id).all()
+    session_groups = db.query(SessionGroup).order_by(SessionGroup.order, SessionGroup.id).all()
 
     data = {
-        "version": 2,
+        "version": 3,
         "exported_at": datetime.now().isoformat(),
+        "categories": [
+            {"id": c.id, "key": c.key, "label": c.label, "color": c.color, "order": c.order}
+            for c in categories
+        ],
+        "session_groups": [
+            {"id": g.id, "label": g.label, "date": g.date, "order": g.order, "color": g.color}
+            for g in session_groups
+        ],
         "rooms": [
             {"id": r.id, "name": r.name, "capacity": r.capacity, "floor": r.floor}
             for r in rooms
@@ -596,12 +599,14 @@ def export_backup(db: Session = Depends(get_db)):
                 "start_time": _dt_str(s.start_time), "end_time": _dt_str(s.end_time),
                 "room_id": s.room_id, "required_staff": s.required_staff,
                 "category": s.category, "english_required": s.english_required,
+                "group_id": s.group_id,
                 "lt_talks": [
                     {
                         "id": t.id, "title": t.title, "speaker": t.speaker,
                         "speaker_kana": t.speaker_kana,
                         "speaker_org": t.speaker_org,
                         "speaker_title": t.speaker_title,
+                        "speaker_photo": t.speaker_photo,
                         "order": t.order,
                     }
                     for t in s.lt_talks
@@ -688,6 +693,8 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
     db.query(Staff).delete()
     db.query(LTTalk).delete()
     db.query(SessionModel).delete()
+    db.query(SessionGroup).delete()
+    db.query(Category).delete()
     db.query(VenueMap).delete()
     db.query(Room).delete()
     db.flush()
@@ -716,6 +723,19 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
     room_map = {}
     session_map = {}
     staff_map = {}
+    group_map = {}
+
+    # --- カテゴリ ---
+    for c in data.get("categories", []):
+        db.add(Category(key=c["key"], label=c["label"], color=c.get("color", "#1a73e8"), order=c.get("order", 0)))
+    db.flush()
+
+    # --- セッショングループ ---
+    for g in data.get("session_groups", []):
+        db_grp = SessionGroup(label=g["label"], date=g.get("date", ""), order=g.get("order", 0), color=g.get("color", "#1a73e8"))
+        db.add(db_grp)
+        db.flush()
+        group_map[g["id"]] = db_grp.id
 
     # --- 部屋 ---
     for r in data.get("rooms", []):
@@ -733,6 +753,7 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
     # --- セッション ---
     for s in data.get("sessions", []):
         new_room_id = room_map.get(s["room_id"], s["room_id"])
+        new_group_id = group_map.get(s.get("group_id")) if s.get("group_id") else None
         db_sess = SessionModel(
             title=s["title"], description=s.get("description", ""),
             notes=s.get("notes", ""), speaker=s["speaker"],
@@ -747,6 +768,7 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
             required_staff=s.get("required_staff", 1),
             category=s.get("category", "general"),
             english_required=s.get("english_required", 0),
+            group_id=new_group_id,
         )
         db.add(db_sess)
         db.flush()
@@ -757,6 +779,7 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
                 speaker_kana=t.get("speaker_kana", ""),
                 speaker_org=t.get("speaker_org", ""),
                 speaker_title=t.get("speaker_title", ""),
+                speaker_photo=t.get("speaker_photo", ""),
                 order=t.get("order", 0),
             ))
 
@@ -808,7 +831,17 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
     }
 
 
-RESET_PASSWORD = os.environ.get("RESET_PASSWORD", "conf-reset-2026")
+from ..models import AppSetting
+
+RESET_PASSWORD_DEFAULT = os.environ.get("RESET_PASSWORD", "conf-reset-2026")
+
+
+def _get_reset_password(db: Session) -> str:
+    """DB設定 > 環境変数 > デフォルト の優先順で初期化パスワードを取得"""
+    row = db.query(AppSetting).filter(AppSetting.key == "reset_password").first()
+    if row and row.value:
+        return row.value
+    return RESET_PASSWORD_DEFAULT
 
 
 class ResetRequest(BaseModel):
@@ -818,7 +851,7 @@ class ResetRequest(BaseModel):
 @router.post("/reset")
 def reset_all_data(body: ResetRequest, db: Session = Depends(get_db)):
     """全データを削除して初期化する（パスワード必須）"""
-    if body.password != RESET_PASSWORD:
+    if body.password != _get_reset_password(db):
         return JSONResponse(status_code=403, content={"detail": "パスワードが正しくありません"})
 
     db.query(Assignment).delete()
@@ -828,6 +861,8 @@ def reset_all_data(body: ResetRequest, db: Session = Depends(get_db)):
     db.query(Staff).delete()
     db.query(LTTalk).delete()
     db.query(SessionModel).delete()
+    db.query(SessionGroup).delete()
+    db.query(Category).delete()
     db.query(VenueMap).delete()
     db.query(Room).delete()
     db.flush()
@@ -839,3 +874,24 @@ def reset_all_data(body: ResetRequest, db: Session = Depends(get_db)):
 
     db.commit()
     return {"status": "ok", "message": "全データを初期化しました"}
+
+
+class ChangeResetPasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/reset-password")
+def change_reset_password(body: ChangeResetPasswordRequest, db: Session = Depends(get_db)):
+    """初期化パスワードを変更する"""
+    if body.current_password != _get_reset_password(db):
+        return JSONResponse(status_code=403, content={"detail": "現在のパスワードが正しくありません"})
+    if not body.new_password:
+        return JSONResponse(status_code=400, content={"detail": "新しいパスワードを入力してください"})
+    row = db.query(AppSetting).filter(AppSetting.key == "reset_password").first()
+    if row:
+        row.value = body.new_password
+    else:
+        db.add(AppSetting(key="reset_password", value=body.new_password))
+    db.commit()
+    return {"status": "ok", "message": "初期化パスワードを変更しました"}

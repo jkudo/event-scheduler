@@ -51,9 +51,12 @@ class Session(Base):
     required_staff = Column(Integer, default=1)
     category = Column(String, default="general")
     english_required = Column(Integer, default=0)  # 英語対応スタッフ必要: 1, 不要: 0
+    group_id = Column(Integer, ForeignKey("session_groups.id"), nullable=True)
 
     room = relationship("Room", back_populates="sessions")
-    assignments = relationship("Assignment", back_populates="session")
+    group = relationship("SessionGroup", back_populates="sessions")
+    assignments = relationship("Assignment", back_populates="session", cascade="all, delete-orphan")
+    preferred_by = relationship("StaffPreferredSession", cascade="all, delete-orphan", passive_deletes=True)
     lt_talks = relationship("LTTalk", back_populates="session", cascade="all, delete-orphan", order_by="LTTalk.order")
 
 
@@ -72,7 +75,7 @@ class Staff(Base):
     skills = relationship("StaffSkill", back_populates="staff", cascade="all, delete-orphan")
     preferred_sessions = relationship("StaffPreferredSession", back_populates="staff", cascade="all, delete-orphan")
     availabilities = relationship("StaffAvailability", back_populates="staff", cascade="all, delete-orphan")
-    assignments = relationship("Assignment", back_populates="staff")
+    assignments = relationship("Assignment", back_populates="staff", cascade="all, delete-orphan")
 
 
 class StaffPreferredSession(Base):
@@ -123,6 +126,30 @@ class LTTalk(Base):
     order = Column(Integer, default=0)
 
     session = relationship("Session", back_populates="lt_talks")
+
+
+class SessionGroup(Base):
+    """セッショングループ（日別など）"""
+    __tablename__ = "session_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    label = Column(String, nullable=False)
+    date = Column(String, default="")  # YYYY-MM-DD (optional)
+    order = Column(Integer, default=0)
+    color = Column(String, nullable=False, default="#1a73e8")
+
+    sessions = relationship("Session", back_populates="group")
+
+
+class Category(Base):
+    """動的カテゴリ（受付案内・懇親会など）"""
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, nullable=False)
+    label = Column(String, nullable=False)
+    color = Column(String, nullable=False, default="#607d8b")
+    order = Column(Integer, default=0)
 
 
 class AppSetting(Base):

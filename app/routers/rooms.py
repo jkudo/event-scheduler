@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Room
+from ..models import Room, Session as SessionModel
 from ..schemas import RoomCreate, RoomResponse
 
 router = APIRouter(prefix="/api/rooms", tags=["rooms"])
@@ -48,5 +48,8 @@ def delete_room(room_id: int, db: Session = Depends(get_db)):
     room = db.query(Room).filter(Room.id == room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
+    session_count = db.query(SessionModel).filter(SessionModel.room_id == room_id).count()
+    if session_count > 0:
+        raise HTTPException(status_code=400, detail=f"この部屋には {session_count} 件のセッションが登録されているため削除できません")
     db.delete(room)
     db.commit()

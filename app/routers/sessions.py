@@ -44,6 +44,7 @@ async def create_session(
     required_staff: int = Form(1),
     category: str = Form("general"),
     english_required: bool = Form(False),
+    group_id: int | None = Form(None),
     speaker_photo: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
@@ -74,6 +75,7 @@ async def create_session(
         required_staff=required_staff,
         category=category,
         english_required=int(english_required),
+        group_id=group_id,
     )
     db.add(db_session)
     db.commit()
@@ -107,6 +109,7 @@ async def update_session(
     required_staff: int = Form(1),
     category: str = Form("general"),
     english_required: bool = Form(False),
+    group_id: int | None = Form(None),
     speaker_photo: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
@@ -128,6 +131,7 @@ async def update_session(
     session.required_staff = required_staff
     session.category = category
     session.english_required = int(english_required)
+    session.group_id = group_id
 
     if speaker_photo and speaker_photo.filename:
         ext = Path(speaker_photo.filename).suffix.lower()

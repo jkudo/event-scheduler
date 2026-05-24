@@ -2,6 +2,42 @@ from datetime import datetime
 from pydantic import BaseModel, field_validator, model_validator
 
 
+# --- SessionGroup ---
+class SessionGroupCreate(BaseModel):
+    label: str
+    date: str = ""
+    order: int = 0
+    color: str = "#1a73e8"
+
+
+class SessionGroupResponse(BaseModel):
+    id: int
+    label: str
+    date: str
+    order: int
+    color: str
+
+    model_config = {"from_attributes": True}
+
+
+# --- Category ---
+class CategoryCreate(BaseModel):
+    key: str
+    label: str
+    color: str = "#607d8b"
+    order: int = 0
+
+
+class CategoryResponse(BaseModel):
+    id: int
+    key: str
+    label: str
+    color: str
+    order: int
+
+    model_config = {"from_attributes": True}
+
+
 # --- VenueMap ---
 class VenueMapResponse(BaseModel):
     id: int
@@ -45,6 +81,7 @@ class SessionCreate(BaseModel):
     required_staff: int = 1
     category: str = "general"
     english_required: bool = False
+    group_id: int | None = None
 
 
 class SessionResponse(BaseModel):
@@ -64,6 +101,7 @@ class SessionResponse(BaseModel):
     required_staff: int
     category: str
     english_required: bool
+    group_id: int | None = None
     room: RoomResponse | None = None
     lt_talks: list["LTTalkResponse"] = []
 

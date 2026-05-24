@@ -3,7 +3,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 createApp({
     setup() {
         const API = '';
-        const CATEGORY_LABELS = { general: '一般', tech: '技術', workshop: 'ワークショップ', keynote: '基調講演', lt: 'LT', reception: '受付案内', social: '懇親会', session: 'セッション', overall: '全体' };
+        const STATIC_LABELS = { general: '一般', tech: '技術', workshop: 'ワークショップ', keynote: '基調講演', lt: 'LT', session: 'セッション', overall: '全体' };
         const SLOT_MIN = 5; // 5分刻み
 
         const tab = ref('all-matrix');
@@ -18,13 +18,70 @@ createApp({
         const sessPhoto = ref(null);
         const matrixStaffFilter = ref(0);
         const staffDetailFilter = ref(0);
-        const rcStaffFilter = ref(0);
-        const scStaffFilter = ref(0);
 
         let dragDidMove = false; // suppress click after drag-and-drop
         const matrixLocked = ref(true); // ドラッグ&ドロップのロック（デフォルト: ロック）
-        const receptionLocked = ref(true);
-        const socialLocked = ref(true);
+
+        // --- 動的カテゴリ ---
+        const categories = ref([]);
+        const categoryLocks = reactive({});
+        const categoryForms = reactive({});
+        const categoryAssignMsgs = reactive({});
+        const categoryStaffFilters = reactive({});
+        const catGroupTabs = reactive({});
+        const catSelectedSessions = reactive({});
+
+        async function loadCategories() {
+            categories.value = await (await fetch(API + '/api/categories/')).json();
+            categories.value.forEach(c => {
+                if (!(c.key in categoryLocks)) categoryLocks[c.key] = true;
+                if (!(c.key in categoryForms)) categoryForms[c.key] = { editId: null, title: '', start_time: '', end_time: '', room_id: null, required_staff: 2, english_required: false, notes: '' };
+                if (!(c.key in categoryAssignMsgs)) categoryAssignMsgs[c.key] = '';
+                if (!(c.key in categoryStaffFilters)) categoryStaffFilters[c.key] = 0;
+                if (!(c.key in catGroupTabs)) catGroupTabs[c.key] = sessionGroups.value.length ? sessionGroups.value[0].id : 0;
+                if (!(c.key in catSelectedSessions)) catSelectedSessions[c.key] = new Set();
+            });
+        }
+        const dynamicCatKeys = computed(() => categories.value.map(c => c.key));
+        const CATEGORY_LABELS = computed(() => {
+            const m = { ...STATIC_LABELS };
+            categories.value.forEach(c => { m[c.key] = c.label; });
+            return m;
+        });
+        const roleOptions = computed(() => {
+            const opts = [{ v: 'session', l: 'セッション' }];
+            categories.value.forEach(c => opts.push({ v: c.key, l: c.label }));
+            return opts;
+        });
+
+        // --- 動的セッショングループ ---
+        const sessionGroups = ref([]);
+        const groupLocks = reactive({});
+        const groupSessForms = reactive({});
+        const groupStaffFilters = reactive({});
+        const groupScheduleMsgs = reactive({});
+        const groupSelectedSessions = reactive({});
+
+        async function loadSessionGroups() {
+            sessionGroups.value = await (await fetch(API + '/api/session-groups/')).json();
+            sessionGroups.value.forEach(g => {
+                if (!(g.id in groupLocks)) groupLocks[g.id] = true;
+                if (!(g.id in groupSessForms)) groupSessForms[g.id] = {
+                    editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
+                    room_id: null, category: 'general', required_staff: 1, english_required: false,
+                    description: '', notes: '', currentPhoto: '',
+                    speaker_org: '', speaker_title: '', speaker_profile: '',
+                    _ltTalks: reactive([])
+                };
+                if (!(g.id in groupStaffFilters)) groupStaffFilters[g.id] = 0;
+                if (!(g.id in groupScheduleMsgs)) groupScheduleMsgs[g.id] = '';
+                if (!(g.id in groupSelectedSessions)) groupSelectedSessions[g.id] = new Set();
+            });
+            // デフォルトで最初のグループを選択
+            if (sessionGroups.value.length && !allGroupTab.value) {
+                allGroupTab.value = sessionGroups.value[0].id;
+            }
+        }
 
         const roomForm = reactive({ editId: null, name: '', capacity: null, floor: 1 });
         const venueMaps = ref([]);
@@ -36,8 +93,9 @@ createApp({
         const sessDetailLocked = computed(() => {
             if (!sessDetailSession.value) return true;
             const cat = sessDetailSession.value.category;
-            if (cat === 'reception') return receptionLocked.value;
-            if (cat === 'social') return socialLocked.value;
+            if (cat in categoryLocks) return categoryLocks[cat];
+            const gid = sessDetailSession.value.group_id;
+            if (gid && gid in groupLocks) return groupLocks[gid];
             return matrixLocked.value;
         });
         const venueMapForm = reactive({ editId: null, title: '', order: 0, currentImage: '' });
@@ -47,7 +105,7 @@ createApp({
         const sessForm = reactive({
             editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
             room_id: null, category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '',
-            speaker_org: '', speaker_title: '', speaker_profile: ''
+            speaker_org: '', speaker_title: '', speaker_profile: '', group_id: null
         });
         const ltTalks = reactive([]);
         const staffForm = reactive({ editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
@@ -58,7 +116,14 @@ createApp({
         const availForms = reactive({});
 
         // --- ユーティリティ ---
-        function catLabel(cat) { return CATEGORY_LABELS[cat] || cat; }
+        function autoSetEndTime(form) {
+            if (form.start_time && !form.end_time) {
+                const d = new Date(form.start_time);
+                d.setMinutes(d.getMinutes() + 5);
+                form.end_time = d.toISOString().slice(0, 16);
+            }
+        }
+        function catLabel(cat) { return CATEGORY_LABELS.value[cat] || cat; }
         function fmt(dt) {
             return new Date(dt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         }
@@ -107,7 +172,7 @@ createApp({
         }
 
         function generateConnpassTimeline() {
-            const allSess = sessions.value.filter(s => !['reception', 'social', 'overall'].includes(s.category));
+            const allSess = sessions.value.filter(s => !dynamicCatKeys.value.includes(s.category) && s.category !== 'overall');
             if (!allSess.length) { connpassTimeline.value = 'セッションが登録されていません。'; return; }
 
             const roomMap = {};
@@ -159,7 +224,7 @@ createApp({
         }
 
         function generateSpeakerTemplate() {
-            const allSess = sessions.value.filter(s => !['reception', 'social', 'overall'].includes(s.category));
+            const allSess = sessions.value.filter(s => !dynamicCatKeys.value.includes(s.category) && s.category !== 'overall');
             if (!allSess.length) { speakerTemplate.value = 'セッションが登録されていません。'; return; }
 
             const sorted = [...allSess].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
@@ -229,6 +294,9 @@ createApp({
         const resetMsg = ref('');
         const resetMsgError = ref(false);
         const resetPassword = ref('');
+        const resetPwForm = reactive({ current: '', newPw: '' });
+        const resetPwMsg = ref('');
+        const resetPwMsgError = ref(false);
 
         // --- Settings ---
         const appTitle = ref('カンファレンス スケジューラー');
@@ -282,6 +350,112 @@ createApp({
                 pwMsg.value = '通信エラー'; pwMsgError.value = true;
             }
         }
+        // --- カテゴリ設定管理 ---
+        const catSettingForm = reactive({ editId: null, key: '', label: '', color: '#607d8b', order: 0 });
+        const catSettingMsg = ref('');
+        function editCatSetting(cat) {
+            catSettingForm.editId = cat.id;
+            catSettingForm.key = cat.key;
+            catSettingForm.label = cat.label;
+            catSettingForm.color = cat.color;
+            catSettingForm.order = cat.order;
+            catSettingMsg.value = '';
+        }
+        function cancelCatSetting() {
+            catSettingForm.editId = null;
+            catSettingForm.key = '';
+            catSettingForm.label = '';
+            catSettingForm.color = '#607d8b';
+            catSettingForm.order = 0;
+            catSettingMsg.value = '';
+        }
+        async function saveCatSetting() {
+            if (!catSettingForm.key || !catSettingForm.label) { catSettingMsg.value = 'キーと表示名は必須です'; return; }
+            const payload = { key: catSettingForm.key, label: catSettingForm.label, color: catSettingForm.color, order: catSettingForm.order };
+            try {
+                let resp;
+                if (catSettingForm.editId) {
+                    resp = await fetch(API + '/api/categories/' + catSettingForm.editId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                } else {
+                    resp = await fetch(API + '/api/categories/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                }
+                if (resp.ok) {
+                    catSettingMsg.value = catSettingForm.editId ? '更新しました' : '追加しました';
+                    cancelCatSetting();
+                    await loadCategories();
+                } else {
+                    const data = await resp.json();
+                    catSettingMsg.value = data.detail || 'エラーが発生しました';
+                }
+            } catch (e) { catSettingMsg.value = '通信エラー'; }
+        }
+        async function deleteCatSetting(id) {
+            if (!confirm('このカテゴリを削除しますか？\n※ セッションが登録されている場合は削除できません。')) return;
+            try {
+                const resp = await fetch(API + '/api/categories/' + id, { method: 'DELETE' });
+                if (resp.ok) {
+                    catSettingMsg.value = '削除しました';
+                    await loadCategories();
+                } else {
+                    const data = await resp.json();
+                    catSettingMsg.value = data.detail || '削除に失敗しました';
+                }
+            } catch (e) { catSettingMsg.value = '通信エラー'; }
+        }
+
+        // --- セッショングループ設定管理 ---
+        const grpSettingForm = reactive({ editId: null, label: '', date: '', order: 0, color: '#1a73e8' });
+        const grpSettingMsg = ref('');
+        function editGrpSetting(grp) {
+            grpSettingForm.editId = grp.id;
+            grpSettingForm.label = grp.label;
+            grpSettingForm.date = grp.date;
+            grpSettingForm.order = grp.order;
+            grpSettingForm.color = grp.color;
+            grpSettingMsg.value = '';
+        }
+        function cancelGrpSetting() {
+            grpSettingForm.editId = null;
+            grpSettingForm.label = '';
+            grpSettingForm.date = '';
+            grpSettingForm.order = 0;
+            grpSettingForm.color = '#1a73e8';
+            grpSettingMsg.value = '';
+        }
+        async function saveGrpSetting() {
+            if (!grpSettingForm.label) { grpSettingMsg.value = '表示名は必須です'; return; }
+            const payload = { label: grpSettingForm.label, date: grpSettingForm.date, order: grpSettingForm.order, color: grpSettingForm.color };
+            try {
+                let resp;
+                if (grpSettingForm.editId) {
+                    resp = await fetch(API + '/api/session-groups/' + grpSettingForm.editId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                } else {
+                    resp = await fetch(API + '/api/session-groups/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                }
+                if (resp.ok) {
+                    grpSettingMsg.value = grpSettingForm.editId ? '更新しました' : '追加しました';
+                    cancelGrpSetting();
+                    await loadSessionGroups();
+                } else {
+                    const data = await resp.json();
+                    grpSettingMsg.value = data.detail || 'エラーが発生しました';
+                }
+            } catch (e) { grpSettingMsg.value = '通信エラー'; }
+        }
+        async function deleteGrpSetting(id) {
+            if (!confirm('このセッショングループを削除しますか？\n※ グループ内のセッションと配置情報もすべて削除されます。')) return;
+            try {
+                const resp = await fetch(API + '/api/session-groups/' + id, { method: 'DELETE' });
+                if (resp.ok) {
+                    grpSettingMsg.value = '削除しました';
+                    await loadSessionGroups();
+                } else {
+                    const data = await resp.json();
+                    grpSettingMsg.value = data.detail || '削除に失敗しました';
+                }
+            } catch (e) { grpSettingMsg.value = '通信エラー'; }
+        }
+
         function onBackupFileChange(e) {
             const f = e.target.files[0];
             if (f) { backupFile.value = f; backupFileName.value = f.name; }
@@ -346,20 +520,63 @@ createApp({
             }
         }
 
+        async function changeResetPassword() {
+            if (!resetPwForm.current || !resetPwForm.newPw) return;
+            resetPwMsg.value = '';
+            try {
+                const res = await fetch(API + '/api/export/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: resetPwForm.current, new_password: resetPwForm.newPw })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    resetPwMsg.value = data.message || '変更しました';
+                    resetPwMsgError.value = false;
+                    resetPwForm.current = ''; resetPwForm.newPw = '';
+                } else {
+                    resetPwMsg.value = data.detail || '変更に失敗しました';
+                    resetPwMsgError.value = true;
+                }
+            } catch (e) {
+                resetPwMsg.value = '変更に失敗しました: ' + e.message;
+                resetPwMsgError.value = true;
+            }
+        }
+
         async function switchTab(name) {
             tab.value = name;
             if (name === 'rooms') await loadRooms();
             if (name === 'venue-maps') await loadVenueMaps();
-            if (name === 'sessions') { await loadRooms(); await loadSessions(); }
             if (name === 'staffs') { await loadSessions(); await loadStaffs(); await loadSchedule(); }
-            if (name === 'matrix') { await loadStaffs(); await loadSchedule(); await loadStaffAssignments(); }
             if (name === 'all-matrix') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); }
             if (name === 'staff-detail') { await loadStaffs(); await loadSessions(); await loadSchedule(); await loadStaffAssignments(); }
             if (name === 'overall-manage') { await loadSessions(); }
-            if (name === 'reception-manage') { await loadRooms(); await loadSessions(); await loadSchedule(); if (!rcForm.room_id && rooms.value.length) rcForm.room_id = rooms.value[0].id; }
-            if (name === 'social-manage') { await loadRooms(); await loadSessions(); await loadSchedule(); if (!scForm.room_id && rooms.value.length) scForm.room_id = rooms.value[0].id; }
-            if (name === 'reception') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); if (!rcForm.room_id && rooms.value.length) rcForm.room_id = rooms.value[0].id; }
-            if (name === 'social') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); if (!scForm.room_id && rooms.value.length) scForm.room_id = rooms.value[0].id; }
+            // 動的セッショングループのタブ
+            for (const g of sessionGroups.value) {
+                if (name === 'grp-' + g.id + '-manage') {
+                    await loadRooms(); await loadSessions();
+                    if (groupSessForms[g.id] && !groupSessForms[g.id].room_id && rooms.value.length) groupSessForms[g.id].room_id = rooms.value[0].id;
+                    break;
+                }
+                if (name === 'grp-' + g.id + '-assign') {
+                    await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); await loadStaffAssignments();
+                    break;
+                }
+            }
+            // 動的カテゴリの管理・担当タブ
+            for (const c of categories.value) {
+                if (name === c.key + '-manage') {
+                    await loadRooms(); await loadSessions(); await loadSchedule();
+                    if (categoryForms[c.key] && !categoryForms[c.key].room_id && rooms.value.length) categoryForms[c.key].room_id = rooms.value[0].id;
+                    break;
+                }
+                if (name === c.key) {
+                    await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule();
+                    if (categoryForms[c.key] && !categoryForms[c.key].room_id && rooms.value.length) categoryForms[c.key].room_id = rooms.value[0].id;
+                    break;
+                }
+            }
             if (name === 'venue-view') await loadVenueMaps();
             if (name === 'io') { await loadRooms(); await loadSessions(); }
         }
@@ -372,7 +589,7 @@ createApp({
             Object.assign(roomForm, { editId: r.id, name: r.name, capacity: r.capacity, floor: r.floor });
         }
         async function submitRoom() {
-            const payload = { name: roomForm.name, capacity: roomForm.capacity, floor: roomForm.floor };
+            const payload = { name: roomForm.name, capacity: roomForm.capacity || 0, floor: roomForm.floor };
             if (roomForm.editId) {
                 await fetch(API + `/api/rooms/${roomForm.editId}`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -387,7 +604,16 @@ createApp({
             cancelEditRoom();
             await loadRooms();
         }
-        async function deleteRoom(id) { await fetch(API + `/api/rooms/${id}`, { method: 'DELETE' }); await loadRooms(); }
+        async function deleteRoom(id) {
+            if (!confirm('この部屋を削除しますか？')) return;
+            const res = await fetch(API + `/api/rooms/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.detail || '削除に失敗しました');
+                return;
+            }
+            await loadRooms();
+        }
 
         // --- 会場地図 ---
         function onVenueMapChange(e) {
@@ -438,9 +664,10 @@ createApp({
         function toggleSessDetailLock() {
             if (!sessDetailSession.value) return;
             const cat = sessDetailSession.value.category;
-            if (cat === 'reception') receptionLocked.value = !receptionLocked.value;
-            else if (cat === 'social') socialLocked.value = !socialLocked.value;
-            else matrixLocked.value = !matrixLocked.value;
+            if (cat in categoryLocks) { categoryLocks[cat] = !categoryLocks[cat]; return; }
+            const gid = sessDetailSession.value.group_id;
+            if (gid && gid in groupLocks) { groupLocks[gid] = !groupLocks[gid]; return; }
+            matrixLocked.value = !matrixLocked.value;
         }
         function onPhotoChange(e) {
             const file = e.target.files[0];
@@ -460,7 +687,7 @@ createApp({
                 editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
                 room_id: rooms.value.length ? rooms.value[0].id : null,
                 category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '',
-                speaker_org: '', speaker_title: '', speaker_profile: ''
+                speaker_org: '', speaker_title: '', speaker_profile: '', group_id: sessForm.group_id
             });
             ltTalks.splice(0);
             sessPhotoPreview.value = '';
@@ -474,7 +701,7 @@ createApp({
                 required_staff: s.required_staff, english_required: !!s.english_required, description: s.description || '', notes: s.notes || '',
                 currentPhoto: s.speaker_photo || '',
                 speaker_org: s.speaker_org || '', speaker_title: s.speaker_title || '',
-                speaker_profile: s.speaker_profile || ''
+                speaker_profile: s.speaker_profile || '', group_id: s.group_id
             });
             ltTalks.splice(0);
             if (s.lt_talks && s.lt_talks.length) {
@@ -493,7 +720,7 @@ createApp({
             // LT/受付/懇親会の場合、speakerは自動設定
             if (sessForm.category === 'lt' && ltTalks.length) {
                 fd.append('speaker', ltTalks.map(t => t.speaker).filter(Boolean).join(', '));
-            } else if (['reception', 'social'].includes(sessForm.category)) {
+            } else if (dynamicCatKeys.value.includes(sessForm.category)) {
                 fd.append('speaker', '-');
             } else {
                 fd.append('speaker', sessForm.speaker);
@@ -511,6 +738,7 @@ createApp({
             fd.append('english_required', sessForm.english_required);
             fd.append('description', sessForm.description);
             fd.append('notes', sessForm.notes);
+            if (sessForm.group_id) fd.append('group_id', sessForm.group_id);
             if (sessPhoto.value && sessPhoto.value.files[0]) fd.append('speaker_photo', sessPhoto.value.files[0]);
 
             let sessionId = sessForm.editId;
@@ -649,7 +877,12 @@ createApp({
             newPrefForm.session_id = null;
             newPrefForm.priority = 1;
         }
-        async function deleteStaff(id) { await fetch(API + `/api/staffs/${id}`, { method: 'DELETE' }); await loadStaffs(); }
+        async function deleteStaff(id) {
+            if (!confirm('このスタッフを削除しますか？配置情報も削除されます。')) return;
+            await fetch(API + `/api/staffs/${id}`, { method: 'DELETE' });
+            await loadStaffs();
+            await loadSchedule();
+        }
         function onNewStaffPhoto(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -704,47 +937,58 @@ createApp({
 
         // --- スケジュール (手動配置) ---
         const sessionSchedule = computed(() => {
-            return schedule.value.filter(e => !['reception', 'social', 'overall'].includes(e.session.category));
+            const dkeys = dynamicCatKeys.value;
+            return schedule.value.filter(e => !dkeys.includes(e.session.category) && e.session.category !== 'overall');
         });
-        const receptionSessions = computed(() => {
-            return schedule.value.filter(e => e.session.category === 'reception');
-        });
-        const socialSessions = computed(() => {
-            return schedule.value.filter(e => e.session.category === 'social');
+        // 動的カテゴリ別セッション
+        const categorySessions = computed(() => {
+            const result = {};
+            categories.value.forEach(c => {
+                result[c.key] = schedule.value.filter(e => e.session.category === c.key);
+            });
+            return result;
         });
 
         function _hasStaff(entry, staffId) {
             if (!staffId) return true;
             return entry.assigned_staff.some(a => a.staff.id === staffId);
         }
-        // プルダウン用: 各タブに関連するスタッフ一覧
         const matrixStaffOptions = computed(() => staffs.value);
-        const rcStaffOptions = computed(() => staffs.value);
-        const scStaffOptions = computed(() => staffs.value);
 
         const filteredMatrixSchedule = computed(() => {
             if (!matrixStaffFilter.value) return sessionSchedule.value;
             return sessionSchedule.value.filter(e => _hasStaff(e, matrixStaffFilter.value));
         });
-        const filteredReceptionSessions = computed(() => {
-            if (!rcStaffFilter.value) return receptionSessions.value;
-            return receptionSessions.value.filter(e => _hasStaff(e, rcStaffFilter.value));
-        });
-        const filteredSocialSessions = computed(() => {
-            if (!scStaffFilter.value) return socialSessions.value;
-            return socialSessions.value.filter(e => _hasStaff(e, scStaffFilter.value));
-        });
+        function catGroupFiltered(catKey) {
+            const sess = categorySessions.value[catKey] || [];
+            const gid = catGroupTabs[catKey];
+            if (!gid) return sess;
+            return sess.filter(e => e.session.group_id === gid);
+        }
+        function catTimelineByGroup(catKey) {
+            const result = {};
+            const sess = categorySessions.value[catKey] || [];
+            sessionGroups.value.forEach(g => {
+                result[g.id] = sess
+                    .filter(e => e.session.group_id === g.id)
+                    .sort((a, b) => new Date(a.session.start_time) - new Date(b.session.start_time));
+            });
+            return result;
+        }
+        function filteredCategorySessions(catKey) {
+            const filter = categoryStaffFilters[catKey];
+            const sess = catGroupFiltered(catKey);
+            if (!filter) return sess;
+            return sess.filter(e => _hasStaff(e, filter));
+        }
         function matrixSessionOpacity(entry) {
             if (!matrixStaffFilter.value) return 1;
             return _hasStaff(entry, matrixStaffFilter.value) ? 1 : 0.15;
         }
-        function rcSessionOpacity(entry) {
-            if (!rcStaffFilter.value) return 1;
-            return _hasStaff(entry, rcStaffFilter.value) ? 1 : 0.15;
-        }
-        function scSessionOpacity(entry) {
-            if (!scStaffFilter.value) return 1;
-            return _hasStaff(entry, scStaffFilter.value) ? 1 : 0.15;
+        function catSessionOpacity(catKey, entry) {
+            const filter = categoryStaffFilters[catKey];
+            if (!filter) return 1;
+            return _hasStaff(entry, filter) ? 1 : 0.15;
         }
 
         const assignStaffSelect = reactive({});
@@ -843,151 +1087,347 @@ createApp({
         }
 
         // ====================================================================
-        //  受付管理
+        //  セッショングループ別 スケジュール・管理
         // ====================================================================
-        const rcForm = reactive({
-            editId: null, title: '', start_time: '', end_time: '',
-            room_id: null, required_staff: 2, english_required: false, notes: ''
+        const groupSchedule = computed(() => {
+            const result = {};
+            sessionGroups.value.forEach(g => {
+                result[g.id] = sessionSchedule.value.filter(e => e.session.group_id === g.id);
+            });
+            return result;
         });
-        const rcAssignMsg = ref('');
+        function filteredGroupSchedule(gid) {
+            const filter = groupStaffFilters[gid];
+            const sess = groupSchedule.value[gid] || [];
+            if (!filter) return sess;
+            return sess.filter(e => _hasStaff(e, filter));
+        }
+        function groupSessionOpacity(gid, entry) {
+            const filter = groupStaffFilters[gid];
+            if (!filter) return 1;
+            return _hasStaff(entry, filter) ? 1 : 0.15;
+        }
 
-        function cancelEditReception() {
-            Object.assign(rcForm, {
+        // グループ別セッション管理
+        function groupSessions(gid) {
+            return sessions.value.filter(s => s.group_id === gid && !dynamicCatKeys.value.includes(s.category) && s.category !== 'overall');
+        }
+        function cancelEditGroupSession(gid) {
+            Object.assign(groupSessForms[gid], {
+                editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
+                room_id: rooms.value.length ? rooms.value[0].id : null,
+                category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '',
+                speaker_org: '', speaker_title: '', speaker_profile: ''
+            });
+            // Clear LT talks for this group
+            if (groupSessForms[gid]._ltTalks) groupSessForms[gid]._ltTalks.splice(0);
+        }
+        function editGroupSession(gid, s) {
+            Object.assign(groupSessForms[gid], {
+                editId: s.id, title: s.title, speaker: s.speaker, speaker_kana: s.speaker_kana || '',
+                start_time: toLocalInput(s.start_time), end_time: toLocalInput(s.end_time),
+                room_id: s.room_id, category: s.category,
+                required_staff: s.required_staff, english_required: !!s.english_required,
+                description: s.description || '', notes: s.notes || '',
+                currentPhoto: s.speaker_photo || '',
+                speaker_org: s.speaker_org || '', speaker_title: s.speaker_title || '',
+                speaker_profile: s.speaker_profile || ''
+            });
+            if (!groupSessForms[gid]._ltTalks) groupSessForms[gid]._ltTalks = reactive([]);
+            groupSessForms[gid]._ltTalks.splice(0);
+            if (s.lt_talks && s.lt_talks.length) {
+                s.lt_talks.forEach(t => groupSessForms[gid]._ltTalks.push({
+                    title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana || '',
+                    speaker_org: t.speaker_org || '', speaker_title: t.speaker_title || '',
+                    speaker_photo: t.speaker_photo || '', photoFile: null, photoPreview: ''
+                }));
+            }
+        }
+        async function submitGroupSession(gid) {
+            const form = groupSessForms[gid];
+            const talks = form._ltTalks || [];
+            const fd = new FormData();
+            fd.append('title', form.title);
+            if (form.category === 'lt' && talks.length) {
+                fd.append('speaker', talks.map(t => t.speaker).filter(Boolean).join(', '));
+            } else if (dynamicCatKeys.value.includes(form.category)) {
+                fd.append('speaker', '-');
+            } else {
+                fd.append('speaker', form.speaker);
+            }
+            fd.append('speaker_kana', form.speaker_kana);
+            fd.append('speaker_org', form.speaker_org);
+            fd.append('speaker_title', form.speaker_title);
+            fd.append('speaker_profile', form.speaker_profile);
+            const st = form.start_time; const et = form.end_time;
+            fd.append('start_time', st.length === 16 ? st + ':00' : st);
+            fd.append('end_time', et.length === 16 ? et + ':00' : et);
+            fd.append('room_id', form.room_id);
+            fd.append('category', form.category);
+            fd.append('required_staff', form.required_staff);
+            fd.append('english_required', form.english_required);
+            fd.append('description', form.description);
+            fd.append('notes', form.notes);
+            fd.append('group_id', gid);
+            const photoInput = document.querySelector(`[data-group-photo="${gid}"]`);
+            if (photoInput && photoInput.files[0]) fd.append('speaker_photo', photoInput.files[0]);
+
+            let sessionId = form.editId;
+            if (sessionId) {
+                await fetch(API + `/api/sessions/${sessionId}`, { method: 'PUT', body: fd });
+            } else {
+                const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+                const created = await res.json();
+                sessionId = created.id;
+            }
+            // LTトーク保存
+            if (form.category === 'lt' && talks.length) {
+                const talkData = talks.map((t, i) => ({
+                    title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana,
+                    speaker_org: t.speaker_org, speaker_title: t.speaker_title,
+                    speaker_photo: t.speaker_photo || '', order: i
+                }));
+                const res2 = await fetch(API + `/api/sessions/${sessionId}/lt-talks`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(talkData)
+                });
+                const savedTalks = await res2.json();
+                for (let i = 0; i < talks.length; i++) {
+                    if (talks[i].photoFile && savedTalks[i]) {
+                        const fd2 = new FormData();
+                        fd2.append('photo', talks[i].photoFile);
+                        await fetch(API + `/api/sessions/${sessionId}/lt-talks/${savedTalks[i].id}/photo`, { method: 'POST', body: fd2 });
+                    }
+                }
+            }
+            cancelEditGroupSession(gid);
+            await loadSessions();
+        }
+        async function deleteGroupSession(gid, id) {
+            if (!confirm('このセッションを削除しますか？')) return;
+            await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
+            await loadSessions();
+            await loadSchedule();
+        }
+
+        // グループ別自動配置
+        async function autoAssignGroup(gid) {
+            if (!confirm('このグループのスタッフを自動配置します。現在の配置はすべて上書きされます。よろしいですか？')) return;
+            const ids = (groupSchedule.value[gid] || []).map(e => e.session.id);
+            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_ids: ids })
+            })).json();
+            groupScheduleMsgs[gid] = `配置完了: ${data.fully_assigned}/${data.total_sessions} セッション`;
+            if (groupSelectedSessions[gid]) groupSelectedSessions[gid].clear();
+            await loadSchedule();
+        }
+        async function autoAssignGroupSelected(gid) {
+            const ids = [...(groupSelectedSessions[gid] || [])];
+            if (!ids.length) return;
+            if (!confirm(`選択した${ids.length}件のセッションを再配置します。よろしいですか？`)) return;
+            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_ids: ids })
+            })).json();
+            groupScheduleMsgs[gid] = `再配置完了: ${data.fully_assigned}/${data.total_sessions} セッション`;
+            if (groupSelectedSessions[gid]) groupSelectedSessions[gid].clear();
+            await loadSchedule();
+        }
+        async function clearGroupAssignments(gid) {
+            if (!confirm('このグループの配置をすべてクリアします。よろしいですか？')) return;
+            const ids = (groupSchedule.value[gid] || []).flatMap(e => e.assigned_staff.map(a => a.assignment_id));
+            for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+            groupScheduleMsgs[gid] = '配置をクリアしました';
+            await loadSchedule();
+        }
+        function toggleGroupSessionSelect(gid, id) {
+            if (!groupSelectedSessions[gid]) groupSelectedSessions[gid] = new Set();
+            if (groupSelectedSessions[gid].has(id)) groupSelectedSessions[gid].delete(id);
+            else groupSelectedSessions[gid].add(id);
+        }
+        function toggleGroupSelectAll(gid) {
+            const all = groupSchedule.value[gid] || [];
+            if (!groupSelectedSessions[gid]) groupSelectedSessions[gid] = new Set();
+            if (groupSelectedSessions[gid].size === all.length) {
+                groupSelectedSessions[gid].clear();
+            } else {
+                all.forEach(e => groupSelectedSessions[gid].add(e.session.id));
+            }
+        }
+
+        // グループ別タイムライングリッド
+        // グループ全体の時間範囲（全カテゴリ含む）を統一的に算出
+        const unifiedGroupConfig = computed(() => {
+            const result = {};
+            const slotMs = SLOT_MIN * 60 * 1000;
+            sessionGroups.value.forEach(g => {
+                const sess = schedule.value.filter(e => e.session.group_id === g.id);
+                if (!sess.length) { result[g.id] = null; return; }
+                let minT = Infinity, maxT = -Infinity;
+                sess.forEach(e => {
+                    const s = new Date(e.session.start_time).getTime();
+                    const end = new Date(e.session.end_time).getTime();
+                    if (s < minT) minT = s;
+                    if (end > maxT) maxT = end;
+                });
+                minT = Math.floor(minT / slotMs) * slotMs;
+                maxT = Math.ceil(maxT / slotMs) * slotMs;
+                result[g.id] = { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
+            });
+            return result;
+        });
+        function grpGridConfig(gid) {
+            return unifiedGroupConfig.value[gid] || null;
+        }
+        function grpGridRooms(gid) {
+            const map = new Map();
+            (groupSchedule.value[gid] || []).forEach(e => {
+                const r = e.session.room;
+                if (r && !map.has(r.id)) map.set(r.id, r.name);
+            });
+            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+        }
+        function grpGridStyle(gid) {
+            const cfg = grpGridConfig(gid);
+            if (!cfg) return {};
+            const rms = grpGridRooms(gid);
+            return {
+                gridTemplateColumns: `70px repeat(${rms.length}, 1fr)`,
+                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
+            };
+        }
+        function grpTimeToRow(gid, dt) {
+            const cfg = grpGridConfig(gid);
+            const t = new Date(dt).getTime();
+            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
+        }
+        function grpGridLabels(gid) {
+            const cfg = grpGridConfig(gid);
+            if (!cfg) return [];
+            const labels = [];
+            const slotsPerLabel = 15 / SLOT_MIN;
+            const labelCount = cfg.totalSlots / slotsPerLabel;
+            for (let i = 0; i < labelCount; i++) {
+                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
+                const mins = t.getMinutes();
+                labels.push({
+                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
+                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
+                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
+                });
+            }
+            return labels;
+        }
+        function grpSessionStyle(gid, entry) {
+            const startRow = grpTimeToRow(gid, entry.session.start_time);
+            const endRow = grpTimeToRow(gid, entry.session.end_time);
+            const rms = grpGridRooms(gid);
+            const ci = rms.findIndex(([rid]) => rid === entry.session.room_id);
+            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
+        }
+        const grpSelectedSession = reactive({});
+        function grpSelectedEntry(gid) {
+            const sid = grpSelectedSession[gid];
+            if (!sid) return null;
+            return (groupSchedule.value[gid] || []).find(e => e.session.id === sid) || null;
+        }
+
+        // ====================================================================
+        //  動的カテゴリ管理（受付案内・懇親会など共通）
+        // ====================================================================
+        function cancelEditCategory(catKey) {
+            Object.assign(categoryForms[catKey], {
                 editId: null, title: '', start_time: '', end_time: '',
                 room_id: rooms.value.length ? rooms.value[0].id : null,
                 required_staff: 2, english_required: false, notes: ''
             });
         }
-        function editReception(s) {
-            Object.assign(rcForm, {
+        function editCategory(catKey, s) {
+            Object.assign(categoryForms[catKey], {
                 editId: s.id, title: s.title,
                 start_time: toLocalInput(s.start_time), end_time: toLocalInput(s.end_time),
                 room_id: s.room_id, required_staff: s.required_staff,
                 english_required: !!s.english_required, notes: s.notes || ''
             });
         }
-        async function submitReception() {
+        async function submitCategory(catKey) {
+            const form = categoryForms[catKey];
             const fd = new FormData();
-            fd.append('title', rcForm.title);
+            fd.append('title', form.title);
             fd.append('speaker', '-');
-            const st = rcForm.start_time; const et = rcForm.end_time;
+            const st = form.start_time; const et = form.end_time;
             fd.append('start_time', st.length === 16 ? st + ':00' : st);
             fd.append('end_time', et.length === 16 ? et + ':00' : et);
-            fd.append('room_id', rcForm.room_id);
-            fd.append('category', 'reception');
-            fd.append('required_staff', rcForm.required_staff);
-            fd.append('english_required', rcForm.english_required);
-            fd.append('notes', rcForm.notes);
-            fd.append('description', '');
-            fd.append('speaker_kana', '');
-            fd.append('speaker_org', '');
-            fd.append('speaker_title', '');
-            fd.append('speaker_profile', '');
-            if (rcForm.editId) {
-                await fetch(API + `/api/sessions/${rcForm.editId}`, { method: 'PUT', body: fd });
+            fd.append('room_id', form.room_id);
+            fd.append('category', catKey);
+            fd.append('required_staff', form.required_staff);
+            fd.append('english_required', form.english_required);
+            fd.append('notes', form.notes);
+            fd.append('description', ''); fd.append('speaker_kana', '');
+            fd.append('speaker_org', ''); fd.append('speaker_title', ''); fd.append('speaker_profile', '');
+            const gid = catGroupTabs[catKey];
+            if (gid) fd.append('group_id', gid);
+            if (form.editId) {
+                await fetch(API + `/api/sessions/${form.editId}`, { method: 'PUT', body: fd });
             } else {
                 await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
             }
-            cancelEditReception();
-            await loadSessions();
-            await loadSchedule();
+            cancelEditCategory(catKey);
+            await loadSessions(); await loadSchedule();
         }
-        async function deleteReception(id) {
-            if (!confirm('この受付案内を削除します。よろしいですか？')) return;
+        async function deleteCategory(catKey, id) {
+            const cat = categories.value.find(c => c.key === catKey);
+            if (!confirm(`この${cat ? cat.label : catKey}を削除します。よろしいですか？`)) return;
             await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
-            await loadSessions();
-            await loadSchedule();
+            await loadSessions(); await loadSchedule();
         }
-        async function autoAssignReception() {
-            if (!confirm('受付案内スタッフを自動配置します。現在の受付案内配置は上書きされます。よろしいですか？')) return;
-            const ids = receptionSessions.value.map(e => e.session.id);
+        async function autoAssignCategory(catKey) {
+            const cat = categories.value.find(c => c.key === catKey);
+            const label = cat ? cat.label : catKey;
+            if (!confirm(`${label}スタッフを自動配置します。現在の${label}配置は上書きされます。よろしいですか？`)) return;
+            const ids = (categorySessions.value[catKey] || []).map(e => e.session.id);
             const data = await (await fetch(API + '/api/assignments/auto-assign', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_ids: ids })
             })).json();
-            rcAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
+            categoryAssignMsgs[catKey] = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
             await loadSchedule();
         }
-        async function clearReceptionAssignments() {
-            if (!confirm('受付案内のスタッフ配置をすべてクリアします。よろしいですか？')) return;
-            const ids = receptionSessions.value.flatMap(e => e.assigned_staff.map(a => a.assignment_id));
+        async function clearCategoryAssignments(catKey) {
+            const cat = categories.value.find(c => c.key === catKey);
+            const label = cat ? cat.label : catKey;
+            if (!confirm(`${label}のスタッフ配置をすべてクリアします。よろしいですか？`)) return;
+            const ids = (categorySessions.value[catKey] || []).flatMap(e => e.assigned_staff.map(a => a.assignment_id));
             for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
-            rcAssignMsg.value = '受付案内の配置をクリアしました';
+            categoryAssignMsgs[catKey] = `${label}の配置をクリアしました`;
             await loadSchedule();
         }
-
-        // ====================================================================
-        //  懇親会管理
-        // ====================================================================
-        const scForm = reactive({
-            editId: null, title: '', start_time: '', end_time: '',
-            room_id: null, required_staff: 2, english_required: false, notes: ''
-        });
-        const scAssignMsg = ref('');
-
-        function cancelEditSocial() {
-            Object.assign(scForm, {
-                editId: null, title: '', start_time: '', end_time: '',
-                room_id: rooms.value.length ? rooms.value[0].id : null,
-                required_staff: 2, english_required: false, notes: ''
-            });
-        }
-        function editSocial(s) {
-            Object.assign(scForm, {
-                editId: s.id, title: s.title,
-                start_time: toLocalInput(s.start_time), end_time: toLocalInput(s.end_time),
-                room_id: s.room_id, required_staff: s.required_staff,
-                english_required: !!s.english_required, notes: s.notes || ''
-            });
-        }
-        async function submitSocial() {
-            const fd = new FormData();
-            fd.append('title', scForm.title);
-            fd.append('speaker', '-');
-            const st = scForm.start_time; const et = scForm.end_time;
-            fd.append('start_time', st.length === 16 ? st + ':00' : st);
-            fd.append('end_time', et.length === 16 ? et + ':00' : et);
-            fd.append('room_id', scForm.room_id);
-            fd.append('category', 'social');
-            fd.append('required_staff', scForm.required_staff);
-            fd.append('english_required', scForm.english_required);
-            fd.append('notes', scForm.notes);
-            fd.append('description', '');
-            fd.append('speaker_kana', '');
-            fd.append('speaker_org', '');
-            fd.append('speaker_title', '');
-            fd.append('speaker_profile', '');
-            if (scForm.editId) {
-                await fetch(API + `/api/sessions/${scForm.editId}`, { method: 'PUT', body: fd });
-            } else {
-                await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
-            }
-            cancelEditSocial();
-            await loadSessions();
-            await loadSchedule();
-        }
-        async function deleteSocial(id) {
-            if (!confirm('この役割を削除します。よろしいですか？')) return;
-            await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
-            await loadSessions();
-            await loadSchedule();
-        }
-        async function autoAssignSocial() {
-            if (!confirm('懇親会スタッフを自動配置します。現在の懇親会配置は上書きされます。よろしいですか？')) return;
-            const ids = socialSessions.value.map(e => e.session.id);
+        async function autoAssignCategorySelected(catKey) {
+            const ids = [...(catSelectedSessions[catKey] || [])];
+            if (!ids.length) return;
+            if (!confirm(`選択した${ids.length}件を再配置します。よろしいですか？`)) return;
             const data = await (await fetch(API + '/api/assignments/auto-assign', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_ids: ids })
             })).json();
-            scAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
+            categoryAssignMsgs[catKey] = `再配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
+            if (catSelectedSessions[catKey]) catSelectedSessions[catKey].clear();
             await loadSchedule();
         }
-        async function clearSocialAssignments() {
-            if (!confirm('懇親会のスタッフ配置をすべてクリアします。よろしいですか？')) return;
-            const ids = socialSessions.value.flatMap(e => e.assigned_staff.map(a => a.assignment_id));
-            for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
-            scAssignMsg.value = '懇親会の配置をクリアしました';
-            await loadSchedule();
+        function toggleCatSessionSelect(catKey, id) {
+            if (!catSelectedSessions[catKey]) catSelectedSessions[catKey] = new Set();
+            if (catSelectedSessions[catKey].has(id)) catSelectedSessions[catKey].delete(id);
+            else catSelectedSessions[catKey].add(id);
+        }
+        function toggleCatSelectAll(catKey) {
+            const all = catGroupFiltered(catKey);
+            if (!catSelectedSessions[catKey]) catSelectedSessions[catKey] = new Set();
+            if (catSelectedSessions[catKey].size === all.length) {
+                catSelectedSessions[catKey].clear();
+            } else {
+                all.forEach(e => catSelectedSessions[catKey].add(e.session.id));
+            }
         }
 
         // ====================================================================
@@ -1344,12 +1784,17 @@ createApp({
         });
 
 
-        // ===== 受付マトリクス =====
-        const rcConfig = computed(() => {
-            if (!receptionSessions.value.length) return null;
+        // ===== 動的カテゴリ タイムライングリッド（共通ファクトリ） =====
+        function catGridConfig(catKey) {
+            const sess = catGroupFiltered(catKey);
+            if (!sess.length) return null;
+            const gid = catGroupTabs[catKey];
+            // グループ選択時はそのグループの統一時間範囲を使用
+            if (gid && unifiedGroupConfig.value[gid]) return unifiedGroupConfig.value[gid];
+            // 全日程の場合は全セッションの時間範囲
             const slotMs = SLOT_MIN * 60 * 1000;
             let minT = Infinity, maxT = -Infinity;
-            receptionSessions.value.forEach(e => {
+            schedule.value.forEach(e => {
                 const s = new Date(e.session.start_time).getTime();
                 const end = new Date(e.session.end_time).getTime();
                 if (s < minT) minT = s;
@@ -1358,30 +1803,31 @@ createApp({
             minT = Math.floor(minT / slotMs) * slotMs;
             maxT = Math.ceil(maxT / slotMs) * slotMs;
             return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
-        });
-        const rcRooms = computed(() => {
+        }
+        function catGridRooms(catKey) {
             const map = new Map();
-            receptionSessions.value.forEach(e => {
+            catGroupFiltered(catKey).forEach(e => {
                 const r = e.session.room;
                 if (r && !map.has(r.id)) map.set(r.id, r.name);
             });
             return [...map.entries()].sort((a, b) => a[0] - b[0]);
-        });
-        const rcGridStyle = computed(() => {
-            const cfg = rcConfig.value;
+        }
+        function catGridStyle(catKey) {
+            const cfg = catGridConfig(catKey);
             if (!cfg) return {};
+            const rms = catGridRooms(catKey);
             return {
-                gridTemplateColumns: `70px repeat(${rcRooms.value.length}, 1fr)`,
+                gridTemplateColumns: `70px repeat(${rms.length}, 1fr)`,
                 gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
             };
-        });
-        function rcTimeToRow(dt) {
-            const cfg = rcConfig.value;
+        }
+        function catTimeToRow(catKey, dt) {
+            const cfg = catGridConfig(catKey);
             const t = new Date(dt).getTime();
             return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
         }
-        const rcLabels = computed(() => {
-            const cfg = rcConfig.value;
+        function catGridLabels(catKey) {
+            const cfg = catGridConfig(catKey);
             if (!cfg) return [];
             const labels = [];
             const slotsPerLabel = 15 / SLOT_MIN;
@@ -1396,85 +1842,23 @@ createApp({
                 });
             }
             return labels;
-        });
-        function rcSessionStyle(entry) {
-            const startRow = rcTimeToRow(entry.session.start_time);
-            const endRow = rcTimeToRow(entry.session.end_time);
-            const ci = rcRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
+        }
+        function catSessionStyle(catKey, entry) {
+            const startRow = catTimeToRow(catKey, entry.session.start_time);
+            const endRow = catTimeToRow(catKey, entry.session.end_time);
+            const rms = catGridRooms(catKey);
+            const ci = rms.findIndex(([rid]) => rid === entry.session.room_id);
             return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
         }
-        const rcSelectedSession = ref(null);
-        const rcSelectedEntry = computed(() => {
-            if (!rcSelectedSession.value) return null;
-            return receptionSessions.value.find(e => e.session.id === rcSelectedSession.value) || null;
-        });
-
-        // --- 懇親会マトリクス ---
-        const scConfig = computed(() => {
-            if (!socialSessions.value.length) return null;
-            const slotMs = SLOT_MIN * 60 * 1000;
-            let minT = Infinity, maxT = -Infinity;
-            socialSessions.value.forEach(e => {
-                const s = new Date(e.session.start_time).getTime();
-                const end = new Date(e.session.end_time).getTime();
-                if (s < minT) minT = s;
-                if (end > maxT) maxT = end;
-            });
-            minT = Math.floor(minT / slotMs) * slotMs;
-            maxT = Math.ceil(maxT / slotMs) * slotMs;
-            return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
-        });
-        const scRooms = computed(() => {
-            const map = new Map();
-            socialSessions.value.forEach(e => {
-                const r = e.session.room;
-                if (r && !map.has(r.id)) map.set(r.id, r.name);
-            });
-            return [...map.entries()].sort((a, b) => a[0] - b[0]);
-        });
-        const scGridStyle = computed(() => {
-            const cfg = scConfig.value;
-            if (!cfg) return {};
-            return {
-                gridTemplateColumns: `70px repeat(${scRooms.value.length}, 1fr)`,
-                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
-            };
-        });
-        function scTimeToRow(dt) {
-            const cfg = scConfig.value;
-            const t = new Date(dt).getTime();
-            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
+        const catSelectedSession = reactive({});
+        function catSelectedEntry(catKey) {
+            const sid = catSelectedSession[catKey];
+            if (!sid) return null;
+            return (categorySessions.value[catKey] || []).find(e => e.session.id === sid) || null;
         }
-        const scLabels = computed(() => {
-            const cfg = scConfig.value;
-            if (!cfg) return [];
-            const labels = [];
-            const slotsPerLabel = 15 / SLOT_MIN;
-            const labelCount = cfg.totalSlots / slotsPerLabel;
-            for (let i = 0; i < labelCount; i++) {
-                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
-                const mins = t.getMinutes();
-                labels.push({
-                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
-                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
-                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
-                });
-            }
-            return labels;
-        });
-        function scSessionStyle(entry) {
-            const startRow = scTimeToRow(entry.session.start_time);
-            const endRow = scTimeToRow(entry.session.end_time);
-            const ci = scRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
-            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
-        }
-        const scSelectedSession = ref(null);
-        const scSelectedEntry = computed(() => {
-            if (!scSelectedSession.value) return null;
-            return socialSessions.value.find(e => e.session.id === scSelectedSession.value) || null;
-        });
 
         // --- 全体スケジュール ---
+        const allGroupTab = ref(0); // 0=全体, group_id=グループ別
         const allStaffFilter = ref(0);
         const allSelectedSession = ref(null);
         const allSelectedEntry = computed(() => {
@@ -1525,8 +1909,7 @@ createApp({
             }
         }
         async function deleteAllEntry(id, category) {
-            const labels = { reception: '受付案内', social: '懇親会', overall: '全体スケジュール' };
-            const label = labels[category] || 'この項目';
+            const label = CATEGORY_LABELS.value[category] || 'この項目';
             if (!confirm(`この${label}を削除します。よろしいですか？`)) return;
             allSelectedSession.value = null;
             await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
@@ -1546,7 +1929,32 @@ createApp({
         const overallSessions = computed(() =>
             sessions.value.filter(s => s.category === 'overall').sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
         );
-        const allSchedule = computed(() => schedule.value);
+        const allSchedule = computed(() => {
+            if (!allGroupTab.value) return schedule.value;
+            return schedule.value.filter(e => e.session.group_id === allGroupTab.value);
+        });
+        // 全日程タイムライン: グループ別にソート済みリスト
+        // 同一時間帯の場合: 全体→セッション→カテゴリ(order順)
+        const allTimelineByGroup = computed(() => {
+            const catOrderMap = {};
+            categories.value.forEach(c => { catOrderMap[c.key] = c.order; });
+            function catPriority(cat) {
+                if (cat === 'overall') return 0;
+                if (cat in catOrderMap) return 2 + catOrderMap[cat];
+                return 1; // session系 (general/tech/keynote/workshop/lt)
+            }
+            const result = {};
+            sessionGroups.value.forEach(g => {
+                result[g.id] = schedule.value
+                    .filter(e => e.session.group_id === g.id)
+                    .sort((a, b) => {
+                        const timeDiff = new Date(a.session.start_time) - new Date(b.session.start_time);
+                        if (timeDiff !== 0) return timeDiff;
+                        return catPriority(a.session.category) - catPriority(b.session.category);
+                    });
+            });
+            return result;
+        });
         const allConfig = computed(() => {
             if (!allSchedule.value.length) return null;
             const slotMs = SLOT_MIN * 60 * 1000;
@@ -1563,59 +1971,48 @@ createApp({
         });
         // 全体スケジュール（overall）があるか
         const hasOverall = computed(() => allSchedule.value.some(e => e.session.category === 'overall'));
-        // セッション用の部屋（reception/social/overall除外）
+        // セッション用の部屋（動的カテゴリ/overall除外）
         const allSessionRooms = computed(() => {
+            const dkeys = dynamicCatKeys.value;
             const map = new Map();
             allSchedule.value.forEach(e => {
-                if (['reception', 'social', 'overall'].includes(e.session.category)) return;
+                if (dkeys.includes(e.session.category) || e.session.category === 'overall') return;
                 const r = e.session.room;
                 if (r && !map.has(r.id)) map.set(r.id, r.name);
             });
             return [...map.entries()].sort((a, b) => a[0] - b[0]);
         });
-        // 受付用の列（受付セッションのタイトルごと or 部屋ごと）
-        const allReceptionCols = computed(() => {
-            const map = new Map();
-            allSchedule.value.forEach(e => {
-                if (e.session.category !== 'reception') return;
-                const r = e.session.room;
-                if (r && !map.has(r.id)) map.set(r.id, r.name);
+        // 動的カテゴリ別列
+        const allCategoryCols = computed(() => {
+            const result = {};
+            categories.value.forEach(c => {
+                const map = new Map();
+                allSchedule.value.forEach(e => {
+                    if (e.session.category !== c.key) return;
+                    const r = e.session.room;
+                    if (r && !map.has(r.id)) map.set(r.id, r.name);
+                });
+                result[c.key] = [...map.entries()].sort((a, b) => a[0] - b[0]);
             });
-            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+            return result;
         });
-        // 懇親会用の列
-        const allSocialCols = computed(() => {
-            const map = new Map();
-            allSchedule.value.forEach(e => {
-                if (e.session.category !== 'social') return;
-                const r = e.session.room;
-                if (r && !map.has(r.id)) map.set(r.id, r.name);
-            });
-            return [...map.entries()].sort((a, b) => a[0] - b[0]);
-        });
-        // 全列 = 全体 + セッション部屋 + 受付列 + 懇親会列
+        // 全列 = 全体 + セッション部屋 + 動的カテゴリ列
         const allColumns = computed(() => {
             const cols = [];
             if (hasOverall.value) cols.push({ id: 'overall', name: '全体', type: 'overall' });
             allSessionRooms.value.forEach(([id, name]) => cols.push({ id, name, type: 'session' }));
-            allReceptionCols.value.forEach(([id, name]) => cols.push({ id, name: '受付案内: ' + name, type: 'reception', roomId: id }));
-            allSocialCols.value.forEach(([id, name]) => cols.push({ id: 's_' + id, name: '懇親会: ' + name, type: 'social', roomId: id }));
+            categories.value.forEach(c => {
+                const catCols = allCategoryCols.value[c.key] || [];
+                catCols.forEach(([id, name]) => cols.push({ id: `${c.key}_${id}`, name: `${c.label}: ${name}`, type: c.key, roomId: id }));
+            });
             return cols;
         });
         const allGridStyle = computed(() => {
             const cfg = allConfig.value;
             if (!cfg) return {};
-            const ovCount = hasOverall.value ? 1 : 0;
-            const sessionCount = allSessionRooms.value.length;
-            const rcCount = allReceptionCols.value.length;
-            const scCount = allSocialCols.value.length;
-            const colWidths = [];
-            if (ovCount) colWidths.push('1fr');
-            if (sessionCount) colWidths.push(`repeat(${sessionCount}, 1fr)`);
-            if (rcCount) colWidths.push(`repeat(${rcCount}, 1fr)`);
-            if (scCount) colWidths.push(`repeat(${scCount}, 1fr)`);
+            const totalCols = allColumns.value.length;
             return {
-                gridTemplateColumns: `70px ${colWidths.join(' ')}`,
+                gridTemplateColumns: `70px repeat(${totalCols}, 1fr)`,
                 gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
             };
         });
@@ -1645,52 +2042,52 @@ createApp({
             const startRow = allTimeToRow(entry.session.start_time);
             const endRow = allTimeToRow(entry.session.end_time);
             const cat = entry.session.category;
-            const ovOffset = hasOverall.value ? 1 : 0;
-            let ci;
+            // allColumns の中から該当列を探す
+            let ci = -1;
             if (cat === 'overall') {
-                ci = 0;
-            } else if (cat === 'reception') {
-                ci = ovOffset + allSessionRooms.value.length + allReceptionCols.value.findIndex(([rid]) => rid === entry.session.room_id);
-            } else if (cat === 'social') {
-                ci = ovOffset + allSessionRooms.value.length + allReceptionCols.value.length + allSocialCols.value.findIndex(([rid]) => rid === entry.session.room_id);
+                ci = allColumns.value.findIndex(c => c.type === 'overall');
+            } else if (dynamicCatKeys.value.includes(cat)) {
+                ci = allColumns.value.findIndex(c => c.type === cat && c.roomId === entry.session.room_id);
             } else {
-                ci = ovOffset + allSessionRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
+                ci = allColumns.value.findIndex(c => c.type === 'session' && c.id === entry.session.room_id);
             }
+            if (ci < 0) ci = 0;
             return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
         }
-        const CAT_COLORS = {
-            general: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
-            tech: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
-            workshop: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
-            keynote: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
-            lt: 'background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8',
-            reception: 'background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-color:#388e3c',
-            social: 'background:linear-gradient(135deg,#f3e5f5,#e1bee7);border-color:#7b1fa2',
-        };
-        const CAT_BG = {
-            general: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
-            tech: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
-            workshop: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
-            keynote: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
-            lt: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
-            reception: { background: 'linear-gradient(135deg,#e8f5e9,#c8e6c9)', borderColor: '#388e3c' },
-            social: { background: 'linear-gradient(135deg,#f3e5f5,#e1bee7)', borderColor: '#7b1fa2' },
-            overall: { background: 'linear-gradient(135deg,#fff3e0,#ffe0b2)', borderColor: '#e65100' },
-        };
-        function allSessionBg(cat) { return CAT_BG[cat] || CAT_BG.general; }
+        // カテゴリ色をHEXから明るいグラデーションに変換
+        function _hexToGradient(hex) {
+            const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+            const light1 = `rgba(${r},${g},${b},0.12)`, light2 = `rgba(${r},${g},${b},0.22)`;
+            return `linear-gradient(135deg,${light1},${light2})`;
+        }
+        const CAT_BG = computed(() => {
+            const base = {
+                general: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+                tech: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+                workshop: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+                keynote: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+                lt: { background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: '#1a73e8' },
+                overall: { background: 'linear-gradient(135deg,#fff3e0,#ffe0b2)', borderColor: '#e65100' },
+            };
+            categories.value.forEach(c => {
+                base[c.key] = { background: _hexToGradient(c.color), borderColor: c.color };
+            });
+            return base;
+        });
+        function allSessionBg(cat) { return CAT_BG.value[cat] || CAT_BG.value.general; }
         function allSessionOpacity(entry) {
             if (!allStaffFilter.value) return 1;
             return _hasStaff(entry, allStaffFilter.value) ? 1 : 0.15;
         }
 
-        onMounted(() => { loadRooms(); loadStaffs(); loadSessions().then(() => loadSchedule()); loadSettings(); });
+        onMounted(async () => { await loadCategories(); await loadSessionGroups(); loadRooms(); loadStaffs(); loadSessions().then(() => loadSchedule()); loadSettings(); });
 
         return {
             tab, rooms, sessions, staffs, schedule, staffAssignments,
             scheduleMsg, scheduleMsgError, sessPhotoPreview, sessPhoto,
             roomForm, sessForm, staffForm, roleDropdownOpen, prefForms, availForms, ltTalks,
             venueMaps, venueMapForm, venueMapPreview, venueMapInput, mapModal,
-            switchTab, catLabel, fmt, fmtShort, sortedPrefs,
+            switchTab, catLabel, fmt, fmtShort, sortedPrefs, autoSetEndTime,
             cancelEditRoom, editRoom, submitRoom, deleteRoom,
             onVenueMapChange, cancelEditVenueMap, editVenueMap, submitVenueMap, deleteVenueMap,
             sessDetailSession, sessDetailEntry, sessDetailLocked, toggleSessionDetail, toggleSessDetailLock,
@@ -1700,32 +2097,44 @@ createApp({
             newStaffPrefs, newPrefForm, addNewStaffPref, sessionTitle,
             staffAssignCount, editingStaffPrefs, editingStaffAvails,
             submitStaff, editStaff, cancelEditStaff, deleteStaff, uploadStaffPhoto, deleteStaffPhoto, onNewStaffPhoto, clearNewStaffPhoto, staffPhotoPreview, addPref, removePref, addAvail, removeAvail,
-            sessionSchedule, receptionSessions, socialSessions,
+            sessionSchedule,
+            // セッショングループ
+            sessionGroups, groupLocks, groupSessForms, groupStaffFilters, groupScheduleMsgs, groupSelectedSessions,
+            groupSchedule, filteredGroupSchedule, groupSessionOpacity, groupSessions,
+            cancelEditGroupSession, editGroupSession, submitGroupSession, deleteGroupSession,
+            autoAssignGroup, autoAssignGroupSelected, clearGroupAssignments,
+            toggleGroupSessionSelect, toggleGroupSelectAll,
+            grpGridConfig, grpGridRooms, grpGridStyle, grpGridLabels, grpSessionStyle, grpSelectedSession, grpSelectedEntry,
+            // 動的カテゴリ
+            categories, dynamicCatKeys, categoryLocks, categoryForms, categoryAssignMsgs, categoryStaffFilters,
+            categorySessions, catGroupTabs, catGroupFiltered, catTimelineByGroup, filteredCategorySessions, catSessionOpacity,
+            cancelEditCategory, editCategory, submitCategory, deleteCategory, autoAssignCategory, clearCategoryAssignments,
+            catSelectedSessions, autoAssignCategorySelected, toggleCatSessionSelect, toggleCatSelectAll,
+            catGridConfig, catGridRooms, catGridStyle, catGridLabels, catSessionStyle, catSelectedSession, catSelectedEntry,
+            roleOptions,
             assignStaffSelect, availableStaffs, addAssignment, removeAssignment,
             selectedSessions, toggleSessionSelect, toggleSelectAll,
             autoAssign, autoAssignSelected, clearAssignments,
             tlRooms, tlGridStyle, tlLabels, tlSessionStyle, tlBreaks,
             matrixLocked, drag, dragSessionStyle, onDragStart, dragCursor,
-            rcConfig, rcRooms, rcGridStyle, rcLabels, rcSessionStyle,
-            rcSelectedSession, rcSelectedEntry,
-            receptionLocked, rcForm, rcAssignMsg, cancelEditReception, editReception, submitReception, deleteReception, autoAssignReception, clearReceptionAssignments,
-            socialLocked, scForm, scAssignMsg, cancelEditSocial, editSocial, submitSocial, deleteSocial, autoAssignSocial, clearSocialAssignments,
-            scConfig, scRooms, scGridStyle, scLabels, scSessionStyle,
-            scSelectedSession, scSelectedEntry,
             exportExcel, exportBackup, backupFileName, ioMsg, ioMsgError, onBackupFileChange, importBackup,
             connpassTimeline, speakerTemplate, connpassBaseUrl, generateConnpassTimeline, generateSpeakerTemplate, copyToClipboard,
             resetAllData, resetMsg, resetMsgError, resetPassword,
+            resetPwForm, resetPwMsg, resetPwMsgError, changeResetPassword,
             appTitle, settingsForm, settingsMsg, saveSettings,
             pwForm, pwMsg, pwMsgError, changePassword,
-            staffDetailFilter, matrixStaffFilter, rcStaffFilter, scStaffFilter,
-            matrixStaffOptions, rcStaffOptions, scStaffOptions,
+            catSettingForm, catSettingMsg, editCatSetting, cancelCatSetting, saveCatSetting, deleteCatSetting,
+            grpSettingForm, grpSettingMsg, editGrpSetting, cancelGrpSetting, saveGrpSetting, deleteGrpSetting,
+            staffDetailFilter, matrixStaffFilter,
+            matrixStaffOptions,
             overallSessions,
-            allStaffFilter, allSchedule, allConfig, allColumns, allGridStyle, allLabels, allSessionStyle, allSessionBg, allSessionOpacity,
+            allGroupTab, allStaffFilter, allSchedule, allTimelineByGroup, allConfig, allColumns, allGridStyle, allLabels, allSessionStyle, allSessionBg, allSessionOpacity,
             allSelectedSession, allSelectedEntry, allAssignMsg,
             allOvForm, cancelAllOverall, submitAllOverall,
             editAllEntry, deleteAllEntry, autoAssignAll,
-            filteredMatrixSchedule, filteredReceptionSessions, filteredSocialSessions,
-            matrixSessionOpacity, rcSessionOpacity, scSessionOpacity, _hasStaff,
+            filteredMatrixSchedule,
+            matrixSessionOpacity, _hasStaff, CAT_BG,
         };
     }
 }).mount('#app');
+

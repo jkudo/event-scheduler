@@ -19,16 +19,14 @@
             <button class="sidebar-item" :class="{ active: tab === 'venue-view' }" @click="switchTab('venue-view')">会場</button>
             <div class="sidebar-section">イベント設定</div>
             <button class="sidebar-item" :class="{ active: tab === 'overall-manage' }" @click="switchTab('overall-manage')">全体スケジュール管理</button>
-            <button class="sidebar-item" :class="{ active: tab === 'sessions' }" @click="switchTab('sessions')">セッション管理</button>
-            <button class="sidebar-item" :class="{ active: tab === 'reception-manage' }" @click="switchTab('reception-manage')">受付案内管理</button>
-            <button class="sidebar-item" :class="{ active: tab === 'social-manage' }" @click="switchTab('social-manage')">懇親会管理</button>
+            <button v-for="grp in sessionGroups" :key="'nav-gm-'+grp.id" class="sidebar-item" :class="{ active: tab === 'grp-'+grp.id+'-manage' }" @click="switchTab('grp-'+grp.id+'-manage')">{{ grp.label }} 管理</button>
+            <button v-for="cat in categories" :key="'nav-m-'+cat.key" class="sidebar-item" :class="{ active: tab === cat.key+'-manage' }" @click="switchTab(cat.key+'-manage')">{{ cat.label }}管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'staffs' }" @click="switchTab('staffs')">スタッフ管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'rooms' }" @click="switchTab('rooms')">部屋管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'venue-maps' }" @click="switchTab('venue-maps')">会場地図</button>
             <div class="sidebar-section">スタッフ配置</div>
-            <button class="sidebar-item" :class="{ active: tab === 'matrix' }" @click="switchTab('matrix')">セッション担当</button>
-            <button class="sidebar-item" :class="{ active: tab === 'reception' }" @click="switchTab('reception')">受付案内担当</button>
-            <button class="sidebar-item" :class="{ active: tab === 'social' }" @click="switchTab('social')">懇親会担当</button>
+            <button v-for="grp in sessionGroups" :key="'nav-ga-'+grp.id" class="sidebar-item" :class="{ active: tab === 'grp-'+grp.id+'-assign' }" @click="switchTab('grp-'+grp.id+'-assign')">{{ grp.label }} 担当</button>
+            <button v-for="cat in categories" :key="'nav-a-'+cat.key" class="sidebar-item" :class="{ active: tab === cat.key }" @click="switchTab(cat.key)">{{ cat.label }}担当</button>
             <button class="sidebar-item" :class="{ active: tab === 'algorithm' }" @click="switchTab('algorithm')">配置アルゴリズム</button>
             <div class="sidebar-section">出力</div>
             <button class="sidebar-item" :class="{ active: tab === 'io' }" @click="switchTab('io')">エクスポート/インポート</button>
@@ -44,7 +42,7 @@
         <div class="panel" :class="{ active: tab === 'rooms' }">
             <h2>部屋管理</h2>
             <div class="form-row">
-                <div class="form-group"><label>部屋名</label><input v-model="roomForm.name" placeholder="例: ホールA"></div>
+                <div class="form-group"><label>部屋名 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="roomForm.name" placeholder="例: ホールA"></div>
                 <div class="form-group"><label>定員</label><input v-model.number="roomForm.capacity" type="number" placeholder="100"></div>
                 <div class="form-group"><label>階</label><input v-model.number="roomForm.floor" type="number" placeholder="1"></div>
             </div>
@@ -113,54 +111,52 @@
             </div>
         </div>
 
-        <!-- ===== セッション管理 ===== -->
-        <div class="panel" :class="{ active: tab === 'sessions' }">
-            <h2>セッション管理</h2>
+        <!-- ===== 動的セッショングループ管理 ===== -->
+        <template v-for="grp in sessionGroups" :key="'grpm-'+grp.id">
+        <div class="panel" :class="{ active: tab === 'grp-'+grp.id+'-manage' }">
+            <h2>{{ grp.label }} 管理</h2>
             <div class="form-row">
-                <div class="form-group"><label>タイトル</label><input v-model="sessForm.title" placeholder="例: Kubernetes実践入門"></div>
+                <div class="form-group"><label>タイトル <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="groupSessForms[grp.id].title" placeholder="例: Kubernetes実践入門"></div>
             </div>
             <!-- 通常セッション: 登壇者情報 -->
-            <template v-if="!['lt','reception','social'].includes(sessForm.category)">
+            <template v-if="!['lt', ...dynamicCatKeys].includes(groupSessForms[grp.id].category)">
                 <div class="form-row">
-                    <div class="form-group"><label>登壇者名</label><input v-model="sessForm.speaker" placeholder="例: 山田 太郎"></div>
-                    <div class="form-group"><label>ふりがな</label><input v-model="sessForm.speaker_kana" placeholder="例: やまだ たろう"></div>
+                    <div class="form-group"><label>登壇者名 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="groupSessForms[grp.id].speaker" placeholder="例: 山田 太郎"></div>
+                    <div class="form-group"><label>ふりがな</label><input v-model="groupSessForms[grp.id].speaker_kana" placeholder="例: やまだ たろう"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>所属</label><input v-model="sessForm.speaker_org" placeholder="例: 株式会社○○"></div>
-                    <div class="form-group"><label>肩書き</label><input v-model="sessForm.speaker_title" placeholder="例: CTO"></div>
+                    <div class="form-group"><label>所属</label><input v-model="groupSessForms[grp.id].speaker_org" placeholder="例: 株式会社○○"></div>
+                    <div class="form-group"><label>肩書き</label><input v-model="groupSessForms[grp.id].speaker_title" placeholder="例: CTO"></div>
                 </div>
-                <div class="form-group"><label>プロフィール</label><textarea v-model="sessForm.speaker_profile" rows="2" placeholder="例: 10年以上のクラウドインフラ経験を持つエンジニア。著書に『実践Kubernetes入門』など。"></textarea></div>
+                <div class="form-group"><label>プロフィール</label><textarea v-model="groupSessForms[grp.id].speaker_profile" rows="2" placeholder="例: 10年以上のクラウドインフラ経験を持つエンジニア。"></textarea></div>
             </template>
-            <!-- 登壇者写真（通常セッションのみ） -->
-            <template v-if="!['lt','reception','social'].includes(sessForm.category)">
+            <!-- 登壇者写真 -->
+            <template v-if="!['lt', ...dynamicCatKeys].includes(groupSessForms[grp.id].category)">
                 <div class="form-row">
                     <div class="form-group">
                         <label>登壇者写真</label>
-                        <input type="file" ref="sessPhoto" accept="image/jpeg,image/png,image/gif,image/webp" @change="onPhotoChange">
-                        <div style="margin-top:8px">
-                            <img v-if="sessPhotoPreview" :src="sessPhotoPreview" class="photo-preview">
-                            <div v-if="sessForm.editId && sessForm.currentPhoto && !sessPhotoPreview" style="font-size:0.8rem;color:#666">
-                                <img :src="sessForm.currentPhoto" class="photo-preview">
-                                <br>新しい写真を選択しない場合、現在の写真が維持されます
-                            </div>
+                        <input type="file" :data-group-photo="grp.id" accept="image/jpeg,image/png,image/gif,image/webp">
+                        <div v-if="groupSessForms[grp.id].editId && groupSessForms[grp.id].currentPhoto" style="margin-top:8px">
+                            <img :src="groupSessForms[grp.id].currentPhoto" class="photo-preview">
+                            <span style="font-size:0.8rem;color:#666">新しい写真を選択しない場合、現在の写真が維持されます</span>
                         </div>
                     </div>
                 </div>
             </template>
             <div class="form-row">
-                <div class="form-group"><label>開始時刻</label><input v-model="sessForm.start_time" type="datetime-local"></div>
-                <div class="form-group"><label>終了時刻</label><input v-model="sessForm.end_time" type="datetime-local"></div>
+                <div class="form-group"><label>開始時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="groupSessForms[grp.id].start_time" type="datetime-local" step="300" @change="autoSetEndTime(groupSessForms[grp.id])"></div>
+                <div class="form-group"><label>終了時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="groupSessForms[grp.id].end_time" type="datetime-local" step="300"></div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>部屋</label>
-                    <select v-model.number="sessForm.room_id">
+                    <label>部屋 <span style="color:#d93025;font-size:0.75rem">必須</span></label>
+                    <select v-model.number="groupSessForms[grp.id].room_id">
                         <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>カテゴリ</label>
-                    <select v-model="sessForm.category">
+                    <select v-model="groupSessForms[grp.id].category">
                         <option value="general">一般</option>
                         <option value="tech">技術</option>
                         <option value="workshop">ワークショップ</option>
@@ -168,18 +164,18 @@
                         <option value="lt">LT</option>
                     </select>
                 </div>
-                <div class="form-group"><label>必要スタッフ数</label><input v-model.number="sessForm.required_staff" type="number" placeholder="例: 2"></div>
+                <div class="form-group"><label>必要スタッフ数</label><input v-model.number="groupSessForms[grp.id].required_staff" type="number" placeholder="例: 2"></div>
                 <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:22px">
-                    <label style="margin:0"><input type="checkbox" v-model="sessForm.english_required" style="width:16px;height:16px;cursor:pointer"> 英語対応必要</label>
+                    <label style="margin:0"><input type="checkbox" v-model="groupSessForms[grp.id].english_required" style="width:16px;height:16px;cursor:pointer"> 英語対応必要</label>
                 </div>
             </div>
-            <div class="form-group"><label>セッション説明</label><textarea v-model="sessForm.description" rows="2" placeholder="例: コンテナオーケストレーションの基礎から実践的なデプロイ手法まで解説します。"></textarea></div>
-            <div class="form-group"><label>備考</label><textarea v-model="sessForm.notes" rows="2" placeholder="例: プロジェクター2台使用。講演者用に水を準備。"></textarea></div>
+            <div class="form-group"><label>セッション説明</label><textarea v-model="groupSessForms[grp.id].description" rows="2" placeholder="例: コンテナオーケストレーションの基礎から実践的なデプロイ手法まで解説します。"></textarea></div>
+            <div class="form-group"><label>備考</label><textarea v-model="groupSessForms[grp.id].notes" rows="2" placeholder="例: プロジェクター2台使用。講演者用に水を準備。"></textarea></div>
 
             <!-- LTセッション: 登壇者リスト -->
-            <div v-if="sessForm.category === 'lt'" class="lt-talks-list">
+            <div v-if="groupSessForms[grp.id].category === 'lt' && groupSessForms[grp.id]._ltTalks" class="lt-talks-list">
                 <h4>LT登壇者一覧</h4>
-                <div v-for="(talk, idx) in ltTalks" :key="idx" class="lt-talk-item">
+                <div v-for="(talk, idx) in groupSessForms[grp.id]._ltTalks" :key="idx" class="lt-talk-item">
                     <span class="lt-num">{{ idx + 1 }}</span>
                     <div style="flex:1;min-width:0">
                         <div class="lt-talk-fields">
@@ -189,35 +185,24 @@
                             <input v-model="talk.speaker_org" placeholder="所属" style="flex:1;min-width:100px">
                             <input v-model="talk.speaker_title" placeholder="肩書き" style="flex:1;min-width:80px">
                         </div>
-                        <div style="margin-top:4px;display:flex;align-items:center;gap:8px">
-                            <img v-if="talk.photoPreview" :src="talk.photoPreview" class="photo-preview" style="width:36px;height:36px">
-                            <img v-else-if="talk.speaker_photo" :src="talk.speaker_photo" class="photo-preview" style="width:36px;height:36px">
-                            <label style="font-size:0.8rem;color:#1a73e8;cursor:pointer">
-                                {{ talk.speaker_photo || talk.photoPreview ? '写真変更' : '写真登録' }}
-                                <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" @change="onLTTalkPhoto($event, idx)" style="display:none">
-                            </label>
-                        </div>
                     </div>
-                    <button class="del-btn" @click="ltTalks.splice(idx, 1)">✕</button>
+                    <button class="del-btn" @click="groupSessForms[grp.id]._ltTalks.splice(idx, 1)">✕</button>
                 </div>
-                <button class="btn btn-sm" @click="addLTTalk" style="margin-top:4px">＋ 登壇者を追加</button>
+                <button class="btn btn-sm" @click="(groupSessForms[grp.id]._ltTalks || (groupSessForms[grp.id]._ltTalks = [])).push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', photoFile: null, photoPreview: '' })" style="margin-top:4px">＋ 登壇者を追加</button>
+            </div>
+            <div v-if="groupSessForms[grp.id].category === 'lt' && !groupSessForms[grp.id]._ltTalks">
+                <button class="btn btn-sm" @click="groupSessForms[grp.id]._ltTalks = [{ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', photoFile: null, photoPreview: '' }]" style="margin-bottom:8px">＋ LT登壇者を追加</button>
             </div>
             <div style="display:flex;gap:8px">
-                <button class="btn" @click="submitSession">{{ sessForm.editId ? '更新' : '追加' }}</button>
-                <button v-if="sessForm.editId" class="btn btn-danger" @click="cancelEditSession">キャンセル</button>
+                <button class="btn" :style="{ background: grp.color }" @click="submitGroupSession(grp.id)">{{ groupSessForms[grp.id].editId ? '更新' : '追加' }}</button>
+                <button v-if="groupSessForms[grp.id].editId" class="btn btn-danger" @click="cancelEditGroupSession(grp.id)">キャンセル</button>
             </div>
-            <div style="margin:12px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-                <button class="btn btn-success" @click="calcRequiredStaff">必要スタッフ数を自動計算</button>
-                <span v-if="calcStaffMsg" style="font-size:0.85rem;color:#137333">{{ calcStaffMsg }}</span>
-            </div>
-            <div v-if="calcStaffSummary" style="margin:0 0 12px;padding:10px 16px;background:#e8f5e9;border-radius:6px;display:flex;gap:24px;align-items:center;font-size:0.95rem">
-                <span><strong>最小必要人数:</strong> {{ calcStaffSummary.min }}人 <span style="color:#666;font-size:0.85rem">（全セッションをカバーできるギリギリの人数）</span></span>
-                <span><strong>休憩込み必要人数:</strong> {{ calcStaffSummary.comfortable }}人 <span style="color:#666;font-size:0.85rem">（1セッション担当後に休憩を挟める人数）</span></span>
-            </div>
-            <table>
+            <h3>登録済み一覧</h3>
+            <p v-if="!groupSessions(grp.id).length" style="color:#666">セッションがまだ登録されていません。</p>
+            <table v-else>
                 <thead><tr><th>ID</th><th>登壇者</th><th>タイトル</th><th>時間</th><th>部屋</th><th>カテゴリ</th><th>必要人数</th><th>英語</th><th></th></tr></thead>
                 <tbody>
-                    <template v-for="s in sessions.filter(s => !['reception','social','overall'].includes(s.category))" :key="s.id">
+                    <template v-for="s in groupSessions(grp.id)" :key="s.id">
                     <tr>
                         <td>{{ s.id }}</td>
                         <td style="text-align:center">
@@ -239,15 +224,15 @@
                         <td>{{ s.required_staff }}</td>
                         <td><span v-if="s.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
                         <td>
-                            <button class="btn btn-sm edit-btn" @click="editSession(s)" style="margin-right:4px">編集</button>
-                            <button class="del-btn" @click="deleteSession(s.id)">削除</button>
+                            <button class="btn btn-sm edit-btn" @click="editGroupSession(grp.id, s)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteGroupSession(grp.id, s.id)">削除</button>
                         </td>
                     </tr>
                     </template>
                 </tbody>
             </table>
-
         </div>
+        </template>
 
         <!-- ===== スタッフ管理 ===== -->
         <div class="panel" :class="{ active: tab === 'staffs' }">
@@ -278,7 +263,7 @@
                 </div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>名前</label><input v-model="staffForm.name" placeholder="例: 山田 太郎"></div>
+                <div class="form-group"><label>名前 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="staffForm.name" placeholder="例: 山田 太郎"></div>
                 <div class="form-group"><label>Slack名</label><input v-model="staffForm.slack_name" placeholder="例: @yamada-taro"></div>
                 <div class="form-group" style="position:relative">
                     <label>担当</label>
@@ -290,7 +275,7 @@
                     </div>
                     <div v-if="roleDropdownOpen"
                          style="position:absolute;top:100%;left:0;right:0;z-index:10;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:4px 0">
-                        <label v-for="opt in [{v:'session',l:'セッション'},{v:'reception',l:'受付案内'},{v:'social',l:'懇親会'}]" :key="opt.v"
+                        <label v-for="opt in roleOptions" :key="opt.v"
                                style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:0.9rem;margin:0"
                                @mousedown.prevent>
                             <input type="checkbox" :value="opt.v" v-model="staffForm.role"
@@ -322,8 +307,8 @@
                     </template>
                     <span v-if="!editingStaffAvails.length" style="color:#999;font-size:0.85rem">制限なし（終日対応可能）</span>
                     <div class="inline-form" style="margin-top:8px">
-                        <div class="form-group"><input v-model="availForms[staffForm.editId].start" type="datetime-local"></div>
-                        <div class="form-group"><input v-model="availForms[staffForm.editId].end" type="datetime-local"></div>
+                        <div class="form-group"><input v-model="availForms[staffForm.editId].start" type="datetime-local" step="300"></div>
+                        <div class="form-group"><input v-model="availForms[staffForm.editId].end" type="datetime-local" step="300"></div>
                         <button class="btn btn-sm" @click="addAvail(staffForm.editId)">追加</button>
                     </div>
                 </template>
@@ -337,8 +322,8 @@
                     </template>
                     <span v-if="!newStaffAvails.length" style="color:#999;font-size:0.85rem">制限なし（終日対応可能）</span>
                     <div class="inline-form" style="margin-top:8px">
-                        <div class="form-group"><input v-model="newAvailForm.start" type="datetime-local"></div>
-                        <div class="form-group"><input v-model="newAvailForm.end" type="datetime-local"></div>
+                        <div class="form-group"><input v-model="newAvailForm.start" type="datetime-local" step="300"></div>
+                        <div class="form-group"><input v-model="newAvailForm.end" type="datetime-local" step="300"></div>
                         <button class="btn btn-sm" @click="addNewStaffAvail">追加</button>
                     </div>
                 </template>
@@ -441,76 +426,62 @@
         </div>
 
         <!-- ===== 配置表 ===== -->
-        <div class="panel" :class="{ active: tab === 'matrix' }">
+        <!-- ===== 動的セッショングループ担当 ===== -->
+        <template v-for="grp in sessionGroups" :key="'grpa-'+grp.id">
+        <div class="panel" :class="{ active: tab === 'grp-'+grp.id+'-assign' }">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                <h2 style="margin:0">セッション担当</h2>
-                <button @click="matrixLocked = !matrixLocked"
-                        :style="{ background: matrixLocked ? '#e8eaed' : '#fce8e6', color: matrixLocked ? '#5f6368' : '#c5221f', border: matrixLocked ? '1px solid #dadce0' : '1px solid #c5221f', borderRadius: '20px', padding: '5px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }">
-                    <span v-if="matrixLocked">&#128274; ロック中</span>
+                <h2 style="margin:0">{{ grp.label }} 担当</h2>
+                <button @click="groupLocks[grp.id] = !groupLocks[grp.id]"
+                        :style="{ background: groupLocks[grp.id] ? '#e8eaed' : '#fce8e6', color: groupLocks[grp.id] ? '#5f6368' : '#c5221f', border: groupLocks[grp.id] ? '1px solid #dadce0' : '1px solid #c5221f', borderRadius: '20px', padding: '5px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }">
+                    <span v-if="groupLocks[grp.id]">&#128274; ロック中</span>
                     <span v-else>&#128275; 編集中</span>
                 </button>
             </div>
 
-            <!-- 自動配置ボタン（ロック解除時のみ表示） -->
-            <div v-if="!matrixLocked" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
-                <button class="btn btn-success" @click="autoAssign">スタッフ自動配置</button>
-                <button class="btn btn-danger" @click="clearAssignments">配置をクリア</button>
-                <div v-if="scheduleMsg" class="msg" :class="scheduleMsg.type" style="margin:0">{{ scheduleMsg.text }}</div>
-                <div v-if="scheduleMsgError" class="msg error" style="margin:0">{{ scheduleMsgError }}</div>
+            <!-- 自動配置ボタン -->
+            <div v-if="!groupLocks[grp.id]" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
+                <button class="btn btn-success" @click="autoAssignGroup(grp.id)">スタッフ自動配置</button>
+                <button class="btn" @click="autoAssignGroupSelected(grp.id)" :disabled="!(groupSelectedSessions[grp.id] && groupSelectedSessions[grp.id].size)">選択分を再配置</button>
+                <button class="btn btn-danger" @click="clearGroupAssignments(grp.id)">配置をクリア</button>
+                <span v-if="groupScheduleMsgs[grp.id]" style="font-size:0.85rem;color:#137333">{{ groupScheduleMsgs[grp.id] }}</span>
             </div>
 
             <!-- スタッフフィルター -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
                 <label style="font-weight:600;font-size:0.9rem">スタッフ絞り込み:</label>
-                <select v-model.number="matrixStaffFilter" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
+                <select v-model.number="groupStaffFilters[grp.id]" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
                     <option :value="0">全員表示</option>
-                    <option v-for="s in matrixStaffOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
+                    <option v-for="s in staffs" :key="s.id" :value="s.id">{{ s.name }}</option>
                 </select>
-                <span v-if="matrixStaffFilter" style="font-size:0.85rem;color:#666">{{ filteredMatrixSchedule.length }}/{{ sessionSchedule.length }}件</span>
             </div>
 
-            <!-- 配置マトリクス -->
+            <!-- タイムライングリッド -->
             <h3 style="margin-top:0">配置マトリクス</h3>
-            <p v-if="!sessionSchedule.length">セッションがまだ登録されていません。</p>
+            <p v-if="!(groupSchedule[grp.id] || []).length">セッションがまだ登録されていません。</p>
             <template v-else>
-                <div class="tl-legend">
-                    <span style="font-weight:600">凡例:</span>
-                    <span class="tl-legend-item">
-                        <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8"></span>
-                        セッション
-                    </span>
-                    <span class="tl-legend-item">
-                        <span class="tl-legend-swatch" style="background:repeating-linear-gradient(-45deg,#fff8e1,#fff8e1 3px,#fff3c4 3px,#fff3c4 6px);border-color:#d4a017"></span>
-                        休憩
-                    </span>
-                </div>
-
                 <div class="tl-wrapper">
-                    <div class="tl-grid" :class="{ 'dragging-active': drag.active }" :style="tlGridStyle">
+                    <div class="tl-grid" :style="grpGridStyle(grp.id)">
                         <div class="tl-corner">時間</div>
-                        <div v-for="([rid, rname], ci) in tlRooms" :key="'rh'+rid"
-                             class="tl-room-header" :style="{gridColumn: ci+2}">
+                        <div v-for="([rid, rname], ci) in grpGridRooms(grp.id)" :key="'grh'+grp.id+'-'+rid"
+                             class="tl-room-header" :style="{gridColumn: ci+2, background: grp.color}">
                             {{ rname }}
                         </div>
-                        <template v-for="(lbl, i) in tlLabels" :key="'t'+i">
+                        <template v-for="(lbl, i) in grpGridLabels(grp.id)" :key="'gt'+grp.id+'-'+i">
                             <div class="tl-time-label"
                                  :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
                                  :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
                                 {{ lbl.text }}
                             </div>
-                            <div v-for="([rid], ci) in tlRooms" :key="'bg'+i+'-'+rid"
+                            <div v-for="([rid], ci) in grpGridRooms(grp.id)" :key="'gbg'+grp.id+'-'+i+'-'+rid"
                                  class="tl-bg-cell"
                                  :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
                                  :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
                             </div>
                         </template>
-                        <div v-for="entry in sessionSchedule" :key="'s'+entry.session.id"
-                             class="tl-session" :class="{ dragging: drag.active && drag.sessionId === entry.session.id }"
-                             :style="{ ...dragSessionStyle(entry), cursor: matrixLocked ? 'pointer' : undefined }"
-                             @mousedown="onDragStart($event, entry)"
-                             @mousemove="!matrixLocked && dragCursor($event)"
+                        <div v-for="entry in (groupSchedule[grp.id] || [])" :key="'gs'+grp.id+'-'+entry.session.id"
+                             class="tl-session"
+                             :style="{ ...grpSessionStyle(grp.id, entry), opacity: groupSessionOpacity(grp.id, entry), cursor: 'pointer' }"
                              @click="toggleSessionDetail(entry.session.id)">
-                            <div v-if="!matrixLocked" class="drag-handle-top"></div>
                             <div class="tl-session-time">
                                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
                             </div>
@@ -525,24 +496,19 @@
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
                             </div>
-                            <div v-if="!matrixLocked" class="drag-handle-bottom"></div>
-                        </div>
-                        <div v-for="(brk, bi) in tlBreaks" :key="'brk'+bi"
-                             class="tl-break" :style="brk.style">
-                            休憩
                         </div>
                     </div>
                 </div>
-
             </template>
 
-            <!-- セッション一覧（スタッフ割り当て） -->
+            <!-- セッション一覧 -->
             <h3 style="margin-top:24px">セッション一覧</h3>
-            <table v-if="sessionSchedule.length">
-                <thead><tr><th>セッション</th><th>時間</th><th>部屋</th><th>担当スタッフ</th></tr></thead>
+            <table v-if="(groupSchedule[grp.id] || []).length">
+                <thead><tr><th style="width:30px"><input type="checkbox" @change="toggleGroupSelectAll(grp.id)" :checked="groupSelectedSessions[grp.id] && groupSelectedSessions[grp.id].size === (groupSchedule[grp.id] || []).length && (groupSchedule[grp.id] || []).length > 0"></th><th>セッション</th><th>時間</th><th>部屋</th><th>担当スタッフ</th></tr></thead>
                 <tbody>
-                    <tr v-for="e in sessionSchedule" :key="'mtbl-'+e.session.id"
-                        :style="{ opacity: matrixSessionOpacity(e) }">
+                    <tr v-for="e in (groupSchedule[grp.id] || [])" :key="'ga-'+grp.id+'-'+e.session.id"
+                        :style="{ opacity: groupSessionOpacity(grp.id, e) }">
+                        <td><input type="checkbox" :checked="groupSelectedSessions[grp.id] && groupSelectedSessions[grp.id].has(e.session.id)" @change="toggleGroupSessionSelect(grp.id, e.session.id)"></td>
                         <td><a href="#" @click.prevent="toggleSessionDetail(e.session.id)" style="color:#1a73e8;text-decoration:none"><strong>{{ e.session.title }}</strong></a></td>
                         <td style="white-space:nowrap">{{ fmtShort(e.session.start_time) }} - {{ fmtShort(e.session.end_time) }}</td>
                         <td>{{ e.session.room ? e.session.room.name : '' }}</td>
@@ -551,11 +517,11 @@
                                 <template v-if="e.assigned_staff.length">
                                     <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
                                         {{ a.staff.name }}
-                                        <button v-if="!matrixLocked" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                        <button v-if="!groupLocks[grp.id]" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
                                     </span>
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
-                                <template v-if="!matrixLocked">
+                                <template v-if="!groupLocks[grp.id]">
                                     <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
                                         <option :value="0">＋追加</option>
                                         <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
@@ -568,130 +534,200 @@
                 </tbody>
             </table>
         </div>
+        </template>
 
-        <!-- ===== 受付案内管理（イベント設定） ===== -->
-        <div class="panel" :class="{ active: tab === 'reception-manage' }">
-            <h2>受付案内管理</h2>
-            <div style="margin-bottom:20px;border:1px solid #c8e6c9;border-radius:8px;padding:16px;background:#e8f5e9">
-                <h3 style="margin:0 0 12px;color:#2e7d32">{{ rcForm.editId ? '受付案内編集' : '受付案内追加' }}</h3>
+        <!-- ===== 動的カテゴリ管理（イベント設定） ===== -->
+        <template v-for="cat in categories" :key="'catm-'+cat.key">
+        <div class="panel" :class="{ active: tab === cat.key+'-manage' }">
+            <h2>{{ cat.label }}管理</h2>
+
+            <!-- 日程タブ -->
+            <div v-if="sessionGroups.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+                <button v-for="grp in sessionGroups" :key="'catm-tab-'+cat.key+'-'+grp.id"
+                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="catGroupTabs[cat.key] === grp.id ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="catGroupTabs[cat.key] = grp.id">
+                    {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:6px;font-size:0.8rem">{{ grp.date }}</span>
+                </button>
+                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="catGroupTabs[cat.key] = 0">
+                    全日程
+                </button>
+            </div>
+
+            <div style="margin-bottom:20px;border-radius:8px;padding:16px" :style="{ border: '1px solid ' + cat.color + '40', background: cat.color + '10' }">
+                <h3 style="margin:0 0 12px" :style="{ color: cat.color }">{{ categoryForms[cat.key]?.editId ? cat.label + '編集' : cat.label + '追加' }}</h3>
                 <div class="form-row">
-                    <div class="form-group"><label>受付案内名</label><input v-model="rcForm.title" placeholder="例: メイン受付"></div>
-                    <div class="form-group"><label>必要スタッフ数</label><input v-model.number="rcForm.required_staff" type="number" min="1" placeholder="2"></div>
+                    <div class="form-group"><label>{{ cat.label }}名 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="categoryForms[cat.key].title" placeholder="名前を入力"></div>
+                    <div class="form-group"><label>必要スタッフ数</label><input v-model.number="categoryForms[cat.key].required_staff" type="number" min="1" placeholder="2"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>開始時刻</label><input v-model="rcForm.start_time" type="datetime-local"></div>
-                    <div class="form-group"><label>終了時刻</label><input v-model="rcForm.end_time" type="datetime-local"></div>
-                    <div class="form-group"><label>場所</label>
-                        <select v-model.number="rcForm.room_id">
+                    <div class="form-group"><label>開始時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="categoryForms[cat.key].start_time" type="datetime-local" step="300" @change="autoSetEndTime(categoryForms[cat.key])"></div>
+                    <div class="form-group"><label>終了時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="categoryForms[cat.key].end_time" type="datetime-local" step="300"></div>
+                    <div class="form-group"><label>場所 <span style="color:#d93025;font-size:0.75rem">必須</span></label>
+                        <select v-model.number="categoryForms[cat.key].room_id">
                             <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>英語対応</label>
-                        <label style="margin:0;display:flex;align-items:center;gap:4px;padding-top:4px"><input type="checkbox" v-model="rcForm.english_required" style="width:16px;height:16px;cursor:pointer"> 必要</label>
+                        <label style="margin:0;display:flex;align-items:center;gap:4px;padding-top:4px"><input type="checkbox" v-model="categoryForms[cat.key].english_required" style="width:16px;height:16px;cursor:pointer"> 必要</label>
                     </div>
                 </div>
-                <div class="form-group"><label>備考</label><textarea v-model="rcForm.notes" rows="2" placeholder="例: 参加者名簿を準備"></textarea></div>
+                <div class="form-group"><label>備考</label><textarea v-model="categoryForms[cat.key].notes" rows="2"></textarea></div>
                 <div style="display:flex;gap:8px">
-                    <button class="btn" style="background:#2e7d32" @click="submitReception">{{ rcForm.editId ? '更新' : '追加' }}</button>
-                    <button v-if="rcForm.editId" class="btn btn-danger" @click="cancelEditReception">キャンセル</button>
+                    <button class="btn" :style="{ background: cat.color }" @click="submitCategory(cat.key)">{{ categoryForms[cat.key]?.editId ? '更新' : '追加' }}</button>
+                    <button v-if="categoryForms[cat.key]?.editId" class="btn btn-danger" @click="cancelEditCategory(cat.key)">キャンセル</button>
                 </div>
             </div>
             <h3>登録済み一覧</h3>
-            <p v-if="!receptionSessions.length" style="color:#666">受付案内がまだ登録されていません。</p>
+            <p v-if="!catGroupFiltered(cat.key).length" style="color:#666">{{ cat.label }}がまだ登録されていません。</p>
             <table v-else>
-                <thead><tr><th>受付案内名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>操作</th></tr></thead>
+                <thead><tr><th>{{ cat.label }}名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>操作</th></tr></thead>
                 <tbody>
-                    <tr v-for="e in receptionSessions" :key="'rcm-'+e.session.id">
+                    <tr v-for="e in catGroupFiltered(cat.key)" :key="'catm-'+cat.key+'-'+e.session.id">
                         <td><strong>{{ e.session.title }}</strong></td>
                         <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
                         <td>{{ e.session.room ? e.session.room.name : '' }}</td>
                         <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
                         <td>{{ e.session.required_staff }}</td>
                         <td>
-                            <button class="btn btn-sm edit-btn" @click="editReception(e.session)" style="margin-right:4px">編集</button>
-                            <button class="del-btn" @click="deleteReception(e.session.id)">削除</button>
+                            <button class="btn btn-sm edit-btn" @click="editCategory(cat.key, e.session)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteCategory(cat.key, e.session.id)">削除</button>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
+        </template>
 
-        <!-- ===== 受付案内担当（スタッフ配置） ===== -->
-        <div class="panel" :class="{ active: tab === 'reception' }">
+        <!-- ===== 動的カテゴリ担当（スタッフ配置） ===== -->
+        <template v-for="cat in categories" :key="'cata-'+cat.key">
+        <div class="panel" :class="{ active: tab === cat.key }">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                <h2 style="margin:0">受付案内担当</h2>
-                <button @click="receptionLocked = !receptionLocked"
-                        :style="{ background: receptionLocked ? '#e8eaed' : '#fce8e6', color: receptionLocked ? '#5f6368' : '#c5221f', border: receptionLocked ? '1px solid #dadce0' : '1px solid #c5221f', borderRadius: '20px', padding: '5px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }">
-                    <span v-if="receptionLocked">&#128274; ロック中</span>
+                <h2 style="margin:0">{{ cat.label }}担当</h2>
+                <button @click="categoryLocks[cat.key] = !categoryLocks[cat.key]"
+                        :style="{ background: categoryLocks[cat.key] ? '#e8eaed' : '#fce8e6', color: categoryLocks[cat.key] ? '#5f6368' : '#c5221f', border: categoryLocks[cat.key] ? '1px solid #dadce0' : '1px solid #c5221f', borderRadius: '20px', padding: '5px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }">
+                    <span v-if="categoryLocks[cat.key]">&#128274; ロック中</span>
                     <span v-else>&#128275; 編集中</span>
                 </button>
             </div>
 
-            <!-- 自動配置ボタン（ロック解除時のみ表示） -->
-            <div v-if="!receptionLocked" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
-                <button class="btn btn-success" @click="autoAssignReception">スタッフ自動配置</button>
-                <button class="btn btn-danger" @click="clearReceptionAssignments">配置をクリア</button>
-                <div v-if="rcAssignMsg" class="msg success" style="margin:0">{{ rcAssignMsg }}</div>
+            <!-- 日程タブ -->
+            <div v-if="sessionGroups.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+                <button v-for="grp in sessionGroups" :key="'cat-tab-'+cat.key+'-'+grp.id"
+                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="catGroupTabs[cat.key] === grp.id ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="catGroupTabs[cat.key] = grp.id">
+                    {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:6px;font-size:0.8rem">{{ grp.date }}</span>
+                </button>
+                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="catGroupTabs[cat.key] = 0">
+                    全日程
+                </button>
             </div>
 
-            <!-- スタッフフィルター -->
+            <div v-if="!categoryLocks[cat.key]" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
+                <button class="btn btn-success" @click="autoAssignCategory(cat.key)">スタッフ自動配置</button>
+                <button class="btn" style="background:#1a73e8" @click="autoAssignCategorySelected(cat.key)" :disabled="!(catSelectedSessions[cat.key] && catSelectedSessions[cat.key].size)">選択して再配置 <span v-if="catSelectedSessions[cat.key] && catSelectedSessions[cat.key].size">({{ catSelectedSessions[cat.key].size }}件)</span></button>
+                <button class="btn btn-danger" @click="clearCategoryAssignments(cat.key)">配置をクリア</button>
+                <div v-if="categoryAssignMsgs[cat.key]" class="msg success" style="margin:0">{{ categoryAssignMsgs[cat.key] }}</div>
+            </div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
                 <label style="font-weight:600;font-size:0.9rem">スタッフ絞り込み:</label>
-                <select v-model.number="rcStaffFilter" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
+                <select v-model.number="categoryStaffFilters[cat.key]" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
                     <option :value="0">全員表示</option>
-                    <option v-for="s in rcStaffOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
+                    <option v-for="s in staffs" :key="s.id" :value="s.id">{{ s.name }}</option>
                 </select>
-                <span v-if="rcStaffFilter" style="font-size:0.85rem;color:#666">{{ filteredReceptionSessions.length }}/{{ receptionSessions.length }}件</span>
+                <span v-if="categoryStaffFilters[cat.key]" style="font-size:0.85rem;color:#666">{{ filteredCategorySessions(cat.key).length }}/{{ catGroupFiltered(cat.key).length }}件</span>
             </div>
+            <p v-if="!catGroupFiltered(cat.key).length" style="color:#888">{{ cat.label }}がまだ登録されていません。「{{ cat.label }}管理」から追加してください。</p>
+            <template v-if="catGroupFiltered(cat.key).length">
 
-            <p v-if="!receptionSessions.length" style="color:#888">受付案内がまだ登録されていません。「受付案内管理」から追加してください。</p>
-            <template v-if="receptionSessions.length">
-                <div class="tl-wrapper">
-                    <div class="tl-grid" :style="rcGridStyle">
-                        <div class="tl-corner">時間</div>
-                        <div v-for="([rid, rname], ci) in rcRooms" :key="'rcrh'+rid"
-                             class="tl-room-header" :style="{gridColumn: ci+2}" style="background:#388e3c">
-                            {{ rname }}
-                        </div>
-                        <template v-for="(lbl, i) in rcLabels" :key="'rct'+i">
-                            <div class="tl-time-label"
-                                 :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
-                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
-                                {{ lbl.text }}
+                <!-- グループ別: マトリクス表示 -->
+                <template v-if="catGroupTabs[cat.key] !== 0">
+                    <div class="tl-wrapper">
+                        <div class="tl-grid" :style="catGridStyle(cat.key)">
+                            <div class="tl-corner">時間</div>
+                            <div v-for="([rid, rname], ci) in catGridRooms(cat.key)" :key="'ctrh'+cat.key+rid"
+                                 class="tl-room-header" :style="{gridColumn: ci+2, background: cat.color}">
+                                {{ rname }}
                             </div>
-                            <div v-for="([rid], ci) in rcRooms" :key="'rcbg'+i+'-'+rid"
-                                 class="tl-bg-cell"
-                                 :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
-                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
-                            </div>
-                        </template>
-                        <div v-for="entry in receptionSessions" :key="'rcs'+entry.session.id"
-                             class="tl-session" :style="{...rcSessionStyle(entry), opacity: rcSessionOpacity(entry)}"
-                             style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-color:#388e3c;cursor:pointer"
-                             @click="toggleSessionDetail(entry.session.id)">
-                            <div class="tl-session-time" style="color:#388e3c">
-                                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
-                            </div>
-                            <div class="tl-session-title" style="color:#1b5e20">{{ entry.session.title }}</div>
-                            <div class="tl-session-staff">
-                                <template v-if="entry.assigned_staff.length">
-                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
-                                </template>
-                                <span v-else class="badge warn">未配置</span>
+                            <template v-for="(lbl, i) in catGridLabels(cat.key)" :key="'ctl'+cat.key+i">
+                                <div class="tl-time-label"
+                                     :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
+                                     :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
+                                    {{ lbl.text }}
+                                </div>
+                                <div v-for="([rid], ci) in catGridRooms(cat.key)" :key="'ctbg'+cat.key+i+'-'+rid"
+                                     class="tl-bg-cell"
+                                     :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
+                                     :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
+                                </div>
+                            </template>
+                            <div v-for="entry in catGroupFiltered(cat.key)" :key="'cts'+cat.key+entry.session.id"
+                                 class="tl-session" :style="{...catSessionStyle(cat.key, entry), opacity: catSessionOpacity(cat.key, entry), ...allSessionBg(cat.key), cursor: 'pointer'}"
+                                 @click="toggleSessionDetail(entry.session.id)">
+                                <div class="tl-session-time" :style="{ color: cat.color }">
+                                    {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
+                                </div>
+                                <div class="tl-session-title">{{ entry.session.title }}</div>
+                                <div class="tl-session-staff">
+                                    <template v-if="entry.assigned_staff.length">
+                                        <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
+                                    </template>
+                                    <span v-else class="badge warn">未配置</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </template>
 
-                <!-- 役割一覧（スタッフ割り当て） -->
+                <!-- 全日程: タイムライン表示 -->
+                <template v-else>
+                    <div v-for="grp in sessionGroups" :key="'cat-tl-grp-'+cat.key+'-'+grp.id" style="margin-bottom:32px">
+                        <h3 style="margin:0 0 12px;padding:8px 16px;border-radius:6px;color:#fff;font-size:1rem"
+                            :style="{background: grp.color || '#1a73e8'}">
+                            {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:8px;font-size:0.85rem">{{ grp.date }}</span>
+                        </h3>
+                        <div v-if="!(catTimelineByGroup(cat.key)[grp.id] || []).length" style="color:#888;font-size:0.9rem;margin-bottom:12px">この日程に{{ cat.label }}はありません。</div>
+                        <div v-else style="display:flex;flex-direction:column;gap:2px">
+                            <div v-for="entry in catTimelineByGroup(cat.key)[grp.id]" :key="'cat-tl-'+cat.key+'-'+entry.session.id"
+                                 style="display:flex;align-items:stretch;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid #e0e0e0;transition:opacity .2s"
+                                 :style="{opacity: catSessionOpacity(cat.key, entry)}"
+                                 @click="toggleSessionDetail(entry.session.id)">
+                                <div style="width:110px;min-width:110px;padding:8px 10px;font-size:0.8rem;font-weight:600;display:flex;align-items:center;justify-content:center;text-align:center;background:#f5f5f5;border-right:1px solid #e0e0e0">
+                                    {{ fmtShort(entry.session.start_time) }}<br>-{{ fmtShort(entry.session.end_time) }}
+                                </div>
+                                <div style="flex:1;padding:8px 12px;display:flex;flex-direction:column;justify-content:center"
+                                     :style="allSessionBg(cat.key)">
+                                    <div style="font-weight:600;font-size:0.9rem">{{ entry.session.title }}</div>
+                                    <div v-if="entry.session.room" style="font-size:0.75rem;color:#888;margin-top:2px">{{ entry.session.room.name }}</div>
+                                </div>
+                                <div style="width:160px;min-width:160px;padding:8px;display:flex;flex-wrap:wrap;align-items:center;gap:3px;background:#fafafa;border-left:1px solid #e0e0e0">
+                                    <template v-if="entry.assigned_staff.length">
+                                        <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id" style="font-size:0.7rem">{{ a.staff.name }}</span>
+                                    </template>
+                                    <span v-else class="badge warn" style="font-size:0.7rem">未配置</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
                 <h3 style="margin-top:24px">役割一覧</h3>
                 <table>
-                    <thead><tr><th>受付案内名</th><th>時間</th><th>場所</th><th>担当スタッフ</th></tr></thead>
+                    <thead><tr>
+                        <th v-if="!categoryLocks[cat.key]" style="width:30px"><input type="checkbox" @change="toggleCatSelectAll(cat.key)" :checked="catSelectedSessions[cat.key] && catSelectedSessions[cat.key].size === catGroupFiltered(cat.key).length && catGroupFiltered(cat.key).length > 0"></th>
+                        <th>{{ cat.label }}名</th><th>時間</th><th>場所</th><th>担当スタッフ</th>
+                    </tr></thead>
                     <tbody>
-                        <tr v-for="e in receptionSessions" :key="'rctbl2-'+e.session.id"
-                            :style="{ opacity: rcSessionOpacity(e) }">
+                        <tr v-for="e in catGroupFiltered(cat.key)" :key="'cttbl-'+cat.key+'-'+e.session.id"
+                            :style="{ opacity: catSessionOpacity(cat.key, e) }">
+                            <td v-if="!categoryLocks[cat.key]"><input type="checkbox" :checked="catSelectedSessions[cat.key] && catSelectedSessions[cat.key].has(e.session.id)" @change="toggleCatSessionSelect(cat.key, e.session.id)"></td>
                             <td><a href="#" @click.prevent="toggleSessionDetail(e.session.id)" style="color:#1a73e8;text-decoration:none"><strong>{{ e.session.title }}</strong></a></td>
                             <td style="white-space:nowrap">{{ fmtShort(e.session.start_time) }} - {{ fmtShort(e.session.end_time) }}</td>
                             <td>{{ e.session.room ? e.session.room.name : '' }}</td>
@@ -700,11 +736,11 @@
                                     <template v-if="e.assigned_staff.length">
                                         <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
                                             {{ a.staff.name }}
-                                            <button v-if="!receptionLocked" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                            <button v-if="!categoryLocks[cat.key]" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
                                         </span>
                                     </template>
                                     <span v-else class="badge warn">未配置</span>
-                                    <template v-if="!receptionLocked">
+                                    <template v-if="!categoryLocks[cat.key]">
                                         <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
                                             <option :value="0">＋追加</option>
                                             <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
@@ -718,161 +754,27 @@
                 </table>
             </template>
         </div>
-
-        <!-- ===== 懇親会管理（イベント設定） ===== -->
-        <div class="panel" :class="{ active: tab === 'social-manage' }">
-            <h2>懇親会管理</h2>
-            <div style="margin-bottom:20px;border:1px solid #e1bee7;border-radius:8px;padding:16px;background:#f3e5f5">
-                <h3 style="margin:0 0 12px;color:#7b1fa2">{{ scForm.editId ? '役割編集' : '役割追加' }}</h3>
-                <div class="form-row">
-                    <div class="form-group"><label>役割名</label><input v-model="scForm.title" placeholder="例: 会場設営、ドリンク担当、司会"></div>
-                    <div class="form-group"><label>必要スタッフ数</label><input v-model.number="scForm.required_staff" type="number" min="1" placeholder="2"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>開始時刻</label><input v-model="scForm.start_time" type="datetime-local"></div>
-                    <div class="form-group"><label>終了時刻</label><input v-model="scForm.end_time" type="datetime-local"></div>
-                    <div class="form-group"><label>場所</label>
-                        <select v-model.number="scForm.room_id">
-                            <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>英語対応</label>
-                        <label style="margin:0;display:flex;align-items:center;gap:4px;padding-top:4px"><input type="checkbox" v-model="scForm.english_required" style="width:16px;height:16px;cursor:pointer"> 必要</label>
-                    </div>
-                </div>
-                <div class="form-group"><label>備考</label><textarea v-model="scForm.notes" rows="2" placeholder="例: ケータリング業者との連携が必要"></textarea></div>
-                <div style="display:flex;gap:8px">
-                    <button class="btn" style="background:#7b1fa2" @click="submitSocial">{{ scForm.editId ? '更新' : '追加' }}</button>
-                    <button v-if="scForm.editId" class="btn btn-danger" @click="cancelEditSocial">キャンセル</button>
-                </div>
-            </div>
-            <h3>登録済み一覧</h3>
-            <p v-if="!socialSessions.length" style="color:#666">懇親会の役割がまだ登録されていません。</p>
-            <table v-else>
-                <thead><tr><th>役割名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>操作</th></tr></thead>
-                <tbody>
-                    <tr v-for="e in socialSessions" :key="'scm-'+e.session.id">
-                        <td><strong>{{ e.session.title }}</strong></td>
-                        <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
-                        <td>{{ e.session.room ? e.session.room.name : '' }}</td>
-                        <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
-                        <td>{{ e.session.required_staff }}</td>
-                        <td>
-                            <button class="btn btn-sm edit-btn" @click="editSocial(e.session)" style="margin-right:4px">編集</button>
-                            <button class="del-btn" @click="deleteSocial(e.session.id)">削除</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- ===== 懇親会担当（スタッフ配置） ===== -->
-        <div class="panel" :class="{ active: tab === 'social' }">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                <h2 style="margin:0">懇親会担当</h2>
-                <button @click="socialLocked = !socialLocked"
-                        :style="{ background: socialLocked ? '#e8eaed' : '#fce8e6', color: socialLocked ? '#5f6368' : '#c5221f', border: socialLocked ? '1px solid #dadce0' : '1px solid #c5221f', borderRadius: '20px', padding: '5px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }">
-                    <span v-if="socialLocked">&#128274; ロック中</span>
-                    <span v-else>&#128275; 編集中</span>
-                </button>
-            </div>
-
-            <!-- 自動配置ボタン（ロック解除時のみ表示） -->
-            <div v-if="!socialLocked" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
-                <button class="btn btn-success" @click="autoAssignSocial">スタッフ自動配置</button>
-                <button class="btn btn-danger" @click="clearSocialAssignments">配置をクリア</button>
-                <div v-if="scAssignMsg" class="msg success" style="margin:0">{{ scAssignMsg }}</div>
-            </div>
-
-            <!-- スタッフフィルター -->
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-                <label style="font-weight:600;font-size:0.9rem">スタッフ絞り込み:</label>
-                <select v-model.number="scStaffFilter" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
-                    <option :value="0">全員表示</option>
-                    <option v-for="s in scStaffOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
-                </select>
-                <span v-if="scStaffFilter" style="font-size:0.85rem;color:#666">{{ filteredSocialSessions.length }}/{{ socialSessions.length }}件</span>
-            </div>
-
-            <p v-if="!socialSessions.length" style="color:#888">懇親会の役割がまだ登録されていません。「懇親会管理」から追加してください。</p>
-            <template v-if="socialSessions.length">
-                <div class="tl-wrapper">
-                    <div class="tl-grid" :style="scGridStyle">
-                        <div class="tl-corner">時間</div>
-                        <div v-for="([rid, rname], ci) in scRooms" :key="'scrh'+rid"
-                             class="tl-room-header" :style="{gridColumn: ci+2}" style="background:#7b1fa2">
-                            {{ rname }}
-                        </div>
-                        <template v-for="(lbl, i) in scLabels" :key="'sct'+i">
-                            <div class="tl-time-label"
-                                 :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
-                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
-                                {{ lbl.text }}
-                            </div>
-                            <div v-for="([rid], ci) in scRooms" :key="'scbg'+i+'-'+rid"
-                                 class="tl-bg-cell"
-                                 :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
-                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
-                            </div>
-                        </template>
-                        <div v-for="entry in socialSessions" :key="'scs'+entry.session.id"
-                             class="tl-session" :style="{...scSessionStyle(entry), opacity: scSessionOpacity(entry)}"
-                             style="background:linear-gradient(135deg,#f3e5f5,#e1bee7);border-color:#7b1fa2;cursor:pointer"
-                             @click="toggleSessionDetail(entry.session.id)">
-                            <div class="tl-session-time" style="color:#7b1fa2">
-                                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
-                            </div>
-                            <div class="tl-session-title" style="color:#4a148c">{{ entry.session.title }}</div>
-                            <div class="tl-session-staff">
-                                <template v-if="entry.assigned_staff.length">
-                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
-                                </template>
-                                <span v-else class="badge warn">未配置</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 懇親会一覧（スタッフ割り当て） -->
-                <h3 style="margin-top:24px">役割一覧</h3>
-                <table>
-                    <thead><tr><th>役割名</th><th>時間</th><th>場所</th><th>担当スタッフ</th></tr></thead>
-                    <tbody>
-                        <tr v-for="e in socialSessions" :key="'sctbl2-'+e.session.id"
-                            :style="{ opacity: scSessionOpacity(e) }">
-                            <td><a href="#" @click.prevent="toggleSessionDetail(e.session.id)" style="color:#1a73e8;text-decoration:none"><strong>{{ e.session.title }}</strong></a></td>
-                            <td style="white-space:nowrap">{{ fmtShort(e.session.start_time) }} - {{ fmtShort(e.session.end_time) }}</td>
-                            <td>{{ e.session.room ? e.session.room.name : '' }}</td>
-                            <td>
-                                <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-                                    <template v-if="e.assigned_staff.length">
-                                        <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
-                                            {{ a.staff.name }}
-                                            <button v-if="!socialLocked" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
-                                        </span>
-                                    </template>
-                                    <span v-else class="badge warn">未配置</span>
-                                    <template v-if="!socialLocked">
-                                        <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
-                                            <option :value="0">＋追加</option>
-                                            <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
-                                        </select>
-                                        <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
-                                    </template>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </template>
-        </div>
+        </template>
 
         <!-- ===== 全体スケジュール ===== -->
         <!-- ===== 全体スケジュール（表示専用） ===== -->
         <div class="panel" :class="{ active: tab === 'all-matrix' }">
             <h2>全体スケジュール</h2>
+
+            <!-- 日程タブ -->
+            <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+                <button v-for="grp in sessionGroups" :key="'all-tab-'+grp.id"
+                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="allGroupTab === grp.id ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="allGroupTab = grp.id">
+                    {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:6px;font-size:0.8rem">{{ grp.date }}</span>
+                </button>
+                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="allGroupTab = 0">
+                    全日程
+                </button>
+            </div>
 
             <!-- スタッフフィルター -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -894,23 +796,21 @@
                     <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8"></span>
                     セッション
                 </span>
-                <span class="tl-legend-item">
-                    <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-color:#388e3c"></span>
-                    受付
-                </span>
-                <span class="tl-legend-item">
-                    <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#f3e5f5,#e1bee7);border-color:#7b1fa2"></span>
-                    懇親会
+                <span v-for="cat in categories" :key="'legend-'+cat.key" class="tl-legend-item">
+                    <span class="tl-legend-swatch" :style="{background: CAT_BG[cat.key]?.background, borderColor: cat.color}"></span>
+                    {{ cat.label }}
                 </span>
             </div>
 
             <p v-if="!allSchedule.length">セッションがまだ登録されていません。</p>
-            <template v-else>
+
+            <!-- グループ別: マトリクス表示 -->
+            <template v-else-if="allGroupTab !== 0">
                 <div class="tl-wrapper">
                     <div class="tl-grid" :style="allGridStyle">
                         <div class="tl-corner">時間</div>
                         <div v-for="(col, ci) in allColumns" :key="'arh'+col.id"
-                             class="tl-room-header" :style="{gridColumn: ci+2, background: col.type==='overall' ? '#e65100' : col.type==='reception' ? '#388e3c' : col.type==='social' ? '#7b1fa2' : ''}">
+                             class="tl-room-header" :style="{gridColumn: ci+2, background: col.type==='overall' ? '#e65100' : (CAT_BG[col.type] ? CAT_BG[col.type].borderColor : '')}">
                             {{ col.name }}
                         </div>
                         <template v-for="(lbl, i) in allLabels" :key="'at'+i">
@@ -941,6 +841,38 @@
                                     <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- 全日程: タイムライン表示 -->
+            <template v-else>
+                <div v-for="grp in sessionGroups" :key="'timeline-grp-'+grp.id" style="margin-bottom:32px">
+                    <h3 style="margin:0 0 12px;padding:8px 16px;border-radius:6px;color:#fff;font-size:1rem"
+                        :style="{background: grp.color || '#1a73e8'}">
+                        {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:8px;font-size:0.85rem">{{ grp.date }}</span>
+                    </h3>
+                    <div style="display:flex;flex-direction:column;gap:2px">
+                        <div v-for="entry in allTimelineByGroup[grp.id]" :key="'tl-'+entry.session.id"
+                             style="display:flex;align-items:stretch;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid #e0e0e0;transition:opacity .2s"
+                             :style="{opacity: allSessionOpacity(entry)}"
+                             @click="toggleSessionDetail(entry.session.id)">
+                            <div style="width:110px;min-width:110px;padding:8px 10px;font-size:0.8rem;font-weight:600;display:flex;align-items:center;justify-content:center;text-align:center;background:#f5f5f5;border-right:1px solid #e0e0e0">
+                                {{ fmtShort(entry.session.start_time) }}<br>-{{ fmtShort(entry.session.end_time) }}
+                            </div>
+                            <div style="flex:1;padding:8px 12px;display:flex;flex-direction:column;justify-content:center"
+                                 :style="allSessionBg(entry.session.category)">
+                                <div style="font-weight:600;font-size:0.9rem">{{ entry.session.title }}</div>
+                                <div v-if="entry.session.speaker && entry.session.speaker !== '-' && entry.session.speaker !== 'スタッフ'" style="font-size:0.8rem;color:#555;margin-top:2px">{{ entry.session.speaker }}</div>
+                                <div v-if="entry.session.room" style="font-size:0.75rem;color:#888;margin-top:2px">{{ entry.session.room.name }}</div>
+                            </div>
+                            <div style="width:160px;min-width:160px;padding:8px;display:flex;flex-wrap:wrap;align-items:center;gap:3px;background:#fafafa;border-left:1px solid #e0e0e0">
+                                <template v-if="entry.assigned_staff.length">
+                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id" style="font-size:0.7rem">{{ a.staff.name }}</span>
+                                </template>
+                                <span v-else-if="entry.session.category !== 'overall'" class="badge warn" style="font-size:0.7rem">未配置</span>
                             </div>
                         </div>
                     </div>
@@ -986,7 +918,7 @@
                         <thead><tr><th>カテゴリ</th><th>セッション</th><th>時間</th><th>部屋</th></tr></thead>
                         <tbody>
                             <tr v-for="s in e.assigned_sessions" :key="'sds-'+s.id">
-                                <td><span class="badge" :style="s.category==='reception' ? 'background:#e8f5e9;color:#1b5e20' : s.category==='social' ? 'background:#f3e5f5;color:#4a148c' : s.category==='overall' ? 'background:#fff3e0;color:#e65100' : ''">{{ catLabel(s.category) }}</span></td>
+                                <td><span class="badge" :style="CAT_BG[s.category] ? 'background:' + CAT_BG[s.category].background + ';color:' + CAT_BG[s.category].borderColor : ''">{{ catLabel(s.category) }}</span></td>
                                 <td><a href="#" @click.prevent="toggleSessionDetail(s.id)" style="color:#1a73e8;text-decoration:none">{{ s.title }}</a></td>
                                 <td style="white-space:nowrap">{{ fmt(s.start_time) }} - {{ fmtShort(s.end_time) }}</td>
                                 <td>{{ s.room ? s.room.name : '' }}</td>
@@ -1024,11 +956,11 @@
             <div style="margin-bottom:20px;border:1px solid #ffe0b2;border-radius:8px;padding:16px;background:#fff8e1">
                 <h3 style="margin:0 0 12px;color:#e65100">{{ allOvForm.editId ? '全体スケジュール編集' : '全体スケジュール追加' }}</h3>
                 <div class="form-row">
-                    <div class="form-group"><label>タイトル</label><input v-model="allOvForm.title" placeholder="例: 集合時間、開場、昼休み"></div>
+                    <div class="form-group"><label>タイトル <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="allOvForm.title" placeholder="例: 集合時間、開場、昼休み"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>開始時刻</label><input v-model="allOvForm.start_time" type="datetime-local"></div>
-                    <div class="form-group"><label>終了時刻</label><input v-model="allOvForm.end_time" type="datetime-local"></div>
+                    <div class="form-group"><label>開始時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="allOvForm.start_time" type="datetime-local" step="300" @change="autoSetEndTime(allOvForm)"></div>
+                    <div class="form-group"><label>終了時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="allOvForm.end_time" type="datetime-local" step="300"></div>
                 </div>
                 <div class="form-group"><label>備考</label><textarea v-model="allOvForm.notes" rows="2" placeholder="例: 正面入口に集合"></textarea></div>
                 <div style="display:flex;gap:8px">
@@ -1075,6 +1007,7 @@
                     <span style="color:#999;font-size:1.2rem">&rarr;</span>
                     <span style="background:#1a73e8;color:#fff;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:600">5. 初心者制約の調整</span>
                 </div>
+                <p style="margin:12px 0 0;font-size:0.85rem;color:#555"><strong>部分再配置:</strong> 選択したセッションのみを指定して再配置することも可能です。その場合、指定外のセッションの配置は維持されます。</p>
             </div>
 
             <!-- ロール判定 -->
@@ -1085,8 +1018,10 @@
                     <thead><tr><th>セッションカテゴリ</th><th>対象スタッフロール</th></tr></thead>
                     <tbody>
                         <tr><td>一般 / 技術 / WS / 基調講演 / LT</td><td><span class="badge">セッション</span></td></tr>
-                        <tr><td>受付案内</td><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">受付案内</span></td></tr>
-                        <tr><td>懇親会</td><td><span class="badge" style="background:#f3e5f5;color:#4a148c">懇親会</span></td></tr>
+                        <tr v-for="cat in categories" :key="'algo-role-'+cat.key">
+                            <td>{{ cat.label }}</td>
+                            <td><span class="badge" :style="{background: CAT_BG[cat.key]?.background, color: cat.color}">{{ cat.label }}</span></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -1111,6 +1046,8 @@
                     <tbody>
                         <tr><td><strong>希望セッション</strong></td><td style="color:#1a73e8;font-weight:700">最大 +100</td><td>優先度1 = +100, 優先度2 = +80, 優先度3 = +60 ...</td></tr>
                         <tr><td><strong>英語対応</strong></td><td style="color:#1a73e8;font-weight:700">+50</td><td>英語対応が必要なセッションで、英語OKスタッフの場合</td></tr>
+                        <tr><td><strong>スキルマッチ</strong></td><td style="color:#1a73e8;font-weight:700">+10</td><td>スタッフのスキルにセッションカテゴリが含まれる場合</td></tr>
+                        <tr><td><strong>ロールマッチ</strong></td><td style="color:#1a73e8;font-weight:700">+5</td><td>スタッフのロールにセッションの対象ロールが含まれる場合</td></tr>
                         <tr><td><strong>担当件数均等化</strong></td><td style="color:#d93025;font-weight:700">-5 / 件</td><td>既に担当しているセッション数に応じて減点（負荷分散）</td></tr>
                         <tr><td><strong>階移動ペナルティ</strong></td><td style="color:#d93025;font-weight:700">-3 / 階</td><td>直前セッションの部屋と階が異なる場合、階差分だけ減点</td></tr>
                     </tbody>
@@ -1139,7 +1076,7 @@
             <!-- 必要スタッフ数の自動計算 -->
             <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:16px 20px;margin-bottom:16px">
                 <h3 style="margin:0 0 8px;font-size:1rem;color:#2e7d32">必要スタッフ数の自動計算</h3>
-                <p style="margin:0 0 8px;font-size:0.9rem;color:#555">「セッション管理」タブの「必要スタッフ数を自動計算」ボタンで実行されるロジックです。</p>
+                <p style="margin:0 0 8px;font-size:0.9rem;color:#555">各セッショングループの管理タブにある「必要スタッフ数を自動計算」ボタンで実行されるロジックです。</p>
                 <table style="font-size:0.85rem">
                     <thead><tr><th>指標</th><th>計算方法</th></tr></thead>
                     <tbody>
@@ -1277,6 +1214,110 @@
                     <button class="btn" @click="changePassword" :disabled="!pwForm.current || !pwForm.newPw">変更</button>
                 </div>
                 <div v-if="pwMsg" :style="{marginTop:'10px',fontSize:'0.85rem',color: pwMsgError ? '#c62828' : '#2e7d32'}">{{ pwMsg }}</div>
+            </div>
+
+            <!-- セッショングループ管理 -->
+            <div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:8px;padding:20px;margin-bottom:20px">
+                <h3 style="margin:0 0 12px;color:#1565c0">セッショングループ管理</h3>
+                <p style="margin:0 0 12px;font-size:0.85rem;color:#555">日別などのセッショングループを追加・編集できます。各グループはセッション管理ページと担当ページのセットとして機能します。</p>
+
+                <!-- 既存グループ一覧 -->
+                <div v-for="grp in sessionGroups" :key="'grpsettings-'+grp.id" style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fff;border-radius:6px;margin-bottom:8px;border:1px solid #e0e0e0">
+                    <span :style="{width:'16px',height:'16px',borderRadius:'50%',background:grp.color,flexShrink:0}"></span>
+                    <span style="font-weight:600;flex:1">{{ grp.label }}</span>
+                    <span v-if="grp.date" style="font-size:0.8rem;color:#888">{{ grp.date }}</span>
+                    <span style="font-size:0.8rem;color:#888">order: {{ grp.order }}</span>
+                    <button class="btn btn-sm edit-btn" @click="editGrpSetting(grp)" style="padding:4px 10px;font-size:0.8rem">編集</button>
+                    <button class="del-btn" @click="deleteGrpSetting(grp.id)" style="padding:4px 10px;font-size:0.8rem">削除</button>
+                </div>
+
+                <!-- 追加/編集フォーム -->
+                <div style="margin-top:16px;padding:12px;background:#f0f7ff;border-radius:6px;border:1px dashed #90caf9">
+                    <strong style="font-size:0.85rem;color:#1565c0">{{ grpSettingForm.editId ? 'グループ編集' : '新しいグループを追加' }}</strong>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:flex-end">
+                        <div class="form-group" style="margin:0;flex:1;min-width:120px">
+                            <label style="font-size:0.8rem">表示名</label>
+                            <input v-model="grpSettingForm.label" placeholder="例: Day 2" style="width:100%">
+                        </div>
+                        <div class="form-group" style="margin:0;min-width:140px">
+                            <label style="font-size:0.8rem">日付(任意)</label>
+                            <input v-model="grpSettingForm.date" type="date" style="width:100%">
+                        </div>
+                        <div class="form-group" style="margin:0;min-width:60px">
+                            <label style="font-size:0.8rem">色</label>
+                            <input v-model="grpSettingForm.color" type="color" style="width:48px;height:34px;padding:2px;cursor:pointer">
+                        </div>
+                        <div class="form-group" style="margin:0;min-width:60px">
+                            <label style="font-size:0.8rem">順序</label>
+                            <input v-model.number="grpSettingForm.order" type="number" min="0" style="width:60px">
+                        </div>
+                        <button class="btn" style="background:#1565c0;align-self:flex-end" @click="saveGrpSetting">{{ grpSettingForm.editId ? '更新' : '追加' }}</button>
+                        <button v-if="grpSettingForm.editId" class="btn btn-danger" style="align-self:flex-end" @click="cancelGrpSetting">キャンセル</button>
+                    </div>
+                    <div v-if="grpSettingMsg" style="margin-top:8px;font-size:0.85rem;color:#2e7d32">{{ grpSettingMsg }}</div>
+                </div>
+            </div>
+
+            <!-- カテゴリ管理 -->
+            <div style="background:#f3e5f5;border:1px solid #ce93d8;border-radius:8px;padding:20px;margin-bottom:20px">
+                <h3 style="margin:0 0 12px;color:#6a1b9a">カテゴリ管理</h3>
+                <p style="margin:0 0 12px;font-size:0.85rem;color:#555">受付案内・懇親会などの担当カテゴリを追加・編集できます。各カテゴリは管理ページと担当ページのセットとして機能します。</p>
+
+                <!-- 既存カテゴリ一覧 -->
+                <div v-for="cat in categories" :key="'catsettings-'+cat.id" style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fff;border-radius:6px;margin-bottom:8px;border:1px solid #e0e0e0">
+                    <span :style="{width:'16px',height:'16px',borderRadius:'50%',background:cat.color,flexShrink:0}"></span>
+                    <span style="font-weight:600;flex:1">{{ cat.label }}</span>
+                    <span style="font-size:0.8rem;color:#888">key: {{ cat.key }}</span>
+                    <span style="font-size:0.8rem;color:#888">order: {{ cat.order }}</span>
+                    <button class="btn btn-sm edit-btn" @click="editCatSetting(cat)" style="padding:4px 10px;font-size:0.8rem">編集</button>
+                    <button class="del-btn" @click="deleteCatSetting(cat.id)" style="padding:4px 10px;font-size:0.8rem">削除</button>
+                </div>
+
+                <!-- 追加/編集フォーム -->
+                <div style="margin-top:16px;padding:12px;background:#faf5fc;border-radius:6px;border:1px dashed #ce93d8">
+                    <strong style="font-size:0.85rem;color:#6a1b9a">{{ catSettingForm.editId ? 'カテゴリ編集' : '新しいカテゴリを追加' }}</strong>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:flex-end">
+                        <div class="form-group" style="margin:0;flex:1;min-width:100px">
+                            <label style="font-size:0.8rem">キー(英字)</label>
+                            <input v-model="catSettingForm.key" placeholder="例: setup" style="width:100%" :disabled="!!catSettingForm.editId">
+                        </div>
+                        <div class="form-group" style="margin:0;flex:1;min-width:100px">
+                            <label style="font-size:0.8rem">表示名</label>
+                            <input v-model="catSettingForm.label" placeholder="例: 設営" style="width:100%">
+                        </div>
+                        <div class="form-group" style="margin:0;min-width:60px">
+                            <label style="font-size:0.8rem">色</label>
+                            <input v-model="catSettingForm.color" type="color" style="width:48px;height:34px;padding:2px;cursor:pointer">
+                        </div>
+                        <div class="form-group" style="margin:0;min-width:60px">
+                            <label style="font-size:0.8rem">順序</label>
+                            <input v-model.number="catSettingForm.order" type="number" min="0" style="width:60px">
+                        </div>
+                        <button class="btn" style="background:#6a1b9a;align-self:flex-end" @click="saveCatSetting">{{ catSettingForm.editId ? '更新' : '追加' }}</button>
+                        <button v-if="catSettingForm.editId" class="btn btn-danger" style="align-self:flex-end" @click="cancelCatSetting">キャンセル</button>
+                    </div>
+                    <div v-if="catSettingMsg" style="margin-top:8px;font-size:0.85rem;color:#2e7d32">{{ catSettingMsg }}</div>
+                </div>
+            </div>
+
+            <!-- 初期化パスワード変更 -->
+            <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:20px;margin-bottom:20px">
+                <h3 style="margin:0 0 8px;color:#e65100">初期化パスワードの変更</h3>
+                <p style="margin:0 0 12px;font-size:0.9rem;color:#555">データ完全初期化に使用するパスワードを変更します。</p>
+                <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+                    <div class="form-group" style="margin:0">
+                        <label style="font-size:0.85rem">現在のパスワード</label>
+                        <input v-model="resetPwForm.current" type="password" placeholder="現在のパスワード" style="width:200px">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label style="font-size:0.85rem">新しいパスワード</label>
+                        <input v-model="resetPwForm.newPw" type="password" placeholder="新しいパスワード" style="width:200px">
+                    </div>
+                    <button class="btn" style="background:#e65100;padding:8px 20px" @click="changeResetPassword" :disabled="!resetPwForm.current || !resetPwForm.newPw">変更</button>
+                </div>
+                <div v-if="resetPwMsg" :style="{marginTop:'12px',padding:'10px 16px',borderRadius:'6px',fontSize:'0.9rem',background: resetPwMsgError ? '#fce4ec' : '#e8f5e9', color: resetPwMsgError ? '#c62828' : '#2e7d32'}">
+                    {{ resetPwMsg }}
+                </div>
             </div>
 
             <!-- データ初期化 -->
@@ -1447,8 +1488,8 @@
             </div>
 
             <!-- 登壇者情報 -->
-            <template v-if="['reception','social'].includes(sessDetailSession.category)">
-                <!-- 受付案内・懇親会は登壇者情報なし -->
+            <template v-if="dynamicCatKeys.includes(sessDetailSession.category)">
+                <!-- 動的カテゴリは登壇者情報なし -->
             </template>
             <template v-else-if="sessDetailSession.category === 'lt' && sessDetailSession.lt_talks && sessDetailSession.lt_talks.length">
                 <div style="margin-bottom:16px">

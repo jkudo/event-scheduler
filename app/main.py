@@ -12,9 +12,9 @@ from .config import UPLOAD_DIR
 from .database import Base, engine, SessionLocal
 from .models import (
     Room, Session as SessionModel, LTTalk, Staff, StaffSkill,
-    StaffPreferredSession, StaffAvailability, VenueMap, Assignment,
+    StaffPreferredSession, StaffAvailability, VenueMap, Assignment, Category, SessionGroup,
 )
-from .routers import rooms, sessions, staffs, assignments, venue_maps, export, auth, settings
+from .routers import rooms, sessions, staffs, assignments, venue_maps, export, auth, settings, categories, session_groups
 
 Base.metadata.create_all(bind=engine)
 
@@ -45,6 +45,8 @@ app.include_router(assignments.router)
 app.include_router(venue_maps.router)
 app.include_router(export.router)
 app.include_router(settings.router)
+app.include_router(categories.router)
+app.include_router(session_groups.router)
 
 
 def _seed_initial_data():
@@ -168,6 +170,45 @@ def _seed_initial_data():
 
 
 _seed_initial_data()
+
+
+def _seed_categories():
+    """デフォルトカテゴリが無ければ作成"""
+    db = SessionLocal()
+    try:
+        if db.query(Category).count() == 0:
+            db.add(Category(key="reception", label="受付案内", color="#388e3c", order=1))
+            db.add(Category(key="social", label="懇親会", color="#7b1fa2", order=2))
+            db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+
+_seed_categories()
+
+
+def _seed_session_groups():
+    """デフォルトセッショングループが無ければ作成"""
+    db = SessionLocal()
+    try:
+        if db.query(SessionGroup).count() == 0:
+            grp = SessionGroup(label="Day 1", date="", order=1, color="#1a73e8")
+            db.add(grp)
+            db.commit()
+            # 既存セッション（group_id=NULL）をデフォルトグループに紐付け
+            db.query(SessionModel).filter(SessionModel.group_id.is_(None)).update(
+                {SessionModel.group_id: grp.id}, synchronize_session=False
+            )
+            db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+
+_seed_session_groups()
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

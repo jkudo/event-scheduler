@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
-from ..models import Session as SessionModel, Staff, Assignment, StaffSkill, StaffPreferredSession, StaffAvailability
+from ..models import Session as SessionModel, Staff, Assignment, StaffSkill, StaffPreferredSession, StaffAvailability, Category
 from ..schemas import (
     AssignmentCreate,
     AssignmentResponse,
@@ -96,6 +96,9 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
         db.query(Assignment).delete()
     db.flush()
 
+    # 動的カテゴリキーを取得（受付案内・懇親会などカスタムカテゴリ）
+    dynamic_cat_keys = {c.key for c in db.query(Category.key).all()}
+
     sessions = db.query(SessionModel).options(joinedload(SessionModel.room)).order_by(SessionModel.start_time).all()
     staffs = (
         db.query(Staff)
@@ -142,7 +145,7 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
         assigned_count = 0
 
         # セッションカテゴリに対応するスタッフロールを判定
-        session_role = session.category if session.category in ('reception', 'social') else 'session'
+        session_role = session.category if session.category in dynamic_cat_keys else 'session'
 
         # スタッフをスコアリング
         scored_staffs = []
