@@ -2124,9 +2124,13 @@ createApp({
             allAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
             await loadSchedule();
         }
-        const overallSessions = computed(() =>
-            sessions.value.filter(s => s.category === 'overall').sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
-        );
+        const overallSessions = computed(() => {
+            let list = sessions.value.filter(s => s.category === 'overall');
+            if (allGroupTab.value && allGroupTab.value !== 0) {
+                list = list.filter(s => s.start_time && s.start_time.startsWith(allGroupTab.value));
+            }
+            return list.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+        });
         const allSchedule = computed(() => {
             if (!allGroupTab.value) return schedule.value;
             // 日付文字列でフィルタリング

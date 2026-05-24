@@ -1012,6 +1012,21 @@
         <div class="panel" :class="{ active: tab === 'overall-manage' }">
             <h2>全体スケジュール管理</h2>
 
+            <!-- 日程タブ -->
+            <div v-if="catDates.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+                <button v-for="date in catDates" :key="'ovm-tab-'+date"
+                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="allGroupTab === date ? {background:'#e65100', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="allGroupTab = date">
+                    {{ date }}
+                </button>
+                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="allGroupTab = 0">
+                    全日程
+                </button>
+            </div>
+
             <!-- 全体スケジュール登録フォーム -->
             <div style="margin-bottom:20px;border:1px solid #ffe0b2;border-radius:8px;padding:16px;background:#fff8e1">
                 <h3 style="margin:0 0 12px;color:#e65100">{{ allOvForm.editId ? '全体スケジュール編集' : '全体スケジュール追加' }}</h3>
