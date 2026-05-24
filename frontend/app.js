@@ -191,6 +191,11 @@ createApp({
                 if (!allGroupTab.value) allGroupTab.value = dates[0];
                 if (!overallDateTab.value) overallDateTab.value = dates[0];
             }
+            // 詳細ポップアップのセッションを最新データに更新
+            if (sessDetailSession.value) {
+                const entry = schedule.value.find(e => e.session.id === sessDetailSession.value.id);
+                if (entry) sessDetailSession.value = entry.session;
+            }
         }
         async function loadStaffAssignments() {
             staffAssignments.value = ((await (await fetch(API + '/api/assignments/staff-schedule')).json()).staff_assignments || []);
