@@ -447,7 +447,13 @@ createApp({
             sessPhotoPreview.value = file ? URL.createObjectURL(file) : '';
         }
         function addLTTalk() {
-            ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '' });
+            ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', photoFile: null, photoPreview: '' });
+        }
+        function onLTTalkPhoto(event, idx) {
+            const file = event.target.files[0];
+            if (!file) return;
+            ltTalks[idx].photoFile = file;
+            ltTalks[idx].photoPreview = URL.createObjectURL(file);
         }
         function cancelEditSession() {
             Object.assign(sessForm, {
@@ -474,7 +480,8 @@ createApp({
             if (s.lt_talks && s.lt_talks.length) {
                 s.lt_talks.forEach(t => ltTalks.push({
                     title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana || '',
-                    speaker_org: t.speaker_org || '', speaker_title: t.speaker_title || ''
+                    speaker_org: t.speaker_org || '', speaker_title: t.speaker_title || '',
+                    speaker_photo: t.speaker_photo || '', photoFile: null, photoPreview: ''
                 }));
             }
             sessPhotoPreview.value = '';
@@ -518,13 +525,23 @@ createApp({
             if (sessForm.category === 'lt' && ltTalks.length) {
                 const talks = ltTalks.map((t, i) => ({
                     title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana,
-                    speaker_org: t.speaker_org, speaker_title: t.speaker_title, order: i
+                    speaker_org: t.speaker_org, speaker_title: t.speaker_title,
+                    speaker_photo: t.speaker_photo || '', order: i
                 }));
-                await fetch(API + `/api/sessions/${sessionId}/lt-talks`, {
+                const res2 = await fetch(API + `/api/sessions/${sessionId}/lt-talks`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(talks)
                 });
+                const savedTalks = await res2.json();
+                // 新しい写真があればアップロード
+                for (let i = 0; i < ltTalks.length; i++) {
+                    if (ltTalks[i].photoFile && savedTalks[i]) {
+                        const fd2 = new FormData();
+                        fd2.append('photo', ltTalks[i].photoFile);
+                        await fetch(API + `/api/sessions/${sessionId}/lt-talks/${savedTalks[i].id}/photo`, { method: 'POST', body: fd2 });
+                    }
+                }
             }
             cancelEditSession();
             await loadSessions();
@@ -1677,7 +1694,7 @@ createApp({
             cancelEditRoom, editRoom, submitRoom, deleteRoom,
             onVenueMapChange, cancelEditVenueMap, editVenueMap, submitVenueMap, deleteVenueMap,
             sessDetailSession, sessDetailEntry, sessDetailLocked, toggleSessionDetail, toggleSessDetailLock,
-            onPhotoChange, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
+            onPhotoChange, onLTTalkPhoto, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
             calcStaffMsg, calcStaffSummary, calcRequiredStaff,
             newStaffAvails, newAvailForm, addNewStaffAvail,
             newStaffPrefs, newPrefForm, addNewStaffPref, sessionTitle,

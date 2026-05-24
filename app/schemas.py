@@ -77,6 +77,7 @@ class LTTalkCreate(BaseModel):
     speaker_kana: str = ""
     speaker_org: str = ""
     speaker_title: str = ""
+    speaker_photo: str = ""
     order: int = 0
 
 
@@ -88,6 +89,7 @@ class LTTalkResponse(BaseModel):
     speaker_kana: str
     speaker_org: str
     speaker_title: str
+    speaker_photo: str
     order: int
 
     model_config = {"from_attributes": True}

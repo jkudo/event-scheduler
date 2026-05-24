@@ -292,7 +292,31 @@ def update_lt_talks(session_id: int, talks: list[LTTalkCreate], db: Session = De
             speaker_kana=talk.speaker_kana,
             speaker_org=talk.speaker_org,
             speaker_title=talk.speaker_title,
+            speaker_photo=talk.speaker_photo,
             order=talk.order if talk.order else i,
         ))
     db.commit()
     return db.query(LTTalk).filter(LTTalk.session_id == session_id).order_by(LTTalk.order).all()
+
+
+@router.post("/{session_id}/lt-talks/{talk_id}/photo", response_model=LTTalkResponse)
+async def upload_lt_talk_photo(session_id: int, talk_id: int, photo: UploadFile = File(...), db: Session = Depends(get_db)):
+    """LT登壇者の写真をアップロード"""
+    talk = db.query(LTTalk).filter(LTTalk.id == talk_id, LTTalk.session_id == session_id).first()
+    if not talk:
+        raise HTTPException(status_code=404, detail="LT Talk not found")
+    ext = Path(photo.filename).suffix.lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+        raise HTTPException(status_code=400, detail="対応していない画像形式です。")
+    if talk.speaker_photo:
+        old_path = Path("." + talk.speaker_photo)
+        if old_path.exists():
+            old_path.unlink()
+    filename = f"lt_{uuid.uuid4().hex}{ext}"
+    save_path = UPLOAD_DIR / filename
+    content = await photo.read()
+    save_path.write_bytes(content)
+    talk.speaker_photo = f"/uploads/{filename}"
+    db.commit()
+    db.refresh(talk)
+    return talk

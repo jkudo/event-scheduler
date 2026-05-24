@@ -119,6 +119,7 @@ class LTTalk(Base):
     speaker_kana = Column(String, default="")
     speaker_org = Column(String, default="")
     speaker_title = Column(String, default="")
+    speaker_photo = Column(String, default="")
     order = Column(Integer, default=0)
 
     session = relationship("Session", back_populates="lt_talks")
