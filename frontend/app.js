@@ -612,6 +612,8 @@ createApp({
             staffForm.experience_count = s.experience_count;
             staffForm.english_ok = !!s.english_ok;
             staffForm.currentPhoto = s.photo || '';
+            newStaffPhotoFile.value = null;
+            staffPhotoPreview.value = '';
         }
         function cancelEditStaff() {
             Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
