@@ -484,7 +484,7 @@
                              :style="dragSessionStyle(entry)"
                              @mousedown="onDragStart($event, entry)"
                              @mousemove="dragCursor($event)"
-                             @click.stop="toggleSessionDetail(entry.session.id)"
+                             @click.stop="toggleSessionDetail(entry.session.id)">
                             <div class="drag-handle-top"></div>
                             <div class="tl-session-time">
                                 {{ drag.active && drag.sessionId === entry.session.id
