@@ -1434,7 +1434,10 @@
             </div>
 
             <!-- 登壇者情報 -->
-            <template v-if="sessDetailSession.category === 'lt' && sessDetailSession.lt_talks && sessDetailSession.lt_talks.length">
+            <template v-if="['reception','social'].includes(sessDetailSession.category)">
+                <!-- 受付案内・懇親会は登壇者情報なし -->
+            </template>
+            <template v-else-if="sessDetailSession.category === 'lt' && sessDetailSession.lt_talks && sessDetailSession.lt_talks.length">
                 <div style="margin-bottom:16px">
                     <strong style="font-size:0.9rem;color:#555">LT登壇者一覧</strong>
                     <div v-for="(t, idx) in sessDetailSession.lt_talks" :key="t.id" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0">
