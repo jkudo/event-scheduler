@@ -1139,15 +1139,17 @@ createApp({
             await loadSchedule();
         }
         async function setAllStaff(sessionId) {
-            const fd = new FormData();
-            fd.append('required_staff', -1);
-            await fetch(API + `/api/sessions/${sessionId}/required-staff`, { method: 'PUT', body: fd });
+            await fetch(API + `/api/sessions/${sessionId}/required-staff`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ required_staff: -1 })
+            });
             await loadSchedule();
         }
         async function unsetAllStaff(sessionId) {
-            const fd = new FormData();
-            fd.append('required_staff', 0);
-            await fetch(API + `/api/sessions/${sessionId}/required-staff`, { method: 'PUT', body: fd });
+            await fetch(API + `/api/sessions/${sessionId}/required-staff`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ required_staff: 0 })
+            });
             await loadSchedule();
         }
         async function addAssignmentOrAll(sessionId) {
