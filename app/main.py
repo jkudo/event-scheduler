@@ -18,6 +18,32 @@ from .routers import rooms, sessions, staffs, assignments, venue_maps, export, a
 
 Base.metadata.create_all(bind=engine)
 
+# --- Auto-migration: add missing columns to existing tables ---
+from sqlalchemy import inspect as sa_inspect, text as sa_text
+
+def _auto_migrate():
+    """Add columns that exist in models but not in the DB (simple ALTER TABLE ADD COLUMN)."""
+    inspector = sa_inspect(engine)
+    with engine.connect() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table.name)}
+            for col in table.columns:
+                if col.name not in existing:
+                    col_type = col.type.compile(engine.dialect)
+                    nullable = "NULL" if col.nullable else "NOT NULL"
+                    default = ""
+                    if col.default is not None:
+                        default = f" DEFAULT {col.default.arg!r}"
+                    elif col.nullable:
+                        default = " DEFAULT NULL"
+                    stmt = f"ALTER TABLE {table.name} ADD COLUMN {col.name} {col_type} {nullable}{default}"
+                    conn.execute(sa_text(stmt))
+                    conn.commit()
+
+_auto_migrate()
+
 app = FastAPI(title="Conference Scheduler API", version="1.0.0")
 
 app.add_middleware(
