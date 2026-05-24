@@ -196,23 +196,37 @@
             <!-- LTセッション: 登壇者リスト -->
             <div v-if="groupSessForms[grp.id].category === 'lt' && groupSessForms[grp.id]._ltTalks" class="lt-talks-list">
                 <h4>LT登壇者一覧</h4>
-                <div v-for="(talk, idx) in groupSessForms[grp.id]._ltTalks" :key="idx" class="lt-talk-item">
-                    <span class="lt-num">{{ idx + 1 }}</span>
-                    <div style="flex:1;min-width:0">
-                        <div class="lt-talk-fields">
-                            <input v-model="talk.title" placeholder="トークタイトル" style="flex:2;min-width:140px">
-                            <input v-model="talk.speaker" placeholder="登壇者名" style="flex:1;min-width:100px">
-                            <input v-model="talk.speaker_kana" placeholder="ふりがな" style="flex:1;min-width:100px">
-                            <input v-model="talk.speaker_org" placeholder="所属" style="flex:1;min-width:100px">
-                            <input v-model="talk.speaker_title" placeholder="肩書き" style="flex:1;min-width:80px">
+                <div v-for="(talk, idx) in groupSessForms[grp.id]._ltTalks" :key="idx" class="lt-talk-item" style="flex-direction:column;align-items:stretch">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span class="lt-num">{{ idx + 1 }}</span>
+                        <div style="flex:1;min-width:0">
+                            <div class="lt-talk-fields">
+                                <input v-model="talk.title" placeholder="トークタイトル" style="flex:2;min-width:140px">
+                                <input v-model="talk.speaker" placeholder="登壇者名" style="flex:1;min-width:100px">
+                                <input v-model="talk.speaker_kana" placeholder="ふりがな" style="flex:1;min-width:100px">
+                            </div>
+                            <div class="lt-talk-fields" style="margin-top:4px">
+                                <input v-model="talk.speaker_org" placeholder="所属" style="flex:1;min-width:100px">
+                                <input v-model="talk.speaker_title" placeholder="肩書き" style="flex:1;min-width:80px">
+                                <input v-model="talk.start_time" type="datetime-local" step="300" style="flex:1;min-width:140px" placeholder="開始時刻"
+                                       @change="autoSetLTEndTime(talk)">
+                                <input v-model="talk.end_time" type="datetime-local" step="300" style="flex:1;min-width:140px" placeholder="終了時刻">
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                                <label style="font-size:0.8rem;white-space:nowrap">写真:</label>
+                                <input type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                                       @change="onLTTalkPhoto($event, grp.id, idx)" style="font-size:0.8rem">
+                                <img v-if="talk.photoPreview" :src="talk.photoPreview" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+                                <img v-else-if="talk.speaker_photo" :src="talk.speaker_photo" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+                            </div>
                         </div>
+                        <button class="del-btn" @click="groupSessForms[grp.id]._ltTalks.splice(idx, 1)">✕</button>
                     </div>
-                    <button class="del-btn" @click="groupSessForms[grp.id]._ltTalks.splice(idx, 1)">✕</button>
                 </div>
-                <button class="btn btn-sm" @click="(groupSessForms[grp.id]._ltTalks || (groupSessForms[grp.id]._ltTalks = [])).push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', photoFile: null, photoPreview: '' })" style="margin-top:4px">＋ 登壇者を追加</button>
+                <button class="btn btn-sm" @click="addLTTalk(grp.id)" style="margin-top:4px">＋ 登壇者を追加</button>
             </div>
             <div v-if="groupSessForms[grp.id].category === 'lt' && !groupSessForms[grp.id]._ltTalks">
-                <button class="btn btn-sm" @click="groupSessForms[grp.id]._ltTalks = [{ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', photoFile: null, photoPreview: '' }]" style="margin-bottom:8px">＋ LT登壇者を追加</button>
+                <button class="btn btn-sm" @click="addLTTalk(grp.id)" style="margin-bottom:8px">＋ LT登壇者を追加</button>
             </div>
             <div style="display:flex;gap:8px">
                 <button class="btn" :style="{ background: grp.color }" @click="submitGroupSession(grp.id)">{{ groupSessForms[grp.id].editId ? '更新' : '追加' }}</button>
@@ -1724,6 +1738,7 @@
                             <span v-if="t.speaker_kana" style="color:#888;font-size:0.8rem;margin-left:4px">({{ t.speaker_kana }})</span>
                             <span v-if="t.speaker_org || t.speaker_title" style="color:#666;font-size:0.85rem"> / {{ [t.speaker_title, t.speaker_org].filter(Boolean).join(' / ') }}</span>
                             <br><span style="color:#555;font-size:0.85rem">{{ t.title }}</span>
+                            <br v-if="t.start_time"><span v-if="t.start_time" style="color:#888;font-size:0.8rem">{{ fmt(t.start_time) }} - {{ fmtShort(t.end_time) }}</span>
                         </div>
                     </div>
                 </div>

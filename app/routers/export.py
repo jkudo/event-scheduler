@@ -180,7 +180,10 @@ def export_excel(db: Session = Depends(get_db)):
         if s.category not in SESSION_CATS:
             continue
         if s.category == "lt" and s.lt_talks:
-            speakers = "\n".join(f"{t.speaker}（{t.title}）" for t in s.lt_talks)
+            speakers = "\n".join(
+                f"{t.speaker}（{t.title}）" + (f" {t.start_time}〜{t.end_time}" if t.start_time else "")
+                for t in s.lt_talks
+            )
         else:
             speakers = s.speaker
         ws2.append([
@@ -608,6 +611,8 @@ def export_backup(db: Session = Depends(get_db)):
                         "speaker_org": t.speaker_org,
                         "speaker_title": t.speaker_title,
                         "speaker_photo": t.speaker_photo,
+                        "start_time": t.start_time,
+                        "end_time": t.end_time,
                         "order": t.order,
                     }
                     for t in s.lt_talks
@@ -785,6 +790,8 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
                 speaker_org=t.get("speaker_org", ""),
                 speaker_title=t.get("speaker_title", ""),
                 speaker_photo=_map_path(t.get("speaker_photo", "")),
+                start_time=t.get("start_time", ""),
+                end_time=t.get("end_time", ""),
                 order=t.get("order", 0),
             ))
 

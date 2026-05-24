@@ -706,14 +706,34 @@ createApp({
             const file = e.target.files[0];
             sessPhotoPreview.value = file ? URL.createObjectURL(file) : '';
         }
-        function addLTTalk() {
-            ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', photoFile: null, photoPreview: '' });
+        function addLTTalk(gid) {
+            if (gid !== undefined) {
+                if (!groupSessForms[gid]._ltTalks) groupSessForms[gid]._ltTalks = reactive([]);
+                groupSessForms[gid]._ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', start_time: '', end_time: '', photoFile: null, photoPreview: '' });
+            } else {
+                ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', start_time: '', end_time: '', photoFile: null, photoPreview: '' });
+            }
         }
-        function onLTTalkPhoto(event, idx) {
+        function onLTTalkPhoto(event, gidOrIdx, idx) {
             const file = event.target.files[0];
             if (!file) return;
-            ltTalks[idx].photoFile = file;
-            ltTalks[idx].photoPreview = URL.createObjectURL(file);
+            if (idx !== undefined) {
+                // group mode: onLTTalkPhoto(event, gid, idx)
+                groupSessForms[gidOrIdx]._ltTalks[idx].photoFile = file;
+                groupSessForms[gidOrIdx]._ltTalks[idx].photoPreview = URL.createObjectURL(file);
+            } else {
+                // legacy mode: onLTTalkPhoto(event, idx)
+                ltTalks[gidOrIdx].photoFile = file;
+                ltTalks[gidOrIdx].photoPreview = URL.createObjectURL(file);
+            }
+        }
+        function autoSetLTEndTime(talk) {
+            if (talk.start_time && !talk.end_time) {
+                const d = new Date(talk.start_time);
+                d.setMinutes(d.getMinutes() + 5);
+                const pad = n => String(n).padStart(2, '0');
+                talk.end_time = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
         }
         function cancelEditSession() {
             Object.assign(sessForm, {
@@ -1221,7 +1241,10 @@ createApp({
                 s.lt_talks.forEach(t => groupSessForms[gid]._ltTalks.push({
                     title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana || '',
                     speaker_org: t.speaker_org || '', speaker_title: t.speaker_title || '',
-                    speaker_photo: t.speaker_photo || '', photoFile: null, photoPreview: ''
+                    speaker_photo: t.speaker_photo || '',
+                    start_time: t.start_time ? toLocalInput(t.start_time) : '',
+                    end_time: t.end_time ? toLocalInput(t.end_time) : '',
+                    photoFile: null, photoPreview: ''
                 }));
             }
         }
@@ -1271,7 +1294,9 @@ createApp({
                 const talkData = talks.map((t, i) => ({
                     title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana,
                     speaker_org: t.speaker_org, speaker_title: t.speaker_title,
-                    speaker_photo: t.speaker_photo || '', order: i
+                    speaker_photo: t.speaker_photo || '',
+                    start_time: t.start_time || '', end_time: t.end_time || '',
+                    order: i
                 }));
                 const res2 = await fetch(API + `/api/sessions/${sessionId}/lt-talks`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -2467,7 +2492,7 @@ createApp({
             cancelEditRoom, editRoom, submitRoom, deleteRoom,
             onVenueMapChange, cancelEditVenueMap, editVenueMap, submitVenueMap, deleteVenueMap,
             sessDetailSession, sessDetailEntry, sessDetailLocked, toggleSessionDetail, toggleSessDetailLock,
-            onPhotoChange, onLTTalkPhoto, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
+            onPhotoChange, onLTTalkPhoto, autoSetLTEndTime, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
             calcStaffMsg, calcStaffSummary, calcRequiredStaff,
             newStaffAvails, newAvailForm, addNewStaffAvail,
             newStaffPrefs, newPrefForm, addNewStaffPref, sessionTitle,

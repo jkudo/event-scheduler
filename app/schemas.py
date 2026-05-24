@@ -116,6 +116,8 @@ class LTTalkCreate(BaseModel):
     speaker_org: str = ""
     speaker_title: str = ""
     speaker_photo: str = ""
+    start_time: str = ""
+    end_time: str = ""
     order: int = 0
 
 
@@ -128,6 +130,8 @@ class LTTalkResponse(BaseModel):
     speaker_org: str
     speaker_title: str
     speaker_photo: str
+    start_time: str
+    end_time: str
     order: int
 
     model_config = {"from_attributes": True}

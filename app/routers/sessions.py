@@ -297,6 +297,8 @@ def update_lt_talks(session_id: int, talks: list[LTTalkCreate], db: Session = De
             speaker_org=talk.speaker_org,
             speaker_title=talk.speaker_title,
             speaker_photo=talk.speaker_photo,
+            start_time=talk.start_time,
+            end_time=talk.end_time,
             order=talk.order if talk.order else i,
         ))
     db.commit()
