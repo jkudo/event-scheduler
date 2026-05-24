@@ -370,7 +370,7 @@ createApp({
         const resetPwMsgError = ref(false);
 
         // --- Settings ---
-        const appTitle = ref('カンファレンス スケジューラー');
+        const appTitle = ref('イベントスケジューラー');
         const settingsForm = reactive({ app_title: '' });
         const settingsMsg = ref('');
         const pwForm = reactive({ current: '', newPw: '' });

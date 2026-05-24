@@ -542,7 +542,7 @@ def export_excel(db: Session = Depends(get_db)):
     stream.seek(0)
 
     now = datetime.now().strftime("%Y%m%d_%H%M")
-    filename = f"conference_schedule_{now}.xlsx"
+    filename = f"event_schedule_{now}.xlsx"
 
     return StreamingResponse(
         stream,
