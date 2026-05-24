@@ -22,6 +22,7 @@ from ..database import get_db
 from ..models import (
     Session as SessionModel, Staff, Assignment, Room, VenueMap,
     LTTalk, StaffSkill, StaffPreferredSession, StaffAvailability, Category, SessionGroup,
+    AppSetting,
 )
 router = APIRouter(prefix="/api/export", tags=["export"])
 
@@ -459,6 +460,10 @@ def export_excel(db: Session = Depends(get_db)):
             time_str = f"{_fmt(s.start_time)}-{_fmt(s.end_time)}"
             if cat == "overall":
                 content = f"{s.title}\n{time_str}"
+                if s.required_staff == -1:
+                    content += "\n【全員】"
+                elif staff_names:
+                    content += f"\n【{staff_names}】"
                 if s.notes:
                     content += f"\n{s.notes}"
             else:
@@ -850,8 +855,6 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
         "assignments": len(data.get("assignments", [])),
     }
 
-
-from ..models import AppSetting
 
 RESET_PASSWORD_DEFAULT = os.environ.get("RESET_PASSWORD", "conf-reset-2026")
 
