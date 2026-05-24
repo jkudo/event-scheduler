@@ -153,7 +153,7 @@
                     <div class="form-group">
                         <label>登壇者写真</label>
                         <input type="file" :data-group-photo="grp.id" accept="image/jpeg,image/png,image/gif,image/webp"
-                               @change="groupSessForms[grp.id].photoPreview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : ''">
+                               @change="onGroupPhotoChange(grp.id, $event)">
                         <div v-if="groupSessForms[grp.id].photoPreview" style="margin-top:8px">
                             <img :src="groupSessForms[grp.id].photoPreview" class="photo-preview">
                         </div>

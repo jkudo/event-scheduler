@@ -67,13 +67,17 @@ createApp({
             sessionGroups.value = await (await fetch(API + '/api/session-groups/')).json();
             sessionGroups.value.forEach(g => {
                 if (!(g.id in groupLocks)) groupLocks[g.id] = true;
-                if (!(g.id in groupSessForms)) groupSessForms[g.id] = {
-                    editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
-                    room_id: null, category: 'general', required_staff: 1, english_required: false,
-                    description: '', notes: '', currentPhoto: '', photoPreview: '',
-                    speaker_org: '', speaker_title: '', speaker_profile: '',
-                    _ltTalks: reactive([])
-                };
+                if (!(g.id in groupSessForms)) {
+                    groupSessForms[g.id] = {
+                        editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
+                        room_id: null, category: 'general', required_staff: 1, english_required: false,
+                        description: '', notes: '', currentPhoto: '', photoPreview: '',
+                        speaker_org: '', speaker_title: '', speaker_profile: '',
+                        _ltTalks: reactive([])
+                    };
+                } else if (!('photoPreview' in groupSessForms[g.id])) {
+                    groupSessForms[g.id].photoPreview = '';
+                }
                 if (!(g.id in groupStaffFilters)) groupStaffFilters[g.id] = 0;
                 if (!(g.id in groupScheduleMsgs)) groupScheduleMsgs[g.id] = '';
                 if (!(g.id in groupSelectedSessions)) groupSelectedSessions[g.id] = new Set();
@@ -1220,6 +1224,10 @@ createApp({
                     speaker_photo: t.speaker_photo || '', photoFile: null, photoPreview: ''
                 }));
             }
+        }
+        function onGroupPhotoChange(gid, event) {
+            const file = event.target.files[0];
+            groupSessForms[gid].photoPreview = file ? URL.createObjectURL(file) : '';
         }
         async function submitGroupSession(gid) {
             const form = groupSessForms[gid];
@@ -2470,7 +2478,7 @@ createApp({
             sessionGroups, groupLocks, groupSessForms, groupStaffFilters, groupScheduleMsgs, groupSelectedSessions,
             grpDateTabs, grpDates, grpDateFiltered, dateGroupLabels,
             groupSchedule, filteredGroupSchedule, groupSessionOpacity, groupSessions,
-            cancelEditGroupSession, editGroupSession, submitGroupSession, deleteGroupSession,
+            cancelEditGroupSession, editGroupSession, submitGroupSession, deleteGroupSession, onGroupPhotoChange,
             autoAssignGroup, autoAssignGroupSelected, clearGroupAssignments,
             toggleGroupSessionSelect, toggleGroupSelectAll,
             grpGridConfig, grpGridRooms, grpGridStyle, grpGridLabels, grpSessionStyle, grpDragSessionStyle, onGrpDragStart, grpSelectedSession, grpSelectedEntry,
