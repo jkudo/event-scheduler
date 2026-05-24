@@ -20,7 +20,7 @@
             <div class="sidebar-section">イベント設定</div>
             <button class="sidebar-item" :class="{ active: tab === 'overall-manage' }" @click="switchTab('overall-manage')">全体スケジュール管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'sessions' }" @click="switchTab('sessions')">セッション管理</button>
-            <button class="sidebar-item" :class="{ active: tab === 'reception-manage' }" @click="switchTab('reception-manage')">受付管理</button>
+            <button class="sidebar-item" :class="{ active: tab === 'reception-manage' }" @click="switchTab('reception-manage')">受付案内管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'social-manage' }" @click="switchTab('social-manage')">懇親会管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'staffs' }" @click="switchTab('staffs')">スタッフ管理</button>
             <button class="sidebar-item" :class="{ active: tab === 'rooms' }" @click="switchTab('rooms')">部屋管理</button>
@@ -246,7 +246,7 @@
                     <label>担当</label>
                     <select v-model="staffForm.role">
                         <option value="session">セッション</option>
-                        <option value="reception">受付</option>
+                        <option value="reception">受付案内</option>
                         <option value="social">懇親会</option>
                     </select>
                 </div>
@@ -520,14 +520,13 @@
             </table>
         </div>
 
-        <!-- ===== 受付案内 ===== -->
-        <!-- ===== 受付管理（イベント設定） ===== -->
+        <!-- ===== 受付案内管理（イベント設定） ===== -->
         <div class="panel" :class="{ active: tab === 'reception-manage' }">
-            <h2>受付管理</h2>
+            <h2>受付案内管理</h2>
             <div style="margin-bottom:20px;border:1px solid #c8e6c9;border-radius:8px;padding:16px;background:#e8f5e9">
-                <h3 style="margin:0 0 12px;color:#2e7d32">{{ rcForm.editId ? '受付編集' : '受付追加' }}</h3>
+                <h3 style="margin:0 0 12px;color:#2e7d32">{{ rcForm.editId ? '受付案内編集' : '受付案内追加' }}</h3>
                 <div class="form-row">
-                    <div class="form-group"><label>受付名</label><input v-model="rcForm.title" placeholder="例: メイン受付"></div>
+                    <div class="form-group"><label>受付案内名</label><input v-model="rcForm.title" placeholder="例: メイン受付"></div>
                     <div class="form-group"><label>必要スタッフ数</label><input v-model.number="rcForm.required_staff" type="number" min="1" placeholder="2"></div>
                 </div>
                 <div class="form-row">
@@ -551,9 +550,9 @@
                 </div>
             </div>
             <h3>登録済み一覧</h3>
-            <p v-if="!receptionSessions.length" style="color:#666">受付がまだ登録されていません。</p>
+            <p v-if="!receptionSessions.length" style="color:#666">受付案内がまだ登録されていません。</p>
             <table v-else>
-                <thead><tr><th>受付名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>操作</th></tr></thead>
+                <thead><tr><th>受付案内名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>操作</th></tr></thead>
                 <tbody>
                     <tr v-for="e in receptionSessions" :key="'rcm-'+e.session.id">
                         <td><strong>{{ e.session.title }}</strong></td>
@@ -598,7 +597,7 @@
                 <span v-if="rcStaffFilter" style="font-size:0.85rem;color:#666">{{ filteredReceptionSessions.length }}/{{ receptionSessions.length }}件</span>
             </div>
 
-            <p v-if="!receptionSessions.length" style="color:#888">受付がまだ登録されていません。「受付管理」から追加してください。</p>
+            <p v-if="!receptionSessions.length" style="color:#888">受付案内がまだ登録されていません。「受付案内管理」から追加してください。</p>
             <template v-if="receptionSessions.length">
                 <div class="tl-wrapper">
                     <div class="tl-grid" :style="rcGridStyle">
@@ -640,7 +639,7 @@
                 <!-- 役割一覧（スタッフ割り当て） -->
                 <h3 style="margin-top:24px">役割一覧</h3>
                 <table>
-                    <thead><tr><th>受付名</th><th>時間</th><th>場所</th><th>担当スタッフ</th></tr></thead>
+                    <thead><tr><th>受付案内名</th><th>時間</th><th>場所</th><th>担当スタッフ</th></tr></thead>
                     <tbody>
                         <tr v-for="e in receptionSessions" :key="'rctbl2-'+e.session.id"
                             :style="{ opacity: rcSessionOpacity(e) }">
@@ -1027,7 +1026,7 @@
                     <thead><tr><th>セッションカテゴリ</th><th>対象スタッフロール</th></tr></thead>
                     <tbody>
                         <tr><td>一般 / 技術 / WS / 基調講演 / LT</td><td><span class="badge">セッション</span></td></tr>
-                        <tr><td>受付</td><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">受付</span></td></tr>
+                        <tr><td>受付案内</td><td><span class="badge" style="background:#e8f5e9;color:#1b5e20">受付案内</span></td></tr>
                         <tr><td>懇親会</td><td><span class="badge" style="background:#f3e5f5;color:#4a148c">懇親会</span></td></tr>
                     </tbody>
                 </table>
@@ -1275,7 +1274,7 @@
                         </div>
                         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#fafafa;border-radius:6px">
                             <span style="background:#1a73e8;color:#fff;border-radius:50%;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">6</span>
-                            <div><strong>配置表</strong>・<strong>受付案内</strong>・<strong>懇親会担当</strong>で当日運営に必要な情報を確認・印刷</div>
+                            <div><strong>セッション担当</strong>・<strong>受付案内担当</strong>・<strong>懇親会担当</strong>で当日運営に必要な情報を確認・印刷</div>
                         </div>
                     </div>
                 </div>
@@ -1309,15 +1308,15 @@
                             </tr>
                             <tr style="border-bottom:1px solid #eee">
                                 <td style="padding:10px 12px;font-weight:600">スタッフ管理</td>
-                                <td style="padding:10px 12px">運営スタッフの登録。スキル（音響/配信/受付等）、英語対応可否、最大稼働時間、経験回数、対応可能時間帯、希望セッションを設定できます。</td>
+                                <td style="padding:10px 12px">運営スタッフの登録。スキル（音響/配信/受付案内等）、英語対応可否、最大稼働時間、経験回数、対応可能時間帯、希望セッションを設定できます。</td>
                             </tr>
                             <tr style="border-bottom:1px solid #eee;background:#fafafa">
                                 <td style="padding:10px 12px;font-weight:600">配置表</td>
                                 <td style="padding:10px 12px">スタッフ配置の一覧をマトリクス形式で表示。自動配置の実行、セッションクリックで手動配置の追加・削除、ドラッグ&ドロップでのセッション移動が可能です。</td>
                             </tr>
                             <tr style="border-bottom:1px solid #eee;background:#fafafa">
-                                <td style="padding:10px 12px;font-weight:600">受付案内</td>
-                                <td style="padding:10px 12px">受付スタッフ向けの案内シート。セッション一覧・会場地図・受付担当者の情報をまとめて印刷できます。</td>
+                                <td style="padding:10px 12px;font-weight:600">受付案内担当</td>
+                                <td style="padding:10px 12px">受付案内スタッフ向けの配置シート。セッション一覧・会場地図・受付案内担当者の情報をまとめて印刷できます。</td>
                             </tr>
                             <tr style="border-bottom:1px solid #eee">
                                 <td style="padding:10px 12px;font-weight:600">懇親会担当</td>
@@ -1368,7 +1367,7 @@
                     <ul style="margin:0;padding-left:20px;font-size:0.92rem;line-height:2;color:#444">
                         <li>セッション一覧・配置表でセッション名をクリックすると詳細ポップアップが表示されます</li>
                         <li>スタッフ写真をクリックすると拡大表示されます</li>
-                        <li>受付案内タブは印刷に最適化されています（ブラウザの印刷機能を使用）</li>
+                        <li>受付案内担当タブは印刷に最適化されています（ブラウザの印刷機能を使用）</li>
                         <li>バックアップZIPにはすべてのデータと画像が含まれます。定期的にエクスポートすることを推奨します</li>
                         <li>connpass出力ではBase URLを設定すると、登壇者写真のURLが自動生成されます</li>
                         <li>配置アルゴリズムは何度でも実行可能です。プレビューで確認してから適用してください</li>

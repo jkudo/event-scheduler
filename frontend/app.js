@@ -3,7 +3,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 createApp({
     setup() {
         const API = '';
-        const CATEGORY_LABELS = { general: '一般', tech: '技術', workshop: 'ワークショップ', keynote: '基調講演', lt: 'LT', reception: '受付', social: '懇親会', session: 'セッション', overall: '全体' };
+        const CATEGORY_LABELS = { general: '一般', tech: '技術', workshop: 'ワークショップ', keynote: '基調講演', lt: 'LT', reception: '受付案内', social: '懇親会', session: 'セッション', overall: '全体' };
         const SLOT_MIN = 5; // 5分刻み
 
         const tab = ref('all-matrix');
@@ -834,13 +834,13 @@ createApp({
             await loadSchedule();
         }
         async function deleteReception(id) {
-            if (!confirm('この受付を削除します。よろしいですか？')) return;
+            if (!confirm('この受付案内を削除します。よろしいですか？')) return;
             await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
             await loadSessions();
             await loadSchedule();
         }
         async function autoAssignReception() {
-            if (!confirm('受付スタッフを自動配置します。現在の受付配置は上書きされます。よろしいですか？')) return;
+            if (!confirm('受付案内スタッフを自動配置します。現在の受付案内配置は上書きされます。よろしいですか？')) return;
             const ids = receptionSessions.value.map(e => e.session.id);
             const data = await (await fetch(API + '/api/assignments/auto-assign', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -850,10 +850,10 @@ createApp({
             await loadSchedule();
         }
         async function clearReceptionAssignments() {
-            if (!confirm('受付のスタッフ配置をすべてクリアします。よろしいですか？')) return;
+            if (!confirm('受付案内のスタッフ配置をすべてクリアします。よろしいですか？')) return;
             const ids = receptionSessions.value.flatMap(e => e.assigned_staff.map(a => a.assignment_id));
             for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
-            rcAssignMsg.value = '受付の配置をクリアしました';
+            rcAssignMsg.value = '受付案内の配置をクリアしました';
             await loadSchedule();
         }
 
@@ -1466,7 +1466,7 @@ createApp({
             }
         }
         async function deleteAllEntry(id, category) {
-            const labels = { reception: '受付', social: '懇親会', overall: '全体スケジュール' };
+            const labels = { reception: '受付案内', social: '懇親会', overall: '全体スケジュール' };
             const label = labels[category] || 'この項目';
             if (!confirm(`この${label}を削除します。よろしいですか？`)) return;
             allSelectedSession.value = null;
@@ -1539,7 +1539,7 @@ createApp({
             const cols = [];
             if (hasOverall.value) cols.push({ id: 'overall', name: '全体', type: 'overall' });
             allSessionRooms.value.forEach(([id, name]) => cols.push({ id, name, type: 'session' }));
-            allReceptionCols.value.forEach(([id, name]) => cols.push({ id, name: '受付: ' + name, type: 'reception', roomId: id }));
+            allReceptionCols.value.forEach(([id, name]) => cols.push({ id, name: '受付案内: ' + name, type: 'reception', roomId: id }));
             allSocialCols.value.forEach(([id, name]) => cols.push({ id: 's_' + id, name: '懇親会: ' + name, type: 'social', roomId: id }));
             return cols;
         });
