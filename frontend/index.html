@@ -130,6 +130,9 @@
                     <div class="form-group"><label>肩書き</label><input v-model="sessForm.speaker_title" placeholder="例: CTO"></div>
                 </div>
                 <div class="form-group"><label>プロフィール</label><textarea v-model="sessForm.speaker_profile" rows="2" placeholder="例: 10年以上のクラウドインフラ経験を持つエンジニア。著書に『実践Kubernetes入門』など。"></textarea></div>
+            </template>
+            <!-- 登壇者写真（通常セッション・LT共通） -->
+            <template v-if="!['reception','social'].includes(sessForm.category)">
                 <div class="form-row">
                     <div class="form-group">
                         <label>登壇者写真</label>
