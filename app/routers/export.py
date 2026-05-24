@@ -404,6 +404,8 @@ def export_excel(db: Session = Depends(get_db)):
             CAT_FONT_COLOR[ck] = hex_color
 
         # --- セッションをマトリクスに配置 (セル結合) ---
+        occupied_cells: set[tuple[int, int]] = set()  # (row, col) の使用済みセル
+
         for s in all_schedule:
             cat = s.category
             # 対応する列を見つける
@@ -472,6 +474,12 @@ def export_excel(db: Session = Depends(get_db)):
                     content += f"\n【{staff_names}】"
                 if not s.assignments and s.required_staff > 0:
                     content += "\n※未配置"
+
+            # セルが既に使用済みならスキップ
+            if (start_row, col_idx) in occupied_cells:
+                continue
+            for r in range(start_row, end_row + 1):
+                occupied_cells.add((r, col_idx))
 
             # セル結合と書式設定
             if end_row > start_row:
