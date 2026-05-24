@@ -983,23 +983,26 @@ createApp({
         // ====================================================================
         //  ドラッグ & ドロップ（Googleカレンダー風）
         // ====================================================================
+        const DRAG_THRESHOLD = 4; // px — この距離以上動かすとドラッグ開始
+
         const drag = reactive({
-            active: false,
+            active: false,    // ドラッグ中（閾値を超えた後）
+            pending: false,   // mousedown済み、閾値未到達
             mode: null,       // 'move' | 'resize-top' | 'resize-bottom'
             sessionId: null,
             entry: null,
             origStartRow: 0,
             origEndRow: 0,
-            origColIdx: 0,    // 0-based index into tlRooms
+            origColIdx: 0,
             curStartRow: 0,
             curEndRow: 0,
             curColIdx: 0,
             startMouseY: 0,
             startMouseX: 0,
-            gridEl: null,     // .tl-grid DOM element
-            rowHeight: 20,    // px per row (matches gridTemplateRows)
-            colWidth: 0,      // px per room column (computed on drag start)
-            colLeft: 0,       // left edge of first room column in grid
+            gridEl: null,
+            rowHeight: 20,
+            colWidth: 0,
+            colLeft: 0,
         });
 
         function dragSessionStyle(entry) {
@@ -1021,14 +1024,12 @@ createApp({
         }
 
         function onDragStart(e, entry) {
-            // Only left mouse button
             if (e.button !== 0) return;
             e.preventDefault();
-            e.stopPropagation();
 
             const sessionEl = e.currentTarget;
             const rect = sessionEl.getBoundingClientRect();
-            const edgeThreshold = 8; // px from top/bottom edge to trigger resize
+            const edgeThreshold = 8;
             const relY = e.clientY - rect.top;
 
             let mode = 'move';
@@ -1036,7 +1037,6 @@ createApp({
             else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
 
             const gridEl = sessionEl.closest('.tl-grid');
-            // Compute column geometry from room headers
             const roomHeaders = gridEl.querySelectorAll('.tl-room-header');
             let colLeft = 0, colWidth = 0;
             if (roomHeaders.length) {
@@ -1051,7 +1051,9 @@ createApp({
             const ci = tlRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
 
             dragDidMove = false;
-            drag.active = true;
+            // pending 状態で待機（閾値を超えたら active にする）
+            drag.pending = true;
+            drag.active = false;
             drag.mode = mode;
             drag.sessionId = entry.session.id;
             drag.entry = entry;
@@ -1072,15 +1074,25 @@ createApp({
         }
 
         function onDragMove(e) {
-            if (!drag.active) return;
-            dragDidMove = true;
+            if (!drag.pending && !drag.active) return;
+
+            const dx = e.clientX - drag.startMouseX;
             const dy = e.clientY - drag.startMouseY;
+
+            // 閾値チェック — まだ active でなければ距離判定
+            if (drag.pending && !drag.active) {
+                if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+                // 閾値を超えた → ドラッグ開始
+                drag.pending = false;
+                drag.active = true;
+                dragDidMove = true;
+            }
+
             const rowDelta = Math.round(dy / drag.rowHeight);
 
             if (drag.mode === 'move') {
                 drag.curStartRow = drag.origStartRow + rowDelta;
                 drag.curEndRow = drag.origEndRow + rowDelta;
-                // Column change: compute from mouse X position relative to grid
                 const gridRect = drag.gridEl.getBoundingClientRect();
                 const mouseXInGrid = e.clientX - gridRect.left - drag.colLeft;
                 let newCol = Math.floor(mouseXInGrid / drag.colWidth);
@@ -1089,7 +1101,7 @@ createApp({
             } else if (drag.mode === 'resize-top') {
                 const newStart = drag.origStartRow + rowDelta;
                 if (newStart < drag.curEndRow - 1) {
-                    drag.curStartRow = Math.max(2, newStart); // row 2 is first data row
+                    drag.curStartRow = Math.max(2, newStart);
                 }
             } else if (drag.mode === 'resize-bottom') {
                 const newEnd = drag.origEndRow + rowDelta;
@@ -1102,6 +1114,14 @@ createApp({
         async function onDragEnd() {
             document.removeEventListener('mousemove', onDragMove);
             document.removeEventListener('mouseup', onDragEnd);
+
+            // 閾値未到達の場合（= 単なるクリック）
+            if (drag.pending && !drag.active) {
+                drag.pending = false;
+                drag.sessionId = null;
+                drag.entry = null;
+                return; // クリックイベントに任せる
+            }
 
             if (!drag.active) return;
 
@@ -1134,6 +1154,7 @@ createApp({
                     if (resp.ok) {
                         await loadSchedule();
                         await loadSessions();
+                        await loadStaffAssignments();
                     }
                 } catch (err) {
                     console.error('Move failed:', err);
@@ -1141,13 +1162,14 @@ createApp({
             }
 
             drag.active = false;
+            drag.pending = false;
             drag.mode = null;
             drag.sessionId = null;
             drag.entry = null;
         }
 
         function dragCursor(e) {
-            // Used for cursor style on hover near edges
+            if (drag.active) return; // ドラッグ中はカーソル変更しない
             const rect = e.currentTarget.getBoundingClientRect();
             const edgeThreshold = 8;
             const relY = e.clientY - rect.top;
