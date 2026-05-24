@@ -835,11 +835,11 @@
                 <span style="font-weight:600">凡例:</span>
                 <span class="tl-legend-item">
                     <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-color:#e65100"></span>
-                    全体
+                    全体スケジュール
                 </span>
-                <span class="tl-legend-item">
-                    <span class="tl-legend-swatch" style="background:linear-gradient(135deg,#e8f0fe,#d2e3fc);border-color:#1a73e8"></span>
-                    セッション
+                <span v-for="grp in sessionGroups" :key="'legend-grp-'+grp.id" class="tl-legend-item">
+                    <span class="tl-legend-swatch" :style="{background: 'linear-gradient(135deg,#e8f0fe,#d2e3fc)', borderColor: grp.color}"></span>
+                    {{ grp.label }}
                 </span>
                 <span v-for="cat in categories" :key="'legend-'+cat.key" class="tl-legend-item">
                     <span class="tl-legend-swatch" :style="{background: CAT_BG[cat.key]?.background, borderColor: cat.color}"></span>
