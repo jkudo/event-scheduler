@@ -983,14 +983,13 @@ createApp({
         // ====================================================================
         //  ドラッグ & ドロップ（Googleカレンダー風）
         // ====================================================================
-        const DRAG_THRESHOLD = 4; // px — この距離以上動かすとドラッグ開始
+        const DRAG_THRESHOLD = 10; // px — 明確なドラッグ意図が必要
 
         const drag = reactive({
             active: false,    // ドラッグ中（閾値を超えた後）
             pending: false,   // mousedown済み、閾値未到達
             mode: null,       // 'move' | 'resize-top' | 'resize-bottom'
             sessionId: null,
-            entry: null,
             origStartRow: 0,
             origEndRow: 0,
             origColIdx: 0,
@@ -1001,8 +1000,7 @@ createApp({
             startMouseX: 0,
             gridEl: null,
             rowHeight: 20,
-            colWidth: 0,
-            colLeft: 0,
+            colWidths: [],    // 各列の左端X座標（grid相対）
         });
 
         function dragSessionStyle(entry) {
@@ -1023,6 +1021,41 @@ createApp({
             };
         }
 
+        function _computeColBounds(gridEl) {
+            // 各部屋ヘッダーの中心X座標を収集（列判定用）
+            const headers = gridEl.querySelectorAll('.tl-room-header');
+            const gridRect = gridEl.getBoundingClientRect();
+            const bounds = [];
+            headers.forEach(h => {
+                const r = h.getBoundingClientRect();
+                bounds.push({
+                    left: r.left - gridRect.left,
+                    right: r.right - gridRect.left,
+                    center: (r.left + r.right) / 2 - gridRect.left,
+                });
+            });
+            return bounds;
+        }
+
+        function _colFromMouseX(mouseX, gridEl, colBounds) {
+            const gridRect = gridEl.getBoundingClientRect();
+            const x = mouseX - gridRect.left;
+            // 最も近い列の中心を探す
+            let bestCol = 0;
+            let bestDist = Infinity;
+            for (let i = 0; i < colBounds.length; i++) {
+                if (x >= colBounds[i].left && x <= colBounds[i].right) {
+                    return i; // マウスがその列内にある
+                }
+                const dist = Math.abs(x - colBounds[i].center);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestCol = i;
+                }
+            }
+            return bestCol;
+        }
+
         function onDragStart(e, entry) {
             if (e.button !== 0) return;
             e.preventDefault();
@@ -1037,26 +1070,17 @@ createApp({
             else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
 
             const gridEl = sessionEl.closest('.tl-grid');
-            const roomHeaders = gridEl.querySelectorAll('.tl-room-header');
-            let colLeft = 0, colWidth = 0;
-            if (roomHeaders.length) {
-                const gridRect = gridEl.getBoundingClientRect();
-                const firstHeader = roomHeaders[0].getBoundingClientRect();
-                colLeft = firstHeader.left - gridRect.left;
-                colWidth = firstHeader.width;
-            }
+            const colBounds = _computeColBounds(gridEl);
 
             const startRow = timeToRow(entry.session.start_time);
             const endRow = timeToRow(entry.session.end_time);
             const ci = tlRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
 
             dragDidMove = false;
-            // pending 状態で待機（閾値を超えたら active にする）
             drag.pending = true;
             drag.active = false;
             drag.mode = mode;
             drag.sessionId = entry.session.id;
-            drag.entry = entry;
             drag.origStartRow = startRow;
             drag.origEndRow = endRow;
             drag.origColIdx = ci;
@@ -1066,8 +1090,7 @@ createApp({
             drag.startMouseY = e.clientY;
             drag.startMouseX = e.clientX;
             drag.gridEl = gridEl;
-            drag.colWidth = colWidth;
-            drag.colLeft = colLeft;
+            drag.colWidths = colBounds;
 
             document.addEventListener('mousemove', onDragMove);
             document.addEventListener('mouseup', onDragEnd);
@@ -1078,11 +1101,11 @@ createApp({
 
             const dx = e.clientX - drag.startMouseX;
             const dy = e.clientY - drag.startMouseY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // 閾値チェック — まだ active でなければ距離判定
-            if (drag.pending && !drag.active) {
-                if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
-                // 閾値を超えた → ドラッグ開始
+            // 閾値チェック
+            if (!drag.active) {
+                if (dist < DRAG_THRESHOLD) return;
                 drag.pending = false;
                 drag.active = true;
                 dragDidMove = true;
@@ -1091,23 +1114,27 @@ createApp({
             const rowDelta = Math.round(dy / drag.rowHeight);
 
             if (drag.mode === 'move') {
-                drag.curStartRow = drag.origStartRow + rowDelta;
-                drag.curEndRow = drag.origEndRow + rowDelta;
-                const gridRect = drag.gridEl.getBoundingClientRect();
-                const mouseXInGrid = e.clientX - gridRect.left - drag.colLeft;
-                let newCol = Math.floor(mouseXInGrid / drag.colWidth);
-                newCol = Math.max(0, Math.min(newCol, tlRooms.value.length - 1));
-                drag.curColIdx = newCol;
+                const newStart = drag.origStartRow + rowDelta;
+                const span = drag.origEndRow - drag.origStartRow;
+                // 行の範囲チェック（row 2 が最初のデータ行）
+                if (newStart >= 2) {
+                    drag.curStartRow = newStart;
+                    drag.curEndRow = newStart + span;
+                }
+                // 列はマウスX位置から判定
+                drag.curColIdx = _colFromMouseX(e.clientX, drag.gridEl, drag.colWidths);
             } else if (drag.mode === 'resize-top') {
                 const newStart = drag.origStartRow + rowDelta;
-                if (newStart < drag.curEndRow - 1) {
-                    drag.curStartRow = Math.max(2, newStart);
+                if (newStart >= 2 && newStart < drag.origEndRow - 1) {
+                    drag.curStartRow = newStart;
                 }
+                // リサイズ時は列を変えない
             } else if (drag.mode === 'resize-bottom') {
                 const newEnd = drag.origEndRow + rowDelta;
-                if (newEnd > drag.curStartRow + 1) {
+                if (newEnd > drag.origStartRow + 1) {
                     drag.curEndRow = newEnd;
                 }
+                // リサイズ時は列を変えない
             }
         }
 
@@ -1115,15 +1142,12 @@ createApp({
             document.removeEventListener('mousemove', onDragMove);
             document.removeEventListener('mouseup', onDragEnd);
 
-            // 閾値未到達の場合（= 単なるクリック）
-            if (drag.pending && !drag.active) {
+            // 閾値未到達 = 単なるクリック → 何もしない
+            if (!drag.active) {
                 drag.pending = false;
                 drag.sessionId = null;
-                drag.entry = null;
-                return; // クリックイベントに任せる
+                return;
             }
-
-            if (!drag.active) return;
 
             const changed = drag.curStartRow !== drag.origStartRow
                          || drag.curEndRow !== drag.origEndRow
@@ -1133,7 +1157,15 @@ createApp({
                 const cfg = tlConfig.value;
                 const newStartMs = cfg.minTime + (drag.curStartRow - 2) * cfg.slotMs;
                 const newEndMs = cfg.minTime + (drag.curEndRow - 2) * cfg.slotMs;
-                const newRoomId = tlRooms.value[drag.curColIdx][0];
+                const newRoomId = tlRooms.value[drag.curColIdx]?.[0];
+
+                if (!newRoomId || newStartMs >= newEndMs) {
+                    // 無効な移動先 — 元に戻す
+                    drag.active = false;
+                    drag.pending = false;
+                    drag.sessionId = null;
+                    return;
+                }
 
                 function toISO(ms) {
                     const d = new Date(ms);
@@ -1165,11 +1197,10 @@ createApp({
             drag.pending = false;
             drag.mode = null;
             drag.sessionId = null;
-            drag.entry = null;
         }
 
         function dragCursor(e) {
-            if (drag.active) return; // ドラッグ中はカーソル変更しない
+            if (drag.active) return;
             const rect = e.currentTarget.getBoundingClientRect();
             const edgeThreshold = 8;
             const relY = e.clientY - rect.top;
