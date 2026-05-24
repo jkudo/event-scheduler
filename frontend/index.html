@@ -461,7 +461,7 @@
                 </div>
 
                 <div class="tl-wrapper">
-                    <div class="tl-grid" :style="tlGridStyle" :class="{ 'dragging-active': drag.active }">
+                    <div class="tl-grid" :style="tlGridStyle">
                         <div class="tl-corner">時間</div>
                         <div v-for="([rid, rname], ci) in tlRooms" :key="'rh'+rid"
                              class="tl-room-header" :style="{gridColumn: ci+2}">
@@ -480,17 +480,10 @@
                             </div>
                         </template>
                         <div v-for="entry in sessionSchedule" :key="'s'+entry.session.id"
-                             class="tl-session" :class="{ dragging: drag.active && drag.sessionId === entry.session.id }"
-                             :style="dragSessionStyle(entry)"
-                             @mousedown="onDragStart($event, entry)"
-                             @mousemove="dragCursor($event)"
-                             @click.stop="toggleSessionDetail(entry.session.id)">
-                            <div class="drag-handle-top"></div>
+                             class="tl-session" :style="{...tlSessionStyle(entry), opacity: matrixSessionOpacity(entry)}"
+                             @click="toggleSessionDetail(entry.session.id)">
                             <div class="tl-session-time">
-                                {{ drag.active && drag.sessionId === entry.session.id
-                                    ? fmtShort(new Date(tlConfig.minTime + (drag.curStartRow - 2) * tlConfig.slotMs))
-                                      + ' - ' + fmtShort(new Date(tlConfig.minTime + (drag.curEndRow - 2) * tlConfig.slotMs))
-                                    : fmtShort(entry.session.start_time) + ' - ' + fmtShort(entry.session.end_time) }}
+                                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
                             </div>
                             <div class="tl-session-title">{{ entry.session.title }}</div>
                             <div v-if="entry.session.category === 'lt' && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
@@ -503,7 +496,6 @@
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
                             </div>
-                            <div class="drag-handle-bottom"></div>
                         </div>
                         <div v-for="(brk, bi) in tlBreaks" :key="'brk'+bi"
                              class="tl-break" :style="brk.style">
