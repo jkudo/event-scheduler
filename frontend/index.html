@@ -461,7 +461,7 @@
                 </div>
 
                 <div class="tl-wrapper">
-                    <div class="tl-grid" :style="tlGridStyle">
+                    <div class="tl-grid" :class="{ 'dragging-active': drag.active }" :style="tlGridStyle">
                         <div class="tl-corner">時間</div>
                         <div v-for="([rid, rname], ci) in tlRooms" :key="'rh'+rid"
                              class="tl-room-header" :style="{gridColumn: ci+2}">
@@ -480,8 +480,12 @@
                             </div>
                         </template>
                         <div v-for="entry in sessionSchedule" :key="'s'+entry.session.id"
-                             class="tl-session" :style="{...tlSessionStyle(entry), opacity: matrixSessionOpacity(entry)}"
+                             class="tl-session" :class="{ dragging: drag.active && drag.sessionId === entry.session.id }"
+                             :style="dragSessionStyle(entry)"
+                             @mousedown="onDragStart($event, entry)"
+                             @mousemove="dragCursor($event)"
                              @click="toggleSessionDetail(entry.session.id)">
+                            <div class="drag-handle-top"></div>
                             <div class="tl-session-time">
                                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
                             </div>
@@ -496,6 +500,7 @@
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
                             </div>
+                            <div class="drag-handle-bottom"></div>
                         </div>
                         <div v-for="(brk, bi) in tlBreaks" :key="'brk'+bi"
                              class="tl-break" :style="brk.style">
