@@ -61,6 +61,7 @@ createApp({
         const groupStaffFilters = reactive({});
         const groupScheduleMsgs = reactive({});
         const groupSelectedSessions = reactive({});
+        const grpDateTabs = reactive({});
 
         async function loadSessionGroups() {
             sessionGroups.value = await (await fetch(API + '/api/session-groups/')).json();
@@ -149,6 +150,13 @@ createApp({
                     if (catGroupTabs[c.key] === 0) catGroupTabs[c.key] = dates[0];
                 });
             }
+            // グループ担当の日付タブもデフォルト設定
+            sessionGroups.value.forEach(g => {
+                if (!(g.id in grpDateTabs)) {
+                    const gDates = grpDates(g.id);
+                    grpDateTabs[g.id] = gDates.length ? gDates[0] : 0;
+                }
+            });
         }
         async function loadStaffs() {
             const data = await (await fetch(API + '/api/staffs/')).json();
@@ -1117,9 +1125,24 @@ createApp({
             });
             return result;
         });
+        // グループ内の日付一覧
+        function grpDates(gid) {
+            const dates = new Set();
+            (groupSchedule.value[gid] || []).forEach(e => {
+                if (e.session.start_time) dates.add(e.session.start_time.slice(0, 10));
+            });
+            return [...dates].sort();
+        }
+        // 日付タブで絞り込んだグループスケジュール
+        function grpDateFiltered(gid) {
+            const sess = groupSchedule.value[gid] || [];
+            const tab = grpDateTabs[gid];
+            if (!tab || tab === 0) return sess;
+            return sess.filter(e => e.session.start_time && e.session.start_time.startsWith(tab));
+        }
         function filteredGroupSchedule(gid) {
             const filter = groupStaffFilters[gid];
-            const sess = groupSchedule.value[gid] || [];
+            const sess = grpDateFiltered(gid);
             if (!filter) return sess;
             return sess.filter(e => _hasStaff(e, filter));
         }
@@ -1299,11 +1322,28 @@ createApp({
             return result;
         });
         function grpGridConfig(gid) {
+            const tab = grpDateTabs[gid];
+            if (tab && tab !== 0) {
+                // 日付選択時: その日のセッションから時間範囲を算出
+                const slotMs = SLOT_MIN * 60 * 1000;
+                const daySessions = sessions.value.filter(s => s.start_time && s.start_time.startsWith(tab));
+                if (!daySessions.length) return null;
+                let minT = Infinity, maxT = -Infinity;
+                daySessions.forEach(s => {
+                    const st = new Date(s.start_time).getTime();
+                    const end = new Date(s.end_time).getTime();
+                    if (st < minT) minT = st;
+                    if (end > maxT) maxT = end;
+                });
+                minT = Math.floor(minT / slotMs) * slotMs;
+                maxT = Math.ceil(maxT / slotMs) * slotMs;
+                return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
+            }
             return unifiedGroupConfig.value[gid] || null;
         }
         function grpGridRooms(gid) {
             const map = new Map();
-            (groupSchedule.value[gid] || []).forEach(e => {
+            grpDateFiltered(gid).forEach(e => {
                 const r = e.session.room;
                 if (r && !map.has(r.id)) map.set(r.id, r.name);
             });
@@ -1765,6 +1805,131 @@ createApp({
             }
         }
 
+        // グループ担当用ドラッグスタイル
+        function grpDragSessionStyle(gid, entry) {
+            if (drag.active && drag.sessionId === entry.session.id) {
+                return {
+                    gridRow: `${drag.curStartRow} / ${drag.curEndRow}`,
+                    gridColumn: `${drag.curColIdx + 2}`,
+                    opacity: 0.85,
+                    zIndex: 50,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+                    transition: 'none',
+                    cursor: drag.mode === 'move' ? 'grabbing' : 'ns-resize',
+                };
+            }
+            return {
+                ...grpSessionStyle(gid, entry),
+                opacity: groupSessionOpacity(gid, entry),
+                cursor: 'grab',
+            };
+        }
+
+        // グループ担当用ドラッグ開始
+        function onGrpDragStart(e, gid, entry) {
+            if (e.button !== 0) return;
+            if (groupLocks[gid]) return;
+            e.preventDefault();
+
+            const sessionEl = e.currentTarget;
+            const rect = sessionEl.getBoundingClientRect();
+            const edgeThreshold = 8;
+            const relY = e.clientY - rect.top;
+
+            let mode = 'move';
+            if (relY <= edgeThreshold) mode = 'resize-top';
+            else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
+
+            const gridEl = sessionEl.closest('.tl-grid');
+            const colBounds = _computeColBounds(gridEl);
+
+            const startRow = grpTimeToRow(gid, entry.session.start_time);
+            const endRow = grpTimeToRow(gid, entry.session.end_time);
+            const rms = grpGridRooms(gid);
+            const ci = rms.findIndex(([rid]) => rid === entry.session.room_id);
+
+            dragDidMove = false;
+            drag.pending = true;
+            drag.active = false;
+            drag.mode = mode;
+            drag.sessionId = entry.session.id;
+            drag.origStartRow = startRow;
+            drag.origEndRow = endRow;
+            drag.origColIdx = ci;
+            drag.curStartRow = startRow;
+            drag.curEndRow = endRow;
+            drag.curColIdx = ci;
+            drag.startMouseY = e.clientY;
+            drag.startMouseX = e.clientX;
+            drag.gridEl = gridEl;
+            drag.colWidths = colBounds;
+            drag._grpId = gid; // グループID保持
+
+            document.addEventListener('mousemove', onDragMove);
+            document.addEventListener('mouseup', onGrpDragEnd);
+        }
+
+        async function onGrpDragEnd() {
+            document.removeEventListener('mousemove', onDragMove);
+            document.removeEventListener('mouseup', onGrpDragEnd);
+
+            if (!drag.active) {
+                drag.pending = false;
+                drag.sessionId = null;
+                return;
+            }
+
+            const changed = drag.curStartRow !== drag.origStartRow
+                         || drag.curEndRow !== drag.origEndRow
+                         || drag.curColIdx !== drag.origColIdx;
+
+            if (changed) {
+                const gid = drag._grpId;
+                const cfg = grpGridConfig(gid);
+                const newStartMs = cfg.minTime + (drag.curStartRow - 2) * cfg.slotMs;
+                const newEndMs = cfg.minTime + (drag.curEndRow - 2) * cfg.slotMs;
+                const rms = grpGridRooms(gid);
+                const newRoomId = rms[drag.curColIdx]?.[0];
+
+                if (!newRoomId || newStartMs >= newEndMs) {
+                    drag.active = false;
+                    drag.pending = false;
+                    drag.sessionId = null;
+                    return;
+                }
+
+                function toISO(ms) {
+                    const d = new Date(ms);
+                    const pad = (n) => String(n).padStart(2, '0');
+                    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+                }
+
+                try {
+                    const resp = await fetch(API + `/api/sessions/${drag.sessionId}/move`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            start_time: toISO(newStartMs),
+                            end_time: toISO(newEndMs),
+                            room_id: newRoomId,
+                        }),
+                    });
+                    if (resp.ok) {
+                        await loadSchedule();
+                        await loadSessions();
+                        await loadStaffAssignments();
+                    }
+                } catch (err) {
+                    console.error('Move failed:', err);
+                }
+            }
+
+            drag.active = false;
+            drag.pending = false;
+            drag.mode = null;
+            drag.sessionId = null;
+        }
+
         // 部屋ごとのセッション一覧（セッションカテゴリのみ）
         const tlRoomSessions = computed(() => {
             const map = new Map();
@@ -2127,11 +2292,12 @@ createApp({
             sessionSchedule,
             // セッショングループ
             sessionGroups, groupLocks, groupSessForms, groupStaffFilters, groupScheduleMsgs, groupSelectedSessions,
+            grpDateTabs, grpDates, grpDateFiltered,
             groupSchedule, filteredGroupSchedule, groupSessionOpacity, groupSessions,
             cancelEditGroupSession, editGroupSession, submitGroupSession, deleteGroupSession,
             autoAssignGroup, autoAssignGroupSelected, clearGroupAssignments,
             toggleGroupSessionSelect, toggleGroupSelectAll,
-            grpGridConfig, grpGridRooms, grpGridStyle, grpGridLabels, grpSessionStyle, grpSelectedSession, grpSelectedEntry,
+            grpGridConfig, grpGridRooms, grpGridStyle, grpGridLabels, grpSessionStyle, grpDragSessionStyle, onGrpDragStart, grpSelectedSession, grpSelectedEntry,
             // 動的カテゴリ
             categories, dynamicCatKeys, categoryLocks, categoryForms, categoryAssignMsgs, categoryStaffFilters,
             categorySessions, catDates, catGroupTabs, catGroupFiltered, catTimelineByGroup, filteredCategorySessions, catSessionOpacity,

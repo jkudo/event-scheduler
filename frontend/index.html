@@ -438,6 +438,21 @@
                 </button>
             </div>
 
+            <!-- 日程タブ -->
+            <div v-if="grpDates(grp.id).length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+                <button v-for="date in grpDates(grp.id)" :key="'grp-dtab-'+grp.id+'-'+date"
+                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="grpDateTabs[grp.id] === date ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="grpDateTabs[grp.id] = date">
+                    {{ date }}
+                </button>
+                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    :style="grpDateTabs[grp.id] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="grpDateTabs[grp.id] = 0">
+                    全日程
+                </button>
+            </div>
+
             <!-- 自動配置ボタン -->
             <div v-if="!groupLocks[grp.id]" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
                 <button class="btn btn-success" @click="autoAssignGroup(grp.id)">スタッフ自動配置</button>
@@ -457,8 +472,8 @@
 
             <!-- タイムライングリッド -->
             <h3 style="margin-top:0">配置マトリクス</h3>
-            <p v-if="!(groupSchedule[grp.id] || []).length">セッションがまだ登録されていません。</p>
-            <template v-else>
+            <p v-if="!grpDateFiltered(grp.id).length">セッションがまだ登録されていません。</p>
+            <template v-else-if="grpDateTabs[grp.id] !== 0">
                 <div class="tl-wrapper">
                     <div class="tl-grid" :style="grpGridStyle(grp.id)">
                         <div class="tl-corner">時間</div>
@@ -478,9 +493,10 @@
                                  :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
                             </div>
                         </template>
-                        <div v-for="entry in (groupSchedule[grp.id] || [])" :key="'gs'+grp.id+'-'+entry.session.id"
+                        <div v-for="entry in grpDateFiltered(grp.id)" :key="'gs'+grp.id+'-'+entry.session.id"
                              class="tl-session"
-                             :style="{ ...grpSessionStyle(grp.id, entry), opacity: groupSessionOpacity(grp.id, entry), cursor: 'pointer' }"
+                             :style="groupLocks[grp.id] ? { ...grpSessionStyle(grp.id, entry), opacity: groupSessionOpacity(grp.id, entry), cursor: 'pointer' } : grpDragSessionStyle(grp.id, entry)"
+                             @mousedown="!groupLocks[grp.id] && onGrpDragStart($event, grp.id, entry)"
                              @click="toggleSessionDetail(entry.session.id)">
                             <div class="tl-session-time">
                                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
@@ -495,6 +511,35 @@
                                     <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <!-- 全日程: タイムライン表示 -->
+            <template v-else>
+                <div v-for="date in grpDates(grp.id)" :key="'grp-tl-'+grp.id+'-'+date" style="margin-bottom:32px">
+                    <h3 style="margin:0 0 12px;padding:8px 16px;border-radius:6px;color:#fff;font-size:1rem"
+                        :style="{background: grp.color || '#1a73e8'}">
+                        {{ date }}
+                    </h3>
+                    <div style="display:flex;flex-direction:column;gap:2px">
+                        <div v-for="entry in (groupSchedule[grp.id] || []).filter(e => e.session.start_time && e.session.start_time.startsWith(date))" :key="'grp-tl-e-'+entry.session.id"
+                             style="display:flex;align-items:stretch;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid #e0e0e0"
+                             :style="{opacity: groupSessionOpacity(grp.id, entry)}"
+                             @click="toggleSessionDetail(entry.session.id)">
+                            <div style="width:110px;min-width:110px;padding:8px 10px;font-size:0.8rem;font-weight:600;display:flex;align-items:center;justify-content:center;text-align:center;background:#f5f5f5;border-right:1px solid #e0e0e0">
+                                {{ fmtShort(entry.session.start_time) }}<br>-{{ fmtShort(entry.session.end_time) }}
+                            </div>
+                            <div style="flex:1;padding:8px 12px">
+                                <div style="font-weight:600;font-size:0.9rem">{{ entry.session.title }}</div>
+                                <div style="font-size:0.8rem;color:#666;margin-top:2px">{{ entry.session.room?.name }}</div>
+                                <div style="margin-top:4px">
+                                    <template v-if="entry.assigned_staff.length">
+                                        <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
+                                    </template>
+                                    <span v-else class="badge warn">未配置</span>
+                                </div>
                             </div>
                         </div>
                     </div>
