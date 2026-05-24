@@ -403,8 +403,9 @@ createApp({
             catSettingMsg.value = '';
         }
         async function saveCatSetting() {
-            if (!catSettingForm.key || !catSettingForm.label) { catSettingMsg.value = 'キーと表示名は必須です'; return; }
-            const payload = { key: catSettingForm.key, label: catSettingForm.label, color: catSettingForm.color, order: catSettingForm.order };
+            if (!catSettingForm.label) { catSettingMsg.value = '表示名は必須です'; return; }
+            const payload = { label: catSettingForm.label, color: catSettingForm.color, order: catSettingForm.order };
+            if (catSettingForm.editId && catSettingForm.key) payload.key = catSettingForm.key;
             try {
                 let resp;
                 if (catSettingForm.editId) {

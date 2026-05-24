@@ -22,7 +22,7 @@ class SessionGroupResponse(BaseModel):
 
 # --- Category ---
 class CategoryCreate(BaseModel):
-    key: str
+    key: str | None = None
     label: str
     color: str = "#607d8b"
     order: int = 0

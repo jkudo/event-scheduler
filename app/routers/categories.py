@@ -15,10 +15,21 @@ def list_categories(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=CategoryResponse, status_code=201)
 def create_category(data: CategoryCreate, db: Session = Depends(get_db)):
-    existing = db.query(Category).filter(Category.key == data.key).first()
+    # Auto-generate key if not provided
+    if data.key:
+        key = data.key
+    else:
+        # Generate unique key: cat_1, cat_2, ...
+        n = 1
+        while True:
+            key = f"cat_{n}"
+            if not db.query(Category).filter(Category.key == key).first():
+                break
+            n += 1
+    existing = db.query(Category).filter(Category.key == key).first()
     if existing:
-        raise HTTPException(status_code=400, detail=f"Key '{data.key}' は既に使用されています")
-    cat = Category(key=data.key, label=data.label, color=data.color, order=data.order)
+        raise HTTPException(status_code=400, detail=f"Key '{key}' は既に使用されています")
+    cat = Category(key=key, label=data.label, color=data.color, order=data.order)
     db.add(cat)
     db.commit()
     db.refresh(cat)

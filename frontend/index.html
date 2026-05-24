@@ -1486,7 +1486,6 @@
                 <div v-for="cat in categories" :key="'catsettings-'+cat.id" style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fff;border-radius:6px;margin-bottom:8px;border:1px solid #e0e0e0">
                     <span :style="{width:'16px',height:'16px',borderRadius:'50%',background:cat.color,flexShrink:0}"></span>
                     <span style="font-weight:600;flex:1">{{ cat.label }}</span>
-                    <span style="font-size:0.8rem;color:#888">key: {{ cat.key }}</span>
                     <span style="font-size:0.8rem;color:#888">order: {{ cat.order }}</span>
                     <button class="btn btn-sm edit-btn" @click="editCatSetting(cat)" style="padding:4px 10px;font-size:0.8rem">編集</button>
                     <button class="del-btn" @click="deleteCatSetting(cat.id)" style="padding:4px 10px;font-size:0.8rem">削除</button>
@@ -1496,10 +1495,6 @@
                 <div style="margin-top:16px;padding:12px;background:#faf5fc;border-radius:6px;border:1px dashed #ce93d8">
                     <strong style="font-size:0.85rem;color:#6a1b9a">{{ catSettingForm.editId ? 'カテゴリ編集' : '新しいカテゴリを追加' }}</strong>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:flex-end">
-                        <div class="form-group" style="margin:0;flex:1;min-width:100px">
-                            <label style="font-size:0.8rem">キー(英字)</label>
-                            <input v-model="catSettingForm.key" placeholder="例: setup" style="width:100%" :disabled="!!catSettingForm.editId">
-                        </div>
                         <div class="form-group" style="margin:0;flex:1;min-width:100px">
                             <label style="font-size:0.8rem">表示名</label>
                             <input v-model="catSettingForm.label" placeholder="例: 設営" style="width:100%">
