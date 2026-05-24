@@ -435,6 +435,13 @@ createApp({
                 sessDetailSession.value = s || null;
             }
         }
+        function toggleSessDetailLock() {
+            if (!sessDetailSession.value) return;
+            const cat = sessDetailSession.value.category;
+            if (cat === 'reception') receptionLocked.value = !receptionLocked.value;
+            else if (cat === 'social') socialLocked.value = !socialLocked.value;
+            else matrixLocked.value = !matrixLocked.value;
+        }
         function onPhotoChange(e) {
             const file = e.target.files[0];
             sessPhotoPreview.value = file ? URL.createObjectURL(file) : '';
@@ -1669,7 +1676,7 @@ createApp({
             switchTab, catLabel, fmt, fmtShort, sortedPrefs,
             cancelEditRoom, editRoom, submitRoom, deleteRoom,
             onVenueMapChange, cancelEditVenueMap, editVenueMap, submitVenueMap, deleteVenueMap,
-            sessDetailSession, sessDetailEntry, sessDetailLocked, toggleSessionDetail,
+            sessDetailSession, sessDetailEntry, sessDetailLocked, toggleSessionDetail, toggleSessDetailLock,
             onPhotoChange, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
             calcStaffMsg, calcStaffSummary, calcRequiredStaff,
             newStaffAvails, newAvailForm, addNewStaffAvail,

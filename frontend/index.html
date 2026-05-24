@@ -1498,7 +1498,8 @@
             <div v-if="sessDetailEntry" style="margin-top:16px;padding:16px;background:#f0f4ff;border-radius:8px">
                 <strong style="font-size:0.9rem">担当スタッフ</strong>
                 <span style="font-size:0.8rem;color:#666;margin-left:8px">(必要: {{ sessDetailSession.required_staff }}名)</span>
-                <span v-if="sessDetailLocked" class="badge" style="margin-left:8px;background:#e8eaed;color:#5f6368">&#128274; ロック中</span>
+                <button v-if="sessDetailLocked" @click="toggleSessDetailLock" class="badge" style="margin-left:8px;background:#e8eaed;color:#5f6368;cursor:pointer;border:none" title="クリックでロック解除">&#128274; ロック中</button>
+                <button v-else @click="toggleSessDetailLock" class="badge" style="margin-left:8px;background:#e8f5e9;color:#2e7d32;cursor:pointer;border:none" title="クリックでロック">&#128275; 編集可能</button>
                 <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
                     <template v-if="sessDetailEntry.assigned_staff.length">
                         <span class="badge" v-for="a in sessDetailEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px">
