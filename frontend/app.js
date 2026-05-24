@@ -50,7 +50,8 @@ createApp({
             speaker_org: '', speaker_title: '', speaker_profile: ''
         });
         const ltTalks = reactive([]);
-        const staffForm = reactive({ editId: null, name: '', slack_name: '', role: 'session', experience_count: 0, english_ok: false });
+        const staffForm = reactive({ editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false });
+        const roleDropdownOpen = ref(false);
         const prefForms = reactive({});
         const availForms = reactive({});
 
@@ -599,12 +600,12 @@ createApp({
             staffForm.editId = s.id;
             staffForm.name = s.name;
             staffForm.slack_name = s.slack_name || '';
-            staffForm.role = s.role || 'session';
+            staffForm.role = Array.isArray(s.role) ? [...s.role] : (s.role ? s.role.split(',') : ['session']);
             staffForm.experience_count = s.experience_count;
             staffForm.english_ok = !!s.english_ok;
         }
         function cancelEditStaff() {
-            Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: 'session', experience_count: 0, english_ok: false });
+            Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false });
             newStaffAvails.splice(0);
             newAvailForm.start = '';
             newAvailForm.end = '';
@@ -721,7 +722,8 @@ createApp({
             }
             return staffs.value.filter(s => {
                 if (assignedIds.has(s.id)) return false;
-                if (s.role !== targetRole) return false;
+                const roles = Array.isArray(s.role) ? s.role : (s.role || '').split(',');
+                if (!roles.includes(targetRole)) return false;
                 // 時間重複チェック
                 const busy = staffBusyMap[s.id] || [];
                 for (const b of busy) {
@@ -1631,7 +1633,7 @@ createApp({
         return {
             tab, rooms, sessions, staffs, schedule, staffAssignments,
             scheduleMsg, scheduleMsgError, sessPhotoPreview, sessPhoto,
-            roomForm, sessForm, staffForm, prefForms, availForms, ltTalks,
+            roomForm, sessForm, staffForm, roleDropdownOpen, prefForms, availForms, ltTalks,
             venueMaps, venueMapForm, venueMapPreview, venueMapInput, mapModal,
             switchTab, catLabel, fmt, fmtShort, sortedPrefs,
             cancelEditRoom, editRoom, submitRoom, deleteRoom,

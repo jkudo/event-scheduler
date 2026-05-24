@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 # --- VenueMap ---
@@ -138,7 +138,7 @@ class StaffCreate(BaseModel):
     name: str
     slack_name: str = ""
     english_ok: bool = False
-    role: str = "general"
+    role: list[str] = ["session"]
     max_hours: int = 8
     experience_count: int = 0
     skills: list[str] = []
@@ -150,7 +150,7 @@ class StaffUpdate(BaseModel):
     name: str
     slack_name: str = ""
     english_ok: bool = False
-    role: str = "general"
+    role: list[str] = ["session"]
     max_hours: int = 8
     experience_count: int = 0
     skills: list[str] = []
@@ -162,7 +162,7 @@ class StaffResponse(BaseModel):
     slack_name: str
     photo: str
     english_ok: bool
-    role: str
+    role: list[str]
     max_hours: int
     experience_count: int
     skills: list[StaffSkillResponse] = []
@@ -170,6 +170,13 @@ class StaffResponse(BaseModel):
     availabilities: list[StaffAvailabilityResponse] = []
 
     model_config = {"from_attributes": True}
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def _split_role(cls, v):
+        if isinstance(v, str):
+            return [r for r in v.split(",") if r]
+        return v
 
 
 # --- Assignment ---

@@ -38,7 +38,7 @@
         </nav>
 
         <!-- メインコンテンツ -->
-        <main class="main-content">
+        <main class="main-content" @click="roleDropdownOpen = false">
 
         <!-- ===== 部屋管理 ===== -->
         <div class="panel" :class="{ active: tab === 'rooms' }">
@@ -242,13 +242,24 @@
             <div class="form-row">
                 <div class="form-group"><label>名前</label><input v-model="staffForm.name" placeholder="例: 山田 太郎"></div>
                 <div class="form-group"><label>Slack名</label><input v-model="staffForm.slack_name" placeholder="例: @yamada-taro"></div>
-                <div class="form-group">
+                <div class="form-group" style="position:relative">
                     <label>担当</label>
-                    <select v-model="staffForm.role">
-                        <option value="session">セッション</option>
-                        <option value="reception">受付案内</option>
-                        <option value="social">懇親会</option>
-                    </select>
+                    <div @click.stop="roleDropdownOpen = !roleDropdownOpen"
+                         style="padding:8px 12px;border:1px solid #ccc;border-radius:4px;font-size:0.9rem;cursor:pointer;background:#fff;display:flex;justify-content:space-between;align-items:center;min-height:38px">
+                        <span v-if="staffForm.role.length">{{ staffForm.role.map(r => catLabel(r)).join(', ') }}</span>
+                        <span v-else style="color:#999">選択してください</span>
+                        <span style="font-size:0.7rem;color:#666">&#9660;</span>
+                    </div>
+                    <div v-if="roleDropdownOpen"
+                         style="position:absolute;top:100%;left:0;right:0;z-index:10;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:4px 0">
+                        <label v-for="opt in [{v:'session',l:'セッション'},{v:'reception',l:'受付案内'},{v:'social',l:'懇親会'}]" :key="opt.v"
+                               style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:0.9rem;margin:0"
+                               @mousedown.prevent>
+                            <input type="checkbox" :value="opt.v" v-model="staffForm.role"
+                                   style="width:16px;height:16px;cursor:pointer;accent-color:#1a73e8">
+                            {{ opt.l }}
+                        </label>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>参加回数</label>
@@ -359,7 +370,7 @@
                                    style="display:none" @change="uploadStaffPhoto(s.id, $event)">
                             <h3 style="margin:0">
                                 {{ s.name }}
-                                <span class="badge">{{ catLabel(s.role) }}</span>
+                                <span class="badge" v-for="r in (Array.isArray(s.role) ? s.role : [s.role])" :key="r">{{ catLabel(r) }}</span>
                                 <span v-if="s.english_ok" class="badge" style="background:#e0f2f1;color:#00695c">EN</span>
                                 <span v-if="s.slack_name" style="font-weight:normal;font-size:0.85rem;color:#666">{{ s.slack_name }}</span>
                                 <span v-if="s.experience_count === 0" class="badge warn">初参加</span>
@@ -912,7 +923,7 @@
             <div v-for="e in staffAssignments" :key="'sd-'+e.staff.id" class="schedule-card"
                  v-show="!staffDetailFilter || e.staff.id === staffDetailFilter">
                 <h3>{{ e.staff.name }}
-                    <span class="badge">{{ catLabel(e.staff.role) }}</span>
+                    <span class="badge" v-for="r in (Array.isArray(e.staff.role) ? e.staff.role : [e.staff.role])" :key="r">{{ catLabel(r) }}</span>
                     <span v-if="e.staff.english_ok" class="badge" style="background:#e0f2f1;color:#00695c">EN</span>
                     <span class="badge" style="background:#e8f0fe;color:#1a73e8">担当: {{ e.assigned_sessions.length }}件</span>
                 </h3>

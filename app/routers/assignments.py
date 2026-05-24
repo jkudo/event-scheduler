@@ -147,8 +147,9 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
         # スタッフをスコアリング
         scored_staffs = []
         for staff in staffs:
-            # ロールフィルタ: 専任ロールのみ（兼務なし）
-            if staff.role != session_role:
+            # ロールフィルタ: スタッフの担当ロール（カンマ区切り）にセッションロールが含まれるか
+            staff_roles = [r for r in (staff.role or "").split(",") if r]
+            if session_role not in staff_roles:
                 continue
             # 活動可能時間チェック (必須)
             if not _is_available(staff, session):
@@ -161,7 +162,7 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
             skill_names = [sk.skill for sk in staff.skills]
             if session.category in skill_names:
                 score += 10
-            if staff.role == session_role:
+            if session_role in staff_roles:
                 score += 5
             # 英語対応: 英語必要セッションでは英語対応スタッフを優先
             if session.english_required and staff.english_ok:
@@ -201,7 +202,7 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
         if effective_required >= 2 and has_raw_newcomer:
             for _score, staff in scored_staffs:
                 if _is_effectively_experienced(staff) and _can_assign(staff):
-                    assignment = Assignment(session_id=session.id, staff_id=staff.id, role=staff.role)
+                    assignment = Assignment(session_id=session.id, staff_id=staff.id, role=session_role)
                     db.add(assignment)
                     staff_sessions[staff.id].append(session)
                     staff_hours[staff.id] += session_duration
@@ -218,7 +219,7 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
                 continue
 
             # 割り当て
-            assignment = Assignment(session_id=session.id, staff_id=staff.id, role=staff.role)
+            assignment = Assignment(session_id=session.id, staff_id=staff.id, role=session_role)
             db.add(assignment)
             staff_sessions[staff.id].append(session)
             staff_hours[staff.id] += session_duration
