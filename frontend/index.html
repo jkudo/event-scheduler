@@ -1743,7 +1743,7 @@
                     </div>
                 </div>
             </template>
-            <template v-else>
+            <template v-else-if="sessDetailSession.category !== 'overall'">
                 <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:8px">
                     <img v-if="sessDetailSession.speaker_photo" :src="sessDetailSession.speaker_photo" :alt="sessDetailSession.speaker"
                          style="width:180px;height:180px;border-radius:8px;object-fit:cover;border:2px solid #e0e0e0;flex-shrink:0">
