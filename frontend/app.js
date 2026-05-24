@@ -38,7 +38,7 @@ createApp({
                 if (!(c.key in categoryForms)) categoryForms[c.key] = { editId: null, title: '', start_time: '', end_time: '', room_id: null, required_staff: 2, english_required: false, notes: '' };
                 if (!(c.key in categoryAssignMsgs)) categoryAssignMsgs[c.key] = '';
                 if (!(c.key in categoryStaffFilters)) categoryStaffFilters[c.key] = 0;
-                if (!(c.key in catGroupTabs)) catGroupTabs[c.key] = sessionGroups.value.length ? sessionGroups.value[0].id : 0;
+                if (!(c.key in catGroupTabs)) catGroupTabs[c.key] = catDates.value.length ? catDates.value[0] : 0;
                 if (!(c.key in catSelectedSessions)) catSelectedSessions[c.key] = new Set();
             });
         }
@@ -140,7 +140,16 @@ createApp({
         // --- API ---
         async function loadRooms() { rooms.value = await (await fetch(API + '/api/rooms/')).json(); }
         async function loadVenueMaps() { venueMaps.value = await (await fetch(API + '/api/venue-maps/')).json(); }
-        async function loadSessions() { sessions.value = await (await fetch(API + '/api/sessions/')).json(); }
+        async function loadSessions() {
+            sessions.value = await (await fetch(API + '/api/sessions/')).json();
+            // セッション読み込み後、カテゴリタブのデフォルトを最初の日付に設定
+            const dates = catDates.value;
+            if (dates.length) {
+                categories.value.forEach(c => {
+                    if (catGroupTabs[c.key] === 0) catGroupTabs[c.key] = dates[0];
+                });
+            }
+        }
         async function loadStaffs() {
             const data = await (await fetch(API + '/api/staffs/')).json();
             staffs.value = data;
@@ -959,18 +968,30 @@ createApp({
             if (!matrixStaffFilter.value) return sessionSchedule.value;
             return sessionSchedule.value.filter(e => _hasStaff(e, matrixStaffFilter.value));
         });
+        // カテゴリ内の日付一覧を自動検出
+        const catDates = computed(() => {
+            const dates = new Set();
+            sessions.value.forEach(s => {
+                if (s.start_time) dates.add(s.start_time.slice(0, 10));
+            });
+            return [...dates].sort();
+        });
         function catGroupFiltered(catKey) {
             const sess = categorySessions.value[catKey] || [];
-            const gid = catGroupTabs[catKey];
-            if (!gid) return sess;
-            return sess.filter(e => e.session.group_id === gid);
+            const tab = catGroupTabs[catKey];
+            if (!tab || tab === 0) return sess; // 全日程
+            // tab = 日付文字列 or グループID
+            if (typeof tab === 'string') {
+                return sess.filter(e => e.session.start_time && e.session.start_time.startsWith(tab));
+            }
+            return sess.filter(e => e.session.group_id === tab);
         }
         function catTimelineByGroup(catKey) {
             const result = {};
             const sess = categorySessions.value[catKey] || [];
-            sessionGroups.value.forEach(g => {
-                result[g.id] = sess
-                    .filter(e => e.session.group_id === g.id)
+            catDates.value.forEach(date => {
+                result[date] = sess
+                    .filter(e => e.session.start_time && e.session.start_time.startsWith(date))
                     .sort((a, b) => new Date(a.session.start_time) - new Date(b.session.start_time));
             });
             return result;
@@ -1788,18 +1809,24 @@ createApp({
         function catGridConfig(catKey) {
             const sess = catGroupFiltered(catKey);
             if (!sess.length) return null;
-            const gid = catGroupTabs[catKey];
-            // グループ選択時はそのグループの統一時間範囲を使用
-            if (gid && unifiedGroupConfig.value[gid]) return unifiedGroupConfig.value[gid];
-            // 全日程の場合は全セッションの時間範囲
+            const tab = catGroupTabs[catKey];
+            // 日付選択時はその日のセッション全体の時間範囲を使用
             const slotMs = SLOT_MIN * 60 * 1000;
             let minT = Infinity, maxT = -Infinity;
-            schedule.value.forEach(e => {
-                const s = new Date(e.session.start_time).getTime();
-                const end = new Date(e.session.end_time).getTime();
-                if (s < minT) minT = s;
+            // 同じ日付の全セッション（カテゴリ問わず）から時間範囲を算出
+            const targetSessions = (tab && tab !== 0 && typeof tab === 'string')
+                ? sessions.value.filter(s => s.start_time && s.start_time.startsWith(tab))
+                : (tab && typeof tab === 'number' && unifiedGroupConfig.value[tab])
+                    ? null // グループ指定時はunifiedGroupConfigを使用
+                    : sessions.value;
+            if (targetSessions === null) return unifiedGroupConfig.value[tab];
+            targetSessions.forEach(s => {
+                const st = new Date(s.start_time).getTime();
+                const end = new Date(s.end_time).getTime();
+                if (st < minT) minT = st;
                 if (end > maxT) maxT = end;
             });
+            if (minT === Infinity) return null;
             minT = Math.floor(minT / slotMs) * slotMs;
             maxT = Math.ceil(maxT / slotMs) * slotMs;
             return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
@@ -2080,7 +2107,7 @@ createApp({
             return _hasStaff(entry, allStaffFilter.value) ? 1 : 0.15;
         }
 
-        onMounted(async () => { await loadCategories(); await loadSessionGroups(); loadRooms(); loadStaffs(); loadSessions().then(() => loadSchedule()); loadSettings(); });
+        onMounted(async () => { await loadSessionGroups(); await loadCategories(); loadRooms(); loadStaffs(); loadSessions().then(() => loadSchedule()); loadSettings(); });
 
         return {
             tab, rooms, sessions, staffs, schedule, staffAssignments,
@@ -2107,7 +2134,7 @@ createApp({
             grpGridConfig, grpGridRooms, grpGridStyle, grpGridLabels, grpSessionStyle, grpSelectedSession, grpSelectedEntry,
             // 動的カテゴリ
             categories, dynamicCatKeys, categoryLocks, categoryForms, categoryAssignMsgs, categoryStaffFilters,
-            categorySessions, catGroupTabs, catGroupFiltered, catTimelineByGroup, filteredCategorySessions, catSessionOpacity,
+            categorySessions, catDates, catGroupTabs, catGroupFiltered, catTimelineByGroup, filteredCategorySessions, catSessionOpacity,
             cancelEditCategory, editCategory, submitCategory, deleteCategory, autoAssignCategory, clearCategoryAssignments,
             catSelectedSessions, autoAssignCategorySelected, toggleCatSessionSelect, toggleCatSelectAll,
             catGridConfig, catGridRooms, catGridStyle, catGridLabels, catSessionStyle, catSelectedSession, catSelectedEntry,

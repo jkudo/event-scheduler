@@ -542,12 +542,12 @@
             <h2>{{ cat.label }}管理</h2>
 
             <!-- 日程タブ -->
-            <div v-if="sessionGroups.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
-                <button v-for="grp in sessionGroups" :key="'catm-tab-'+cat.key+'-'+grp.id"
+            <div v-if="catDates.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+                <button v-for="date in catDates" :key="'catm-tab-'+cat.key+'-'+date"
                     style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
-                    :style="catGroupTabs[cat.key] === grp.id ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="catGroupTabs[cat.key] = grp.id">
-                    {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:6px;font-size:0.8rem">{{ grp.date }}</span>
+                    :style="catGroupTabs[cat.key] === date ? {background: cat.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="catGroupTabs[cat.key] = date">
+                    {{ date }}
                 </button>
                 <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
                     :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
@@ -616,12 +616,12 @@
             </div>
 
             <!-- 日程タブ -->
-            <div v-if="sessionGroups.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
-                <button v-for="grp in sessionGroups" :key="'cat-tab-'+cat.key+'-'+grp.id"
+            <div v-if="catDates.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+                <button v-for="date in catDates" :key="'cat-tab-'+cat.key+'-'+date"
                     style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
-                    :style="catGroupTabs[cat.key] === grp.id ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="catGroupTabs[cat.key] = grp.id">
-                    {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:6px;font-size:0.8rem">{{ grp.date }}</span>
+                    :style="catGroupTabs[cat.key] === date ? {background: cat.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="catGroupTabs[cat.key] = date">
+                    {{ date }}
                 </button>
                 <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
                     :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
@@ -688,14 +688,14 @@
 
                 <!-- 全日程: タイムライン表示 -->
                 <template v-else>
-                    <div v-for="grp in sessionGroups" :key="'cat-tl-grp-'+cat.key+'-'+grp.id" style="margin-bottom:32px">
+                    <div v-for="date in catDates" :key="'cat-tl-grp-'+cat.key+'-'+date" style="margin-bottom:32px">
                         <h3 style="margin:0 0 12px;padding:8px 16px;border-radius:6px;color:#fff;font-size:1rem"
-                            :style="{background: grp.color || '#1a73e8'}">
-                            {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:8px;font-size:0.85rem">{{ grp.date }}</span>
+                            :style="{background: cat.color || '#1a73e8'}">
+                            {{ date }}
                         </h3>
-                        <div v-if="!(catTimelineByGroup(cat.key)[grp.id] || []).length" style="color:#888;font-size:0.9rem;margin-bottom:12px">この日程に{{ cat.label }}はありません。</div>
+                        <div v-if="!(catTimelineByGroup(cat.key)[date] || []).length" style="color:#888;font-size:0.9rem;margin-bottom:12px">この日程に{{ cat.label }}はありません。</div>
                         <div v-else style="display:flex;flex-direction:column;gap:2px">
-                            <div v-for="entry in catTimelineByGroup(cat.key)[grp.id]" :key="'cat-tl-'+cat.key+'-'+entry.session.id"
+                            <div v-for="entry in catTimelineByGroup(cat.key)[date]" :key="'cat-tl-'+cat.key+'-'+entry.session.id"
                                  style="display:flex;align-items:stretch;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid #e0e0e0;transition:opacity .2s"
                                  :style="{opacity: catSessionOpacity(cat.key, entry)}"
                                  @click="toggleSessionDetail(entry.session.id)">
