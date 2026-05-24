@@ -1107,8 +1107,10 @@ createApp({
             }
             return staffs.value.filter(s => {
                 if (assignedIds.has(s.id)) return false;
-                const roles = Array.isArray(s.role) ? s.role : (s.role || '').split(',');
-                if (!roles.includes(targetRole)) return false;
+                if (targetRole !== 'overall') {
+                    const roles = Array.isArray(s.role) ? s.role : (s.role || '').split(',');
+                    if (!roles.includes(targetRole)) return false;
+                }
                 // 時間重複チェック
                 const busy = staffBusyMap[s.id] || [];
                 for (const b of busy) {
