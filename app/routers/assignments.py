@@ -147,8 +147,11 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
         # スタッフをスコアリング
         scored_staffs = []
         for staff in staffs:
-            # スタッフの役割がセッションカテゴリと合わない場合はスキップ
-            if staff.role != session_role:
+            # 受付・懇親会は専任ロール優先、いなければ全ロール許可
+            if session_role in ('reception', 'social'):
+                if staff.role not in (session_role, 'session'):
+                    continue
+            elif staff.role != session_role:
                 continue
             # 活動可能時間チェック (必須)
             if not _is_available(staff, session):
