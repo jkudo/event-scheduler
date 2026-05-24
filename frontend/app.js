@@ -1155,7 +1155,12 @@ createApp({
 
         // グループ別セッション管理
         function groupSessions(gid) {
-            return sessions.value.filter(s => s.group_id === gid && !dynamicCatKeys.value.includes(s.category) && s.category !== 'overall');
+            let list = sessions.value.filter(s => s.group_id === gid && !dynamicCatKeys.value.includes(s.category) && s.category !== 'overall');
+            const tab = grpDateTabs[gid];
+            if (tab && tab !== 0) {
+                list = list.filter(s => s.start_time && s.start_time.startsWith(tab));
+            }
+            return list;
         }
         function cancelEditGroupSession(gid) {
             Object.assign(groupSessForms[gid], {
