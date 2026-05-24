@@ -573,7 +573,8 @@ createApp({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: resetPassword.value })
                 });
-                const data = await res.json();
+                let data;
+                try { data = await res.json(); } catch { data = { detail: 'サーバーエラー (HTTP ' + res.status + ')' }; }
                 if (res.ok) {
                     resetMsg.value = data.message || '全データを初期化しました';
                     resetMsgError.value = false;

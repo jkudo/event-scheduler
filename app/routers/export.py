@@ -885,26 +885,32 @@ def reset_all_data(body: ResetRequest, db: Session = Depends(get_db)):
     if body.password != _get_reset_password(db):
         return JSONResponse(status_code=403, content={"detail": "パスワードが正しくありません"})
 
-    db.query(Assignment).delete()
-    db.query(StaffAvailability).delete()
-    db.query(StaffPreferredSession).delete()
-    db.query(StaffSkill).delete()
-    db.query(Staff).delete()
-    db.query(LTTalk).delete()
-    db.query(SessionModel).delete()
-    db.query(SessionGroup).delete()
-    db.query(Category).delete()
-    db.query(VenueMap).delete()
-    db.query(Room).delete()
-    db.flush()
+    try:
+        db.query(Assignment).delete()
+        db.query(StaffAvailability).delete()
+        db.query(StaffPreferredSession).delete()
+        db.query(StaffSkill).delete()
+        db.query(Staff).delete()
+        db.query(LTTalk).delete()
+        db.query(SessionModel).delete()
+        db.query(SessionGroup).delete()
+        db.query(Category).delete()
+        db.query(VenueMap).delete()
+        db.query(Room).delete()
+        db.flush()
 
-    # uploads ディレクトリをクリア
-    if UPLOAD_DIR.exists():
-        shutil.rmtree(UPLOAD_DIR)
-    UPLOAD_DIR.mkdir(exist_ok=True)
+        # uploads ディレクトリをクリア
+        if UPLOAD_DIR.exists():
+            shutil.rmtree(UPLOAD_DIR)
+        UPLOAD_DIR.mkdir(exist_ok=True)
 
-    db.commit()
-    return {"status": "ok", "message": "全データを初期化しました"}
+        db.commit()
+        return {"status": "ok", "message": "全データを初期化しました"}
+    except Exception as e:
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"detail": f"初期化に失敗しました: {str(e)}"})
 
 
 class ChangeResetPasswordRequest(BaseModel):
