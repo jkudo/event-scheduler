@@ -70,7 +70,7 @@ createApp({
                 if (!(g.id in groupSessForms)) groupSessForms[g.id] = {
                     editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
                     room_id: null, category: 'general', required_staff: 1, english_required: false,
-                    description: '', notes: '', currentPhoto: '',
+                    description: '', notes: '', currentPhoto: '', photoPreview: '',
                     speaker_org: '', speaker_title: '', speaker_profile: '',
                     _ltTalks: reactive([])
                 };
@@ -1189,7 +1189,7 @@ createApp({
             Object.assign(groupSessForms[gid], {
                 editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
                 room_id: rooms.value.length ? rooms.value[0].id : null,
-                category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '',
+                category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '', photoPreview: '',
                 speaker_org: '', speaker_title: '', speaker_profile: ''
             });
             // Clear LT talks for this group
@@ -1202,7 +1202,7 @@ createApp({
                 room_id: s.room_id, category: s.category,
                 required_staff: s.required_staff, english_required: !!s.english_required,
                 description: s.description || '', notes: s.notes || '',
-                currentPhoto: s.speaker_photo || '',
+                currentPhoto: s.speaker_photo || '', photoPreview: '',
                 speaker_org: s.speaker_org || '', speaker_title: s.speaker_title || '',
                 speaker_profile: s.speaker_profile || ''
             });
