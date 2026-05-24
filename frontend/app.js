@@ -200,6 +200,20 @@ createApp({
         async function loadStaffAssignments() {
             staffAssignments.value = ((await (await fetch(API + '/api/assignments/staff-schedule')).json()).staff_assignments || []);
         }
+        // 「全員」overallセッションを全スタッフの担当に含めたスタッフ別詳細
+        const staffAssignmentsWithAll = computed(() => {
+            const allOverall = schedule.value
+                .filter(e => e.session.category === 'overall' && e.session.required_staff === -1)
+                .map(e => e.session);
+            if (!allOverall.length) return staffAssignments.value;
+            return staffAssignments.value.map(e => {
+                const existingIds = new Set(e.assigned_sessions.map(s => s.id));
+                const extras = allOverall.filter(s => !existingIds.has(s.id));
+                if (!extras.length) return e;
+                const merged = [...e.assigned_sessions, ...extras].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+                return { ...e, assigned_sessions: merged };
+            });
+        });
 
         function exportExcel() {
             window.open(API + '/api/export/excel', '_blank');
@@ -2533,7 +2547,7 @@ createApp({
         onMounted(async () => { await loadSessionGroups(); await loadCategories(); loadRooms(); loadStaffs(); loadSessions().then(() => loadSchedule()); loadSettings(); });
 
         return {
-            tab, rooms, sessions, staffs, schedule, staffAssignments,
+            tab, rooms, sessions, staffs, schedule, staffAssignments, staffAssignmentsWithAll,
             scheduleMsg, scheduleMsgError, sessPhotoPreview, sessPhoto,
             roomForm, sessForm, staffForm, roleDropdownOpen, prefForms, availForms, ltTalks,
             venueMaps, venueMapForm, venueMapPreview, venueMapInput, mapModal,

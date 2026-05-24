@@ -1070,7 +1070,8 @@
                             </div>
                             <div v-else-if="entry.session.speaker && entry.session.speaker !== '-' && entry.session.speaker !== 'スタッフ'" class="tl-session-speaker">{{ entry.session.speaker }}</div>
                             <div class="tl-session-staff">
-                                <template v-if="entry.assigned_staff.length">
+                                <span v-if="entry.session.required_staff === -1" class="badge" style="background:#e65100;color:#fff">全員</span>
+                                <template v-else-if="entry.assigned_staff.length">
                                     <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
@@ -1128,8 +1129,8 @@
                 </select>
             </div>
 
-            <p v-if="!staffAssignments.length">スタッフがまだ登録されていません。</p>
-            <div v-for="e in staffAssignments" :key="'sd-'+e.staff.id" class="schedule-card"
+            <p v-if="!staffAssignmentsWithAll.length">スタッフがまだ登録されていません。</p>
+            <div v-for="e in staffAssignmentsWithAll" :key="'sd-'+e.staff.id" class="schedule-card"
                  v-show="!staffDetailFilter || e.staff.id === staffDetailFilter">
                 <div style="display:flex;align-items:center;gap:10px">
                     <img v-if="e.staff.photo" :src="e.staff.photo" :alt="e.staff.name" class="speaker-photo">
