@@ -1106,6 +1106,7 @@
             <div v-for="e in staffAssignments" :key="'sd-'+e.staff.id" class="schedule-card"
                  v-show="!staffDetailFilter || e.staff.id === staffDetailFilter">
                 <h3>{{ e.staff.name }}
+                    <span v-if="e.staff.slack_name" style="font-size:0.85rem;font-weight:400;color:#888">a.k.a {{ e.staff.slack_name }}</span>
                     <span class="badge" v-for="r in (Array.isArray(e.staff.role) ? e.staff.role : [e.staff.role])" :key="r">{{ catLabel(r) }}</span>
                     <span v-if="e.staff.english_ok" class="badge" style="background:#e0f2f1;color:#00695c">EN</span>
                     <span v-if="e.staff.experience_count === 0" class="badge warn">初参加</span>
