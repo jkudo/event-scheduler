@@ -564,10 +564,10 @@
 
             <!-- セッション一覧 -->
             <h3 style="margin-top:24px">セッション一覧</h3>
-            <table v-if="(groupSchedule[grp.id] || []).length">
-                <thead><tr><th style="width:30px"><input type="checkbox" @change="toggleGroupSelectAll(grp.id)" :checked="groupSelectedSessions[grp.id] && groupSelectedSessions[grp.id].size === (groupSchedule[grp.id] || []).length && (groupSchedule[grp.id] || []).length > 0"></th><th>セッション</th><th>時間</th><th>部屋</th><th>担当スタッフ</th></tr></thead>
+            <table v-if="grpDateFiltered(grp.id).length">
+                <thead><tr><th style="width:30px"><input type="checkbox" @change="toggleGroupSelectAll(grp.id)" :checked="groupSelectedSessions[grp.id] && groupSelectedSessions[grp.id].size === grpDateFiltered(grp.id).length && grpDateFiltered(grp.id).length > 0"></th><th>セッション</th><th>時間</th><th>部屋</th><th>担当スタッフ</th></tr></thead>
                 <tbody>
-                    <tr v-for="e in (groupSchedule[grp.id] || [])" :key="'ga-'+grp.id+'-'+e.session.id"
+                    <tr v-for="e in grpDateFiltered(grp.id)" :key="'ga-'+grp.id+'-'+e.session.id"
                         :style="{ opacity: groupSessionOpacity(grp.id, e) }">
                         <td><input type="checkbox" :checked="groupSelectedSessions[grp.id] && groupSelectedSessions[grp.id].has(e.session.id)" @change="toggleGroupSessionSelect(grp.id, e.session.id)"></td>
                         <td><a href="#" @click.prevent="toggleSessionDetail(e.session.id)" style="color:#1a73e8;text-decoration:none"><strong>{{ e.session.title }}</strong></a></td>
