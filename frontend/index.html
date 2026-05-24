@@ -26,7 +26,7 @@
             <button class="sidebar-item" :class="{ active: tab === 'venue-maps' }" @click="switchTab('venue-maps')">会場地図</button>
             <div class="sidebar-section">スタッフ配置</div>
             <button class="sidebar-item" :class="{ active: tab === 'overall-assign' }" @click="switchTab('overall-assign')">全体スケジュール担当</button>
-            <button v-for="grp in sessionGroups" :key="'nav-ga-'+grp.id" class="sidebar-item" :class="{ active: tab === 'grp-'+grp.id+'-assign' }" @click="switchTab('grp-'+grp.id+'-assign')">{{ grp.label }} 担当</button>
+            <button v-for="grp in sessionGroups" :key="'nav-ga-'+grp.id" class="sidebar-item" :class="{ active: tab === 'grp-'+grp.id+'-assign' }" @click="switchTab('grp-'+grp.id+'-assign')">{{ grp.label }}担当</button>
             <button v-for="cat in categories" :key="'nav-a-'+cat.key" class="sidebar-item" :class="{ active: tab === cat.key }" @click="switchTab(cat.key)">{{ cat.label }}担当</button>
             <button class="sidebar-item" :class="{ active: tab === 'algorithm' }" @click="switchTab('algorithm')">配置アルゴリズム</button>
             <div class="sidebar-section">出力</div>
@@ -609,7 +609,7 @@
         <template v-for="grp in sessionGroups" :key="'grpa-'+grp.id">
         <div class="panel" :class="{ active: tab === 'grp-'+grp.id+'-assign' }">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                <h2 style="margin:0">{{ grp.label }} 担当</h2>
+                <h2 style="margin:0">{{ grp.label }}担当</h2>
                 <button @click="groupLocks[grp.id] = !groupLocks[grp.id]"
                         :style="{ background: groupLocks[grp.id] ? '#e8eaed' : '#fce8e6', color: groupLocks[grp.id] ? '#5f6368' : '#c5221f', border: groupLocks[grp.id] ? '1px solid #dadce0' : '1px solid #c5221f', borderRadius: '20px', padding: '5px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }">
                     <span v-if="groupLocks[grp.id]">&#128274; ロック中</span>
