@@ -52,6 +52,8 @@ createApp({
         const ltTalks = reactive([]);
         const staffForm = reactive({ editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
         const roleDropdownOpen = ref(false);
+        const newStaffPhotoFile = ref(null);
+        const staffPhotoPreview = ref('');
         const prefForms = reactive({});
         const availForms = reactive({});
 
@@ -588,10 +590,16 @@ createApp({
             } else {
                 payload.availabilities = newStaffAvails.map(a => ({ start_time: a.start_time, end_time: a.end_time }));
                 payload.preferred_sessions = newStaffPrefs.map(p => ({ session_id: p.session_id, priority: p.priority }));
-                await fetch(API + '/api/staffs/', {
+                const res = await fetch(API + '/api/staffs/', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                if (res.ok && newStaffPhotoFile.value) {
+                    const created = await res.json();
+                    const fd = new FormData();
+                    fd.append('photo', newStaffPhotoFile.value);
+                    await fetch(API + `/api/staffs/${created.id}/photo`, { method: 'POST', body: fd });
+                }
             }
             cancelEditStaff();
             await loadStaffs();
@@ -607,6 +615,7 @@ createApp({
         }
         function cancelEditStaff() {
             Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
+            clearNewStaffPhoto();
             newStaffAvails.splice(0);
             newAvailForm.start = '';
             newAvailForm.end = '';
@@ -615,6 +624,16 @@ createApp({
             newPrefForm.priority = 1;
         }
         async function deleteStaff(id) { await fetch(API + `/api/staffs/${id}`, { method: 'DELETE' }); await loadStaffs(); }
+        function onNewStaffPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            newStaffPhotoFile.value = file;
+            staffPhotoPreview.value = URL.createObjectURL(file);
+        }
+        function clearNewStaffPhoto() {
+            newStaffPhotoFile.value = null;
+            staffPhotoPreview.value = '';
+        }
         async function uploadStaffPhoto(staffId, event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1654,7 +1673,7 @@ createApp({
             newStaffAvails, newAvailForm, addNewStaffAvail,
             newStaffPrefs, newPrefForm, addNewStaffPref, sessionTitle,
             staffAssignCount, editingStaffPrefs, editingStaffAvails,
-            submitStaff, editStaff, cancelEditStaff, deleteStaff, uploadStaffPhoto, deleteStaffPhoto, addPref, removePref, addAvail, removeAvail,
+            submitStaff, editStaff, cancelEditStaff, deleteStaff, uploadStaffPhoto, deleteStaffPhoto, onNewStaffPhoto, clearNewStaffPhoto, staffPhotoPreview, addPref, removePref, addAvail, removeAvail,
             sessionSchedule, receptionSessions, socialSessions,
             assignStaffSelect, availableStaffs, addAssignment, removeAssignment,
             selectedSessions, toggleSessionSelect, toggleSelectAll,
