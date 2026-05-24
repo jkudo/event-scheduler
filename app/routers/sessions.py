@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from ..config import UPLOAD_DIR
@@ -142,6 +143,29 @@ async def update_session(
         save_path.write_bytes(content)
         session.speaker_photo = f"/uploads/{filename}"
 
+    db.commit()
+    db.refresh(session, ["room", "lt_talks"])
+    return session
+
+
+class SessionMoveRequest(BaseModel):
+    start_time: str
+    end_time: str
+    room_id: int
+
+
+@router.patch("/{session_id}/move", response_model=SessionResponse)
+def move_session(session_id: int, body: SessionMoveRequest, db: Session = Depends(get_db)):
+    """Lightweight endpoint for drag-and-drop: update only time and room."""
+    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    room = db.query(Room).filter(Room.id == body.room_id).first()
+    if not room:
+        raise HTTPException(status_code=400, detail="Room not found")
+    session.start_time = _parse_dt(body.start_time)
+    session.end_time = _parse_dt(body.end_time)
+    session.room_id = body.room_id
     db.commit()
     db.refresh(session, ["room", "lt_talks"])
     return session

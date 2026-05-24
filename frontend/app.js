@@ -20,6 +20,8 @@ createApp({
         const rcStaffFilter = ref(0);
         const scStaffFilter = ref(0);
 
+        let dragDidMove = false; // suppress click after drag-and-drop
+
         const roomForm = reactive({ editId: null, name: '', capacity: null, floor: 1 });
         const venueMaps = ref([]);
         const sessDetailSession = ref(null);
@@ -397,6 +399,8 @@ createApp({
 
         // --- セッション ---
         function toggleSessionDetail(id) {
+            // Suppress click after drag
+            if (dragDidMove) return;
             if (sessDetailSession.value && sessDetailSession.value.id === id) {
                 sessDetailSession.value = null;
             } else {
@@ -976,6 +980,184 @@ createApp({
             };
         }
 
+        // ====================================================================
+        //  ドラッグ & ドロップ（Googleカレンダー風）
+        // ====================================================================
+        const drag = reactive({
+            active: false,
+            mode: null,       // 'move' | 'resize-top' | 'resize-bottom'
+            sessionId: null,
+            entry: null,
+            origStartRow: 0,
+            origEndRow: 0,
+            origColIdx: 0,    // 0-based index into tlRooms
+            curStartRow: 0,
+            curEndRow: 0,
+            curColIdx: 0,
+            startMouseY: 0,
+            startMouseX: 0,
+            gridEl: null,     // .tl-grid DOM element
+            rowHeight: 20,    // px per row (matches gridTemplateRows)
+            colWidth: 0,      // px per room column (computed on drag start)
+            colLeft: 0,       // left edge of first room column in grid
+        });
+
+        function dragSessionStyle(entry) {
+            if (drag.active && drag.sessionId === entry.session.id) {
+                return {
+                    gridRow: `${drag.curStartRow} / ${drag.curEndRow}`,
+                    gridColumn: `${drag.curColIdx + 2}`,
+                    opacity: 0.85,
+                    zIndex: 50,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+                    transition: 'none',
+                    cursor: drag.mode === 'move' ? 'grabbing' : 'ns-resize',
+                };
+            }
+            return {
+                ...tlSessionStyle(entry),
+                opacity: matrixSessionOpacity(entry),
+            };
+        }
+
+        function onDragStart(e, entry) {
+            // Only left mouse button
+            if (e.button !== 0) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            const sessionEl = e.currentTarget;
+            const rect = sessionEl.getBoundingClientRect();
+            const edgeThreshold = 8; // px from top/bottom edge to trigger resize
+            const relY = e.clientY - rect.top;
+
+            let mode = 'move';
+            if (relY <= edgeThreshold) mode = 'resize-top';
+            else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
+
+            const gridEl = sessionEl.closest('.tl-grid');
+            // Compute column geometry from room headers
+            const roomHeaders = gridEl.querySelectorAll('.tl-room-header');
+            let colLeft = 0, colWidth = 0;
+            if (roomHeaders.length) {
+                const gridRect = gridEl.getBoundingClientRect();
+                const firstHeader = roomHeaders[0].getBoundingClientRect();
+                colLeft = firstHeader.left - gridRect.left;
+                colWidth = firstHeader.width;
+            }
+
+            const startRow = timeToRow(entry.session.start_time);
+            const endRow = timeToRow(entry.session.end_time);
+            const ci = tlRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
+
+            dragDidMove = false;
+            drag.active = true;
+            drag.mode = mode;
+            drag.sessionId = entry.session.id;
+            drag.entry = entry;
+            drag.origStartRow = startRow;
+            drag.origEndRow = endRow;
+            drag.origColIdx = ci;
+            drag.curStartRow = startRow;
+            drag.curEndRow = endRow;
+            drag.curColIdx = ci;
+            drag.startMouseY = e.clientY;
+            drag.startMouseX = e.clientX;
+            drag.gridEl = gridEl;
+            drag.colWidth = colWidth;
+            drag.colLeft = colLeft;
+
+            document.addEventListener('mousemove', onDragMove);
+            document.addEventListener('mouseup', onDragEnd);
+        }
+
+        function onDragMove(e) {
+            if (!drag.active) return;
+            dragDidMove = true;
+            const dy = e.clientY - drag.startMouseY;
+            const rowDelta = Math.round(dy / drag.rowHeight);
+
+            if (drag.mode === 'move') {
+                drag.curStartRow = drag.origStartRow + rowDelta;
+                drag.curEndRow = drag.origEndRow + rowDelta;
+                // Column change: compute from mouse X position relative to grid
+                const gridRect = drag.gridEl.getBoundingClientRect();
+                const mouseXInGrid = e.clientX - gridRect.left - drag.colLeft;
+                let newCol = Math.floor(mouseXInGrid / drag.colWidth);
+                newCol = Math.max(0, Math.min(newCol, tlRooms.value.length - 1));
+                drag.curColIdx = newCol;
+            } else if (drag.mode === 'resize-top') {
+                const newStart = drag.origStartRow + rowDelta;
+                if (newStart < drag.curEndRow - 1) {
+                    drag.curStartRow = Math.max(2, newStart); // row 2 is first data row
+                }
+            } else if (drag.mode === 'resize-bottom') {
+                const newEnd = drag.origEndRow + rowDelta;
+                if (newEnd > drag.curStartRow + 1) {
+                    drag.curEndRow = newEnd;
+                }
+            }
+        }
+
+        async function onDragEnd() {
+            document.removeEventListener('mousemove', onDragMove);
+            document.removeEventListener('mouseup', onDragEnd);
+
+            if (!drag.active) return;
+
+            const changed = drag.curStartRow !== drag.origStartRow
+                         || drag.curEndRow !== drag.origEndRow
+                         || drag.curColIdx !== drag.origColIdx;
+
+            if (changed) {
+                const cfg = tlConfig.value;
+                const newStartMs = cfg.minTime + (drag.curStartRow - 2) * cfg.slotMs;
+                const newEndMs = cfg.minTime + (drag.curEndRow - 2) * cfg.slotMs;
+                const newRoomId = tlRooms.value[drag.curColIdx][0];
+
+                function toISO(ms) {
+                    const d = new Date(ms);
+                    const pad = (n) => String(n).padStart(2, '0');
+                    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+                }
+
+                try {
+                    const resp = await fetch(API + `/api/sessions/${drag.sessionId}/move`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            start_time: toISO(newStartMs),
+                            end_time: toISO(newEndMs),
+                            room_id: newRoomId,
+                        }),
+                    });
+                    if (resp.ok) {
+                        await loadSchedule();
+                        await loadSessions();
+                    }
+                } catch (err) {
+                    console.error('Move failed:', err);
+                }
+            }
+
+            drag.active = false;
+            drag.mode = null;
+            drag.sessionId = null;
+            drag.entry = null;
+        }
+
+        function dragCursor(e) {
+            // Used for cursor style on hover near edges
+            const rect = e.currentTarget.getBoundingClientRect();
+            const edgeThreshold = 8;
+            const relY = e.clientY - rect.top;
+            if (relY <= edgeThreshold || rect.bottom - e.clientY <= edgeThreshold) {
+                e.currentTarget.style.cursor = 'ns-resize';
+            } else {
+                e.currentTarget.style.cursor = 'grab';
+            }
+        }
+
         // 部屋ごとのセッション一覧（セッションカテゴリのみ）
         const tlRoomSessions = computed(() => {
             const map = new Map();
@@ -1374,6 +1556,7 @@ createApp({
             selectedSessions, toggleSessionSelect, toggleSelectAll,
             autoAssign, autoAssignSelected, clearAssignments,
             tlRooms, tlGridStyle, tlLabels, tlSessionStyle, tlBreaks,
+            drag, dragSessionStyle, onDragStart, dragCursor,
             rcConfig, rcRooms, rcGridStyle, rcLabels, rcSessionStyle,
             rcSelectedSession, rcSelectedEntry,
             rcForm, rcAssignMsg, cancelEditReception, editReception, submitReception, deleteReception, autoAssignReception,
