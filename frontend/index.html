@@ -959,7 +959,13 @@
                     </span>
                 </div>
                 <template v-if="e.assigned_sessions.length">
-                    <table>
+                    <table style="table-layout:fixed;width:100%">
+                        <colgroup>
+                            <col style="width:100px">
+                            <col>
+                            <col style="width:200px">
+                            <col style="width:120px">
+                        </colgroup>
                         <thead><tr><th>カテゴリ</th><th>セッション</th><th>時間</th><th>部屋</th></tr></thead>
                         <tbody>
                             <tr v-for="s in e.assigned_sessions" :key="'sds-'+s.id">
