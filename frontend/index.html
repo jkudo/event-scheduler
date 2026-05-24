@@ -261,26 +261,20 @@
             <!-- 写真アップロード -->
             <div style="margin-bottom:12px;display:flex;align-items:center;gap:16px">
                 <div>
-                    <img v-if="staffForm.currentPhoto" :src="staffForm.currentPhoto" class="photo-preview">
-                    <img v-else-if="staffPhotoPreview" :src="staffPhotoPreview" class="photo-preview">
+                    <img v-if="staffPhotoPreview" :src="staffPhotoPreview" class="photo-preview">
+                    <img v-else-if="staffForm.currentPhoto" :src="staffForm.currentPhoto" class="photo-preview">
                     <span v-else class="speaker-photo-placeholder" style="width:80px;height:80px;font-size:2rem">{{ staffForm.name ? staffForm.name.charAt(0) : '?' }}</span>
                 </div>
                 <div>
                     <label style="font-weight:600;font-size:0.9rem;display:block;margin-bottom:4px">プロフィール写真</label>
-                    <template v-if="staffForm.editId">
-                        <input type="file" accept="image/jpeg,image/png,image/gif,image/webp"
-                               @change="uploadStaffPhoto(staffForm.editId, $event)">
-                        <div v-if="staffForm.currentPhoto" style="margin-top:4px">
-                            <button class="del-btn" @click="deleteStaffPhoto(staffForm.editId)">写真を削除</button>
-                        </div>
-                    </template>
-                    <template v-else>
-                        <input type="file" accept="image/jpeg,image/png,image/gif,image/webp"
-                               @change="onNewStaffPhoto($event)">
-                        <div v-if="staffPhotoPreview" style="margin-top:4px">
-                            <button class="del-btn" @click="clearNewStaffPhoto">取り消し</button>
-                        </div>
-                    </template>
+                    <input type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                           @change="onNewStaffPhoto($event)">
+                    <div v-if="staffPhotoPreview" style="margin-top:4px">
+                        <button class="del-btn" @click="clearNewStaffPhoto">取り消し</button>
+                    </div>
+                    <div v-else-if="staffForm.editId && staffForm.currentPhoto" style="margin-top:4px">
+                        <button class="del-btn" @click="deleteStaffPhoto(staffForm.editId)">写真を削除</button>
+                    </div>
                 </div>
             </div>
             <div class="form-row">
@@ -406,10 +400,12 @@
                 <div v-for="s in staffs" :key="s.id" class="staff-detail-card">
                     <div style="display:flex;justify-content:space-between;align-items:center">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <img v-if="s.photo" :src="s.photo" :alt="s.name" class="speaker-photo" style="cursor:pointer"
-                                 @click="document.getElementById('staffPhotoInput_'+s.id).click()">
-                            <span v-else class="speaker-photo-placeholder" style="cursor:pointer"
-                                  @click="document.getElementById('staffPhotoInput_'+s.id).click()">{{ s.name.charAt(0) }}</span>
+                            <img v-if="s.photo" :src="s.photo" :alt="s.name" class="speaker-photo"
+                                 :style="staffForm.editId ? '' : 'cursor:pointer'"
+                                 @click="!staffForm.editId && document.getElementById('staffPhotoInput_'+s.id).click()">
+                            <span v-else class="speaker-photo-placeholder"
+                                  :style="staffForm.editId ? '' : 'cursor:pointer'"
+                                  @click="!staffForm.editId && document.getElementById('staffPhotoInput_'+s.id).click()">{{ s.name.charAt(0) }}</span>
                             <input type="file" :id="'staffPhotoInput_'+s.id" accept="image/jpeg,image/png,image/gif,image/webp"
                                    style="display:none" @change="uploadStaffPhoto(s.id, $event)">
                             <h3 style="margin:0">

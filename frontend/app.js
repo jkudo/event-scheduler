@@ -871,6 +871,11 @@ createApp({
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                if (newStaffPhotoFile.value) {
+                    const fd = new FormData();
+                    fd.append('photo', newStaffPhotoFile.value);
+                    await fetch(API + `/api/staffs/${staffForm.editId}/photo`, { method: 'POST', body: fd });
+                }
             } else {
                 payload.availabilities = newStaffAvails.map(a => ({ start_time: a.start_time, end_time: a.end_time }));
                 payload.preferred_sessions = newStaffPrefs.map(p => ({ session_id: p.session_id, priority: p.priority }));
