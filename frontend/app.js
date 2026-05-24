@@ -201,6 +201,14 @@ createApp({
             staffAssignments.value = ((await (await fetch(API + '/api/assignments/staff-schedule')).json()).staff_assignments || []);
         }
         // 「全員」overallセッションを全スタッフの担当に含めたスタッフ別詳細
+        const CAT_PRIORITY = { overall: 0, session: 1 };
+        function _catPriority(cat) {
+            if (cat in CAT_PRIORITY) return CAT_PRIORITY[cat];
+            // 動的カテゴリ: 受付案内系→2, 懇親会系→3, その他→2
+            const c = categories.value.find(c => c.key === cat);
+            if (c) return 2 + c.order * 0.01;
+            return 2;
+        }
         const staffAssignmentsWithAll = computed(() => {
             const allOverall = schedule.value
                 .filter(e => e.session.category === 'overall' && e.session.required_staff === -1)
@@ -210,7 +218,11 @@ createApp({
                 const existingIds = new Set(e.assigned_sessions.map(s => s.id));
                 const extras = allOverall.filter(s => !existingIds.has(s.id));
                 if (!extras.length) return e;
-                const merged = [...e.assigned_sessions, ...extras].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+                const merged = [...e.assigned_sessions, ...extras].sort((a, b) => {
+                    const tc = (a.start_time || '').localeCompare(b.start_time || '');
+                    if (tc !== 0) return tc;
+                    return _catPriority(a.category) - _catPriority(b.category);
+                });
                 return { ...e, assigned_sessions: merged };
             });
         });
