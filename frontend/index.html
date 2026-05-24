@@ -1500,11 +1500,26 @@
                 <span style="font-size:0.8rem;color:#666;margin-left:8px">(必要: {{ sessDetailSession.required_staff }}名)</span>
                 <button v-if="sessDetailLocked" @click="toggleSessDetailLock" class="badge" style="margin-left:8px;background:#e8eaed;color:#5f6368;cursor:pointer;border:none" title="クリックでロック解除">&#128274; ロック中</button>
                 <button v-else @click="toggleSessDetailLock" class="badge" style="margin-left:8px;background:#e8f5e9;color:#2e7d32;cursor:pointer;border:none" title="クリックでロック">&#128275; 編集可能</button>
-                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+                <!-- ロック中: 写真付きプレビュー -->
+                <div v-if="sessDetailLocked" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:12px">
+                    <template v-if="sessDetailEntry.assigned_staff.length">
+                        <div v-for="a in sessDetailEntry.assigned_staff" :key="a.assignment_id" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+                            <img v-if="a.staff.photo" :src="a.staff.photo" :alt="a.staff.name" style="width:40px;height:40px;border-radius:50%;object-fit:cover">
+                            <div v-else style="width:40px;height:40px;border-radius:50%;background:#1a73e8;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.9rem;flex-shrink:0">{{ a.staff.name.charAt(0) }}</div>
+                            <div>
+                                <div style="font-weight:600;font-size:0.9rem">{{ a.staff.name }}</div>
+                                <div v-if="a.staff.role && a.staff.role.length" style="font-size:0.75rem;color:#888">{{ a.staff.role.join(', ') }}</div>
+                            </div>
+                        </div>
+                    </template>
+                    <span v-else class="badge warn">未配置</span>
+                </div>
+                <!-- 編集可能: バッジ表示 -->
+                <div v-else style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
                     <template v-if="sessDetailEntry.assigned_staff.length">
                         <span class="badge" v-for="a in sessDetailEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px">
                             {{ a.staff.name }}
-                            <button v-if="!sessDetailLocked" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                            <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
                         </span>
                     </template>
                     <span v-else class="badge warn">未配置</span>
