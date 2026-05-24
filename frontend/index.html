@@ -912,7 +912,7 @@
             <template v-else>
                 <div v-for="date in catDates" :key="'timeline-grp-'+date" style="margin-bottom:32px">
                     <h3 style="margin:0 0 12px;padding:8px 16px;border-radius:6px;color:#fff;font-size:1rem;background:#1a73e8">
-                        {{ date }}
+                        {{ date }}<span v-if="dateGroupLabels(date).length" style="font-weight:400;margin-left:8px;font-size:0.85rem">({{ dateGroupLabels(date).join(', ') }})</span>
                     </h3>
                     <div style="display:flex;flex-direction:column;gap:2px">
                         <div v-for="entry in allTimelineByGroup[date]" :key="'tl-'+entry.session.id"
