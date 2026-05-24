@@ -586,7 +586,10 @@
                         <td>{{ e.session.room ? e.session.room.name : '' }}</td>
                         <td>
                             <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-                                <span v-if="e.session.required_staff === -1" class="badge" style="background:#e65100;color:#fff;font-weight:600">全員</span>
+                                <span v-if="e.session.required_staff === -1" class="badge" style="background:#e65100;color:#fff;font-weight:600;display:inline-flex;align-items:center;gap:4px">
+                                    全員
+                                    <button v-if="!overallLocked" @click="unsetAllStaff(e.session.id)" style="background:none;border:none;color:#fff;cursor:pointer;font-size:0.9rem;padding:0 2px" title="解除">&#10005;</button>
+                                </span>
                                 <template v-else>
                                     <template v-if="e.assigned_staff.length">
                                         <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
@@ -597,15 +600,12 @@
                                     <span v-else class="badge warn">未配置</span>
                                 </template>
                                 <template v-if="!overallLocked">
-                                    <button v-if="e.session.required_staff !== -1" class="btn btn-sm" style="padding:2px 8px;background:#e65100" @click="setAllStaff(e.session.id)">全員</button>
-                                    <button v-else class="btn btn-sm" style="padding:2px 8px;background:#888" @click="unsetAllStaff(e.session.id)">全員解除</button>
-                                    <template v-if="e.session.required_staff !== -1">
-                                        <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
-                                            <option :value="0">＋追加</option>
-                                            <option v-for="s in availableStaffs(e, 'overall')" :key="s.id" :value="s.id">{{ s.name }}</option>
-                                        </select>
-                                        <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
-                                    </template>
+                                    <select v-model="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                        <option value="0">＋追加</option>
+                                        <option value="all">全員</option>
+                                        <option v-for="s in availableStaffs(e, 'overall')" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                    </select>
+                                    <button v-if="assignStaffSelect[e.session.id] && assignStaffSelect[e.session.id] !== '0'" class="btn btn-sm" @click="addAssignmentOrAll(e.session.id)" style="padding:2px 8px">追加</button>
                                 </template>
                             </div>
                         </td>
@@ -1807,7 +1807,7 @@
                 <button v-else @click="toggleSessDetailLock" class="badge" style="margin-left:8px;background:#e8f5e9;color:#2e7d32;cursor:pointer;border:none" title="クリックでロック">&#128275; 編集可能</button>
                 <!-- ロック中 -->
                 <div v-if="sessDetailLocked" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:12px">
-                    <span v-if="sessDetailSession.required_staff === -1" class="badge" style="background:#e65100;color:#fff;font-size:0.9rem">全員参加</span>
+                    <span v-if="sessDetailSession.required_staff === -1" class="badge" style="background:#e65100;color:#fff;font-size:0.9rem">全員</span>
                     <template v-else-if="sessDetailEntry.assigned_staff.length">
                         <div v-for="a in sessDetailEntry.assigned_staff" :key="a.assignment_id" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
                             <img v-if="a.staff.photo" :src="a.staff.photo" :alt="a.staff.name" style="width:40px;height:40px;border-radius:50%;object-fit:cover">
@@ -1822,7 +1822,10 @@
                 </div>
                 <!-- 編集可能 -->
                 <div v-else style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-                    <span v-if="sessDetailSession.required_staff === -1" class="badge" style="background:#e65100;color:#fff">全員参加</span>
+                    <span v-if="sessDetailSession.required_staff === -1" class="badge" style="background:#e65100;color:#fff;display:inline-flex;align-items:center;gap:4px">
+                        全員
+                        <button @click="unsetAllStaff(sessDetailSession.id)" style="background:none;border:none;color:#fff;cursor:pointer;font-size:0.9rem;padding:0 2px" title="解除">&#10005;</button>
+                    </span>
                     <template v-else-if="sessDetailEntry.assigned_staff.length">
                         <span class="badge" v-for="a in sessDetailEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px">
                             {{ a.staff.name }}
@@ -1832,17 +1835,12 @@
                     <span v-else class="badge warn">未配置</span>
                 </div>
                 <div v-if="!sessDetailLocked" style="margin-top:8px;display:flex;align-items:center;gap:6px">
-                    <template v-if="sessDetailSession.category === 'overall'">
-                        <button v-if="sessDetailSession.required_staff !== -1" class="btn btn-sm" style="background:#e65100;padding:4px 12px" @click="setAllStaff(sessDetailSession.id)">全員</button>
-                        <button v-else class="btn btn-sm" style="background:#888;padding:4px 12px" @click="unsetAllStaff(sessDetailSession.id)">全員解除</button>
-                    </template>
-                    <template v-if="sessDetailSession.required_staff !== -1">
-                        <select v-model.number="assignStaffSelect[sessDetailSession.id]" style="padding:4px 8px;font-size:0.85rem;border:1px solid #ccc;border-radius:4px;flex:1;max-width:240px">
-                            <option :value="0">＋ スタッフ追加</option>
-                            <option v-for="s in availableStaffs(sessDetailEntry)" :key="s.id" :value="s.id">{{ s.name }}</option>
-                        </select>
-                        <button v-if="assignStaffSelect[sessDetailSession.id]" class="btn btn-sm" @click="addAssignment(sessDetailSession.id)" style="padding:4px 12px">追加</button>
-                    </template>
+                    <select v-model="assignStaffSelect[sessDetailSession.id]" style="padding:4px 8px;font-size:0.85rem;border:1px solid #ccc;border-radius:4px;flex:1;max-width:240px">
+                        <option value="0">＋ スタッフ追加</option>
+                        <option v-if="sessDetailSession.category === 'overall'" value="all">全員</option>
+                        <option v-for="s in availableStaffs(sessDetailEntry)" :key="s.id" :value="s.id">{{ s.name }}</option>
+                    </select>
+                    <button v-if="assignStaffSelect[sessDetailSession.id] && assignStaffSelect[sessDetailSession.id] !== '0'" class="btn btn-sm" @click="addAssignmentOrAll(sessDetailSession.id)" style="padding:4px 12px">追加</button>
                 </div>
             </div>
         </div>

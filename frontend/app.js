@@ -1148,6 +1148,21 @@ createApp({
             await fetch(API + `/api/sessions/${sessionId}/required-staff`, { method: 'PUT', body: fd });
             await loadSchedule();
         }
+        async function addAssignmentOrAll(sessionId) {
+            const val = assignStaffSelect[sessionId];
+            if (val === 'all') {
+                await setAllStaff(sessionId);
+            } else {
+                const staffId = Number(val);
+                if (!staffId) return;
+                await fetch(API + '/api/assignments/', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId, staff_id: staffId })
+                });
+                await loadSchedule();
+            }
+            assignStaffSelect[sessionId] = '0';
+        }
 
         async function autoAssign() {
             if (!confirm('スタッフを自動配置します。現在の配置はすべて上書きされます。よろしいですか？')) return;
@@ -2539,7 +2554,7 @@ createApp({
             catSelectedSessions, autoAssignCategorySelected, toggleCatSessionSelect, toggleCatSelectAll,
             catGridConfig, catGridRooms, catGridStyle, catGridLabels, catSessionStyle, catSelectedSession, catSelectedEntry,
             roleOptions,
-            assignStaffSelect, availableStaffs, addAssignment, removeAssignment, setAllStaff, unsetAllStaff,
+            assignStaffSelect, availableStaffs, addAssignment, removeAssignment, setAllStaff, unsetAllStaff, addAssignmentOrAll,
             selectedSessions, toggleSessionSelect, toggleSelectAll,
             autoAssign, autoAssignSelected, clearAssignments,
             tlRooms, tlGridStyle, tlLabels, tlSessionStyle, tlBreaks,
