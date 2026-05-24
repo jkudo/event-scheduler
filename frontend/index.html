@@ -807,12 +807,12 @@
             <h2>全体スケジュール</h2>
 
             <!-- 日程タブ -->
-            <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
-                <button v-for="grp in sessionGroups" :key="'all-tab-'+grp.id"
+            <div v-if="catDates.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+                <button v-for="date in catDates" :key="'all-tab-'+date"
                     style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
-                    :style="allGroupTab === grp.id ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="allGroupTab = grp.id">
-                    {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:6px;font-size:0.8rem">{{ grp.date }}</span>
+                    :style="allGroupTab === date ? {background:'#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="allGroupTab = date">
+                    {{ date }}
                 </button>
                 <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
                     :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
@@ -894,13 +894,12 @@
 
             <!-- 全日程: タイムライン表示 -->
             <template v-else>
-                <div v-for="grp in sessionGroups" :key="'timeline-grp-'+grp.id" style="margin-bottom:32px">
-                    <h3 style="margin:0 0 12px;padding:8px 16px;border-radius:6px;color:#fff;font-size:1rem"
-                        :style="{background: grp.color || '#1a73e8'}">
-                        {{ grp.label }}<span v-if="grp.date" style="font-weight:400;margin-left:8px;font-size:0.85rem">{{ grp.date }}</span>
+                <div v-for="date in catDates" :key="'timeline-grp-'+date" style="margin-bottom:32px">
+                    <h3 style="margin:0 0 12px;padding:8px 16px;border-radius:6px;color:#fff;font-size:1rem;background:#1a73e8">
+                        {{ date }}
                     </h3>
                     <div style="display:flex;flex-direction:column;gap:2px">
-                        <div v-for="entry in allTimelineByGroup[grp.id]" :key="'tl-'+entry.session.id"
+                        <div v-for="entry in allTimelineByGroup[date]" :key="'tl-'+entry.session.id"
                              style="display:flex;align-items:stretch;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid #e0e0e0;transition:opacity .2s"
                              :style="{opacity: allSessionOpacity(entry)}"
                              @click="toggleSessionDetail(entry.session.id)">

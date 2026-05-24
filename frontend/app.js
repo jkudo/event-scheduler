@@ -78,10 +78,7 @@ createApp({
                 if (!(g.id in groupScheduleMsgs)) groupScheduleMsgs[g.id] = '';
                 if (!(g.id in groupSelectedSessions)) groupSelectedSessions[g.id] = new Set();
             });
-            // デフォルトで最初のグループを選択
-            if (sessionGroups.value.length && !allGroupTab.value) {
-                allGroupTab.value = sessionGroups.value[0].id;
-            }
+            // allGroupTabのデフォルトはloadSessions後に設定
         }
 
         const roomForm = reactive({ editId: null, name: '', capacity: null, floor: 1 });
@@ -157,6 +154,10 @@ createApp({
                     grpDateTabs[g.id] = gDates.length ? gDates[0] : 0;
                 }
             });
+            // 全体スケジュールのデフォルトタブ
+            if (!allGroupTab.value && dates.length) {
+                allGroupTab.value = dates[0];
+            }
         }
         async function loadStaffs() {
             const data = await (await fetch(API + '/api/staffs/')).json();
@@ -1125,11 +1126,11 @@ createApp({
             });
             return result;
         });
-        // グループ内の日付一覧
+        // グループ内の日付一覧（sessions.valueから直接計算）
         function grpDates(gid) {
             const dates = new Set();
-            (groupSchedule.value[gid] || []).forEach(e => {
-                if (e.session.start_time) dates.add(e.session.start_time.slice(0, 10));
+            sessions.value.filter(s => s.group_id === gid).forEach(s => {
+                if (s.start_time) dates.add(s.start_time.slice(0, 10));
             });
             return [...dates].sort();
         }
@@ -2050,7 +2051,7 @@ createApp({
         }
 
         // --- 全体スケジュール ---
-        const allGroupTab = ref(0); // 0=全体, group_id=グループ別
+        const allGroupTab = ref(0); // 0=全日程, 日付文字列=日別
         const allStaffFilter = ref(0);
         const allSelectedSession = ref(null);
         const allSelectedEntry = computed(() => {
@@ -2123,9 +2124,10 @@ createApp({
         );
         const allSchedule = computed(() => {
             if (!allGroupTab.value) return schedule.value;
-            return schedule.value.filter(e => e.session.group_id === allGroupTab.value);
+            // 日付文字列でフィルタリング
+            return schedule.value.filter(e => e.session.start_time && e.session.start_time.startsWith(allGroupTab.value));
         });
-        // 全日程タイムライン: グループ別にソート済みリスト
+        // 全日程タイムライン: 日付別にソート済みリスト
         // 同一時間帯の場合: 全体→セッション→カテゴリ(order順)
         const allTimelineByGroup = computed(() => {
             const catOrderMap = {};
@@ -2136,9 +2138,9 @@ createApp({
                 return 1; // session系 (general/tech/keynote/workshop/lt)
             }
             const result = {};
-            sessionGroups.value.forEach(g => {
-                result[g.id] = schedule.value
-                    .filter(e => e.session.group_id === g.id)
+            catDates.value.forEach(date => {
+                result[date] = schedule.value
+                    .filter(e => e.session.start_time && e.session.start_time.startsWith(date))
                     .sort((a, b) => {
                         const timeDiff = new Date(a.session.start_time) - new Date(b.session.start_time);
                         if (timeDiff !== 0) return timeDiff;
