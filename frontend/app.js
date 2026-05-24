@@ -158,6 +158,7 @@ createApp({
                 }
             });
             // 全体スケジュールのデフォルトタブ（未設定 or 0 の場合は最初の日付に）
+            const dates = catDates.value;
             if (!allGroupTab.value && dates.length) {
                 allGroupTab.value = dates[0];
             }
