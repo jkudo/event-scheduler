@@ -19,30 +19,37 @@ from .routers import rooms, sessions, staffs, assignments, venue_maps, export, a
 Base.metadata.create_all(bind=engine)
 
 # --- Auto-migration: add missing columns to existing tables ---
-from sqlalchemy import inspect as sa_inspect, text as sa_text
+from sqlalchemy import text as sa_text
 
 def _auto_migrate():
     """Add columns that exist in models but not in the DB (simple ALTER TABLE ADD COLUMN)."""
-    inspector = sa_inspect(engine)
     with engine.connect() as conn:
         for table in Base.metadata.sorted_tables:
-            if not inspector.has_table(table.name):
+            # Check if table exists
+            res = conn.execute(sa_text(
+                f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table.name}'"
+            ))
+            if not res.fetchone():
                 continue
-            existing = {c["name"] for c in inspector.get_columns(table.name)}
+            # Get existing columns via PRAGMA
+            pragma = conn.execute(sa_text(f"PRAGMA table_info({table.name})"))
+            existing = {row[1] for row in pragma.fetchall()}
             for col in table.columns:
                 if col.name not in existing:
                     col_type = col.type.compile(engine.dialect)
-                    nullable = "NULL" if col.nullable else "NOT NULL"
-                    default = ""
-                    if col.default is not None:
-                        default = f" DEFAULT {col.default.arg!r}"
-                    elif col.nullable:
-                        default = " DEFAULT NULL"
-                    stmt = f"ALTER TABLE {table.name} ADD COLUMN {col.name} {col_type} {nullable}{default}"
+                    stmt = f"ALTER TABLE {table.name} ADD COLUMN {col.name} {col_type}"
+                    print(f"[migration] {stmt}")
                     conn.execute(sa_text(stmt))
                     conn.commit()
+                    print(f"[migration] OK: added {table.name}.{col.name}")
 
-_auto_migrate()
+try:
+    _auto_migrate()
+    print("[migration] Auto-migration complete")
+except Exception as e:
+    print(f"[migration] ERROR: {e}")
+    import traceback
+    traceback.print_exc()
 
 app = FastAPI(title="Conference Scheduler API", version="1.0.0")
 
