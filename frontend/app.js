@@ -158,6 +158,9 @@ createApp({
             if (!allGroupTab.value && dates.length) {
                 allGroupTab.value = dates[0];
             }
+            if (!overallDateTab.value && dates.length) {
+                overallDateTab.value = dates[0];
+            }
         }
         async function loadStaffs() {
             const data = await (await fetch(API + '/api/staffs/')).json();
@@ -179,6 +182,7 @@ createApp({
                     if (!catGroupTabs[c.key]) catGroupTabs[c.key] = dates[0];
                 });
                 if (!allGroupTab.value) allGroupTab.value = dates[0];
+                if (!overallDateTab.value) overallDateTab.value = dates[0];
             }
         }
         async function loadStaffAssignments() {
@@ -1134,9 +1138,8 @@ createApp({
             const result = {};
             const dkeys = dynamicCatKeys.value;
             sessionGroups.value.forEach(g => {
-                // セッション + 全体スケジュール（動的カテゴリは除外）
                 result[g.id] = schedule.value.filter(e =>
-                    e.session.group_id === g.id && !dkeys.includes(e.session.category)
+                    e.session.group_id === g.id && !dkeys.includes(e.session.category) && e.session.category !== 'overall'
                 );
             });
             return result;
@@ -2076,7 +2079,144 @@ createApp({
             return (categorySessions.value[catKey] || []).find(e => e.session.id === sid) || null;
         }
 
-        // --- 全体スケジュール ---
+        // --- 全体スケジュール担当 ---
+        const overallLocked = ref(true);
+        const overallStaffFilter = ref(0);
+        const overallAssignMsg = ref('');
+        const overallSelectedSessions = reactive(new Set());
+        const overallDateTab = ref(0);
+        const overallSchedule = computed(() => {
+            return schedule.value.filter(e => e.session.category === 'overall');
+        });
+        function overallDateFiltered() {
+            const sess = overallSchedule.value;
+            const tab = overallDateTab.value;
+            if (!tab || tab === 0) return sess;
+            return sess.filter(e => e.session.start_time && e.session.start_time.startsWith(tab));
+        }
+        function filteredOverallSchedule() {
+            const filter = overallStaffFilter.value;
+            const sess = overallDateFiltered();
+            if (!filter) return sess;
+            return sess.filter(e => _hasStaff(e, filter));
+        }
+        function overallSessionOpacity(entry) {
+            if (!overallStaffFilter.value) return 1;
+            return _hasStaff(entry, overallStaffFilter.value) ? 1 : 0.15;
+        }
+        function overallDates() {
+            const dates = new Set();
+            sessions.value.filter(s => s.category === 'overall').forEach(s => {
+                if (s.start_time) dates.add(s.start_time.slice(0, 10));
+            });
+            return [...dates].sort();
+        }
+        function toggleOverallSessionSelect(id) {
+            if (overallSelectedSessions.has(id)) overallSelectedSessions.delete(id);
+            else overallSelectedSessions.add(id);
+        }
+        function toggleOverallSelectAll() {
+            const filtered = overallDateFiltered();
+            if (overallSelectedSessions.size === filtered.length) {
+                overallSelectedSessions.clear();
+            } else {
+                filtered.forEach(e => overallSelectedSessions.add(e.session.id));
+            }
+        }
+        async function autoAssignOverall() {
+            if (!confirm('全体スケジュールを自動配置します。よろしいですか？')) return;
+            const ids = overallDateFiltered().map(e => e.session.id);
+            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_ids: ids })
+            })).json();
+            overallAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
+            await loadSchedule();
+        }
+        async function autoAssignOverallSelected() {
+            const ids = [...overallSelectedSessions];
+            if (!ids.length) return;
+            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_ids: ids })
+            })).json();
+            overallAssignMsg.value = `再配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
+            overallSelectedSessions.clear();
+            await loadSchedule();
+        }
+        async function clearOverallAssignments() {
+            if (!confirm('全体スケジュールの配置をクリアしますか？')) return;
+            const ids = overallDateFiltered().flatMap(e => e.assigned_staff.map(a => a.assignment_id));
+            for (const id of ids) { await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' }); }
+            overallAssignMsg.value = '配置をクリアしました';
+            await loadSchedule();
+        }
+        // overallGrid (マトリクス用)
+        function ovGridConfig() {
+            const sess = overallDateFiltered();
+            if (!sess.length) return null;
+            const slotMs = SLOT_MIN * 60 * 1000;
+            const tab = overallDateTab.value;
+            const targetSessions = (tab && tab !== 0)
+                ? sessions.value.filter(s => s.start_time && s.start_time.startsWith(tab))
+                : sessions.value.filter(s => s.category === 'overall');
+            let minT = Infinity, maxT = -Infinity;
+            targetSessions.forEach(s => {
+                const st = new Date(s.start_time).getTime();
+                const end = new Date(s.end_time).getTime();
+                if (st < minT) minT = st;
+                if (end > maxT) maxT = end;
+            });
+            if (minT === Infinity) return null;
+            minT = Math.floor(minT / slotMs) * slotMs;
+            maxT = Math.ceil(maxT / slotMs) * slotMs;
+            return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
+        }
+        function ovGridRooms() {
+            const map = new Map();
+            overallDateFiltered().forEach(e => {
+                const r = e.session.room;
+                if (r && !map.has(r.id)) map.set(r.id, r.name);
+            });
+            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+        }
+        function ovGridStyle() {
+            const cfg = ovGridConfig();
+            if (!cfg) return {};
+            const rms = ovGridRooms();
+            return { gridTemplateColumns: `70px repeat(${rms.length}, 1fr)`, gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)` };
+        }
+        function ovTimeToRow(dt) {
+            const cfg = ovGridConfig();
+            const t = new Date(dt).getTime();
+            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
+        }
+        function ovGridLabels() {
+            const cfg = ovGridConfig();
+            if (!cfg) return [];
+            const labels = [];
+            const slotsPerLabel = 15 / SLOT_MIN;
+            const labelCount = cfg.totalSlots / slotsPerLabel;
+            for (let i = 0; i < labelCount; i++) {
+                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
+                const mins = t.getMinutes();
+                labels.push({
+                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
+                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
+                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
+                });
+            }
+            return labels;
+        }
+        function ovSessionStyle(entry) {
+            const startRow = ovTimeToRow(entry.session.start_time);
+            const endRow = ovTimeToRow(entry.session.end_time);
+            const rms = ovGridRooms();
+            const ci = rms.findIndex(([rid]) => rid === entry.session.room_id);
+            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
+        }
+
+        // --- 全体スケジュール（表示用） ---
         const allGroupTab = ref(0); // 0=全日程, 日付文字列=日別
         const allStaffFilter = ref(0);
         const allSelectedSession = ref(null);
@@ -2353,6 +2493,11 @@ createApp({
             staffDetailFilter, matrixStaffFilter,
             matrixStaffOptions,
             overallSessions,
+            overallLocked, overallStaffFilter, overallAssignMsg, overallSelectedSessions, overallDateTab,
+            overallSchedule, overallDateFiltered, filteredOverallSchedule, overallSessionOpacity, overallDates,
+            toggleOverallSessionSelect, toggleOverallSelectAll,
+            autoAssignOverall, autoAssignOverallSelected, clearOverallAssignments,
+            ovGridConfig, ovGridRooms, ovGridStyle, ovGridLabels, ovSessionStyle,
             allGroupTab, allStaffFilter, allSchedule, allTimelineByGroup, allConfig, allColumns, allGridStyle, allLabels, allSessionStyle, allSessionBg, allSessionOpacity,
             allSelectedSession, allSelectedEntry, allAssignMsg,
             allOvForm, cancelAllOverall, submitAllOverall,
