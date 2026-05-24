@@ -69,7 +69,7 @@
         <div class="panel" :class="{ active: tab === 'venue-maps' }">
             <h2>会場地図</h2>
             <div class="form-row">
-                <div class="form-group"><label>タイトル</label><input v-model="venueMapForm.title" placeholder="例: 1F フロアマップ"></div>
+                <div class="form-group"><label>タイトル <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="venueMapForm.title" placeholder="例: 1F フロアマップ"></div>
                 <div class="form-group"><label>表示順</label><input v-model.number="venueMapForm.order" type="number" placeholder="0"></div>
             </div>
             <div class="form-row">
