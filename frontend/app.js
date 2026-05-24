@@ -31,7 +31,14 @@ createApp({
         const sessDetailSession = ref(null);
         const sessDetailEntry = computed(() => {
             if (!sessDetailSession.value) return null;
-            return sessionSchedule.value.find(e => e.session.id === sessDetailSession.value.id) || null;
+            return schedule.value.find(e => e.session.id === sessDetailSession.value.id) || null;
+        });
+        const sessDetailLocked = computed(() => {
+            if (!sessDetailSession.value) return true;
+            const cat = sessDetailSession.value.category;
+            if (cat === 'reception') return receptionLocked.value;
+            if (cat === 'social') return socialLocked.value;
+            return matrixLocked.value;
         });
         const venueMapForm = reactive({ editId: null, title: '', order: 0, currentImage: '' });
         const venueMapPreview = ref('');
@@ -1626,7 +1633,7 @@ createApp({
             switchTab, catLabel, fmt, fmtShort, sortedPrefs,
             cancelEditRoom, editRoom, submitRoom, deleteRoom,
             onVenueMapChange, cancelEditVenueMap, editVenueMap, submitVenueMap, deleteVenueMap,
-            sessDetailSession, sessDetailEntry, toggleSessionDetail,
+            sessDetailSession, sessDetailEntry, sessDetailLocked, toggleSessionDetail,
             onPhotoChange, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
             calcStaffMsg, calcStaffSummary, calcRequiredStaff,
             newStaffAvails, newAvailForm, addNewStaffAvail,

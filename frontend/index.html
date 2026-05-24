@@ -636,8 +636,8 @@
                     </div>
                 </div>
 
-                <!-- 受付一覧（スタッフ割り当て） -->
-                <h3 style="margin-top:24px">受付一覧</h3>
+                <!-- 役割一覧（スタッフ割り当て） -->
+                <h3 style="margin-top:24px">役割一覧</h3>
                 <table>
                     <thead><tr><th>受付名</th><th>時間</th><th>場所</th><th>担当スタッフ</th></tr></thead>
                     <tbody>
@@ -1430,16 +1430,17 @@
             <div v-if="sessDetailEntry" style="margin-top:16px;padding:16px;background:#f0f4ff;border-radius:8px">
                 <strong style="font-size:0.9rem">担当スタッフ</strong>
                 <span style="font-size:0.8rem;color:#666;margin-left:8px">(必要: {{ sessDetailSession.required_staff }}名)</span>
+                <span v-if="sessDetailLocked" class="badge" style="margin-left:8px;background:#e8eaed;color:#5f6368">&#128274; ロック中</span>
                 <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
                     <template v-if="sessDetailEntry.assigned_staff.length">
                         <span class="badge" v-for="a in sessDetailEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px">
                             {{ a.staff.name }}
-                            <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                            <button v-if="!sessDetailLocked" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
                         </span>
                     </template>
                     <span v-else class="badge warn">未配置</span>
                 </div>
-                <div style="margin-top:8px;display:flex;align-items:center;gap:6px">
+                <div v-if="!sessDetailLocked" style="margin-top:8px;display:flex;align-items:center;gap:6px">
                     <select v-model.number="assignStaffSelect[sessDetailSession.id]" style="padding:4px 8px;font-size:0.85rem;border:1px solid #ccc;border-radius:4px;flex:1;max-width:240px">
                         <option :value="0">＋ スタッフ追加</option>
                         <option v-for="s in availableStaffs(sessDetailEntry)" :key="s.id" :value="s.id">{{ s.name }}</option>
