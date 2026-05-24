@@ -752,9 +752,10 @@ createApp({
 
         async function autoAssign() {
             if (!confirm('スタッフを自動配置します。現在の配置はすべて上書きされます。よろしいですか？')) return;
+            const ids = sessionSchedule.value.map(e => e.session.id);
             const data = await (await fetch(API + '/api/assignments/auto-assign', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
+                body: JSON.stringify({ session_ids: ids })
             })).json();
             scheduleMsg.value = { type: 'success', text: `配置完了: ${data.fully_assigned}/${data.total_sessions} セッション` };
             scheduleMsgError.value = data.understaffed && data.understaffed.length
@@ -776,9 +777,10 @@ createApp({
             await loadSchedule();
         }
         async function clearAssignments() {
-            if (!confirm('すべての配置をクリアします。よろしいですか？')) return;
-            await fetch(API + '/api/assignments/', { method: 'DELETE' });
-            scheduleMsg.value = { type: 'success', text: '配置をクリアしました' };
+            if (!confirm('セッション担当の配置をすべてクリアします。よろしいですか？')) return;
+            const ids = sessionSchedule.value.flatMap(e => e.assigned_staff.map(a => a.assignment_id));
+            for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+            scheduleMsg.value = { type: 'success', text: 'セッション担当の配置をクリアしました' };
             scheduleMsgError.value = '';
             await loadSchedule();
         }
