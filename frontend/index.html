@@ -592,6 +592,7 @@
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
                                 <template v-if="!overallLocked">
+                                    <button class="btn btn-sm" style="padding:2px 8px;background:#e65100;margin-left:4px" @click="assignAllStaff(e.session.id)">全員配置</button>
                                     <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
                                         <option :value="0">＋追加</option>
                                         <option v-for="s in availableStaffs(e, 'overall')" :key="s.id" :value="s.id">{{ s.name }}</option>
@@ -1773,7 +1774,7 @@
                     <span class="badge">{{ catLabel(sessDetailSession.category) }}</span>
                     <span v-if="sessDetailSession.english_required" class="badge" style="background:#e0f2f1;color:#00695c;margin-left:4px">EN</span>
                 </div>
-                <div style="color:#555"><strong>必要人数:</strong> {{ sessDetailSession.required_staff }}名</div>
+                <div style="color:#555"><strong>必要人数:</strong> {{ sessDetailSession.category === 'overall' ? '全員' : sessDetailSession.required_staff + '名' }}</div>
             </div>
 
             <div v-if="sessDetailSession.description" style="margin-bottom:12px;padding:12px;background:#f8f9fa;border-radius:6px">
@@ -1789,7 +1790,7 @@
             <!-- スタッフ配置 -->
             <div v-if="sessDetailEntry" style="margin-top:16px;padding:16px;background:#f0f4ff;border-radius:8px">
                 <strong style="font-size:0.9rem">担当スタッフ</strong>
-                <span style="font-size:0.8rem;color:#666;margin-left:8px">(必要: {{ sessDetailSession.required_staff }}名)</span>
+                <span style="font-size:0.8rem;color:#666;margin-left:8px">(必要: {{ sessDetailSession.category === 'overall' ? '全員' : sessDetailSession.required_staff + '名' }})</span>
                 <button v-if="sessDetailLocked" @click="toggleSessDetailLock" class="badge" style="margin-left:8px;background:#e8eaed;color:#5f6368;cursor:pointer;border:none" title="クリックでロック解除">&#128274; ロック中</button>
                 <button v-else @click="toggleSessDetailLock" class="badge" style="margin-left:8px;background:#e8f5e9;color:#2e7d32;cursor:pointer;border:none" title="クリックでロック">&#128275; 編集可能</button>
                 <!-- ロック中: 写真付きプレビュー -->
@@ -1817,6 +1818,7 @@
                     <span v-else class="badge warn">未配置</span>
                 </div>
                 <div v-if="!sessDetailLocked" style="margin-top:8px;display:flex;align-items:center;gap:6px">
+                    <button v-if="sessDetailSession.category === 'overall'" class="btn btn-sm" style="background:#e65100;padding:4px 12px" @click="assignAllStaff(sessDetailSession.id)">全員配置</button>
                     <select v-model.number="assignStaffSelect[sessDetailSession.id]" style="padding:4px 8px;font-size:0.85rem;border:1px solid #ccc;border-radius:4px;flex:1;max-width:240px">
                         <option :value="0">＋ スタッフ追加</option>
                         <option v-for="s in availableStaffs(sessDetailEntry)" :key="s.id" :value="s.id">{{ s.name }}</option>

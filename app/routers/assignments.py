@@ -147,6 +147,30 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
         # セッションカテゴリに対応するスタッフロールを判定
         session_role = session.category if session.category in dynamic_cat_keys else 'session'
 
+        # 全体スケジュールは全員配置（ロール・時間制約をスキップ）
+        if session.category == 'overall':
+            for staff in staffs:
+                # 時間帯の重複チェックのみ行う
+                can = True
+                for assigned_session in staff_sessions[staff.id]:
+                    if session.start_time < assigned_session.end_time and session.end_time > assigned_session.start_time:
+                        can = False
+                        break
+                if not can:
+                    continue
+                assignment = Assignment(session_id=session.id, staff_id=staff.id, role='overall')
+                db.add(assignment)
+                staff_sessions[staff.id].append(session)
+                staff_hours[staff.id] += session_duration
+                assigned_count += 1
+            results.append({
+                "session_id": session.id,
+                "session_title": session.title,
+                "required": len(staffs),
+                "assigned": assigned_count,
+            })
+            continue
+
         # スタッフをスコアリング
         scored_staffs = []
         for staff in staffs:
