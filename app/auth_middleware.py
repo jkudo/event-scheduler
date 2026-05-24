@@ -29,7 +29,7 @@ GEOIP_ENABLED = os.environ.get("GEOIP_ENABLED", "0") == "1"
 IPINFO_TOKEN = os.environ.get("IPINFO_TOKEN", "")
 
 # Paths that bypass authentication
-PUBLIC_PATHS = {"/auth/login", "/auth/verify", "/auth/logout"}
+PUBLIC_PATHS = {"/auth/login", "/auth/verify", "/auth/logout", "/auth/debug"}
 
 
 # ---------------------------------------------------------------------------
@@ -108,10 +108,14 @@ async def _check_geo_jp(client_ip: str) -> bool:
 
 def _get_client_ip(request: Request) -> str:
     """Extract client IP, respecting proxy headers."""
-    # Azure App Service sets X-Forwarded-For
+    # Azure App Service sets X-Forwarded-For (may include port, e.g. "1.2.3.4:12345")
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        ip = forwarded.split(",")[0].strip()
+        # Strip port if present
+        if ":" in ip and not ip.startswith("["):
+            ip = ip.rsplit(":", 1)[0]
+        return ip
     if request.client:
         return request.client.host
     return "127.0.0.1"
