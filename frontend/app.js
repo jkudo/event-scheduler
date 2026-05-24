@@ -17,14 +17,20 @@ createApp({
         const sessPhotoPreview = ref('');
         const sessPhoto = ref(null);
         const matrixStaffFilter = ref(0);
+        const staffDetailFilter = ref(0);
         const rcStaffFilter = ref(0);
         const scStaffFilter = ref(0);
 
         let dragDidMove = false; // suppress click after drag-and-drop
+        const matrixLocked = ref(true); // ドラッグ&ドロップのロック（デフォルト: ロック）
 
         const roomForm = reactive({ editId: null, name: '', capacity: null, floor: 1 });
         const venueMaps = ref([]);
         const sessDetailSession = ref(null);
+        const sessDetailEntry = computed(() => {
+            if (!sessDetailSession.value) return null;
+            return sessionSchedule.value.find(e => e.session.id === sessDetailSession.value.id) || null;
+        });
         const venueMapForm = reactive({ editId: null, title: '', order: 0, currentImage: '' });
         const venueMapPreview = ref('');
         const venueMapInput = ref(null);
@@ -334,9 +340,12 @@ createApp({
             if (name === 'venue-maps') await loadVenueMaps();
             if (name === 'sessions') { await loadRooms(); await loadSessions(); }
             if (name === 'staffs') { await loadSessions(); await loadStaffs(); await loadSchedule(); }
-            if (name === 'schedule') { await loadStaffs(); await loadSchedule(); await loadStaffAssignments(); }
             if (name === 'matrix') { await loadStaffs(); await loadSchedule(); await loadStaffAssignments(); }
             if (name === 'all-matrix') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); }
+            if (name === 'staff-detail') { await loadStaffs(); await loadSessions(); await loadSchedule(); await loadStaffAssignments(); }
+            if (name === 'overall-manage') { await loadSessions(); }
+            if (name === 'reception-manage') { await loadRooms(); await loadSessions(); await loadSchedule(); if (!rcForm.room_id && rooms.value.length) rcForm.room_id = rooms.value[0].id; }
+            if (name === 'social-manage') { await loadRooms(); await loadSessions(); await loadSchedule(); if (!scForm.room_id && rooms.value.length) scForm.room_id = rooms.value[0].id; }
             if (name === 'reception') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); if (!rcForm.room_id && rooms.value.length) rcForm.room_id = rooms.value[0].id; }
             if (name === 'social') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); if (!scForm.room_id && rooms.value.length) scForm.room_id = rooms.value[0].id; }
             if (name === 'io') { await loadRooms(); await loadSessions(); }
@@ -1058,6 +1067,7 @@ createApp({
 
         function onDragStart(e, entry) {
             if (e.button !== 0) return;
+            if (matrixLocked.value) return;
             e.preventDefault();
 
             const sessionEl = e.currentTarget;
@@ -1450,6 +1460,9 @@ createApp({
             allAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
             await loadSchedule();
         }
+        const overallSessions = computed(() =>
+            sessions.value.filter(s => s.category === 'overall').sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+        );
         const allSchedule = computed(() => schedule.value);
         const allConfig = computed(() => {
             if (!allSchedule.value.length) return null;
@@ -1597,7 +1610,7 @@ createApp({
             switchTab, catLabel, fmt, fmtShort, sortedPrefs,
             cancelEditRoom, editRoom, submitRoom, deleteRoom,
             onVenueMapChange, cancelEditVenueMap, editVenueMap, submitVenueMap, deleteVenueMap,
-            sessDetailSession, toggleSessionDetail,
+            sessDetailSession, sessDetailEntry, toggleSessionDetail,
             onPhotoChange, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
             calcStaffMsg, calcStaffSummary, calcRequiredStaff,
             newStaffAvails, newAvailForm, addNewStaffAvail,
@@ -1609,7 +1622,7 @@ createApp({
             selectedSessions, toggleSessionSelect, toggleSelectAll,
             autoAssign, autoAssignSelected, clearAssignments,
             tlRooms, tlGridStyle, tlLabels, tlSessionStyle, tlBreaks,
-            drag, dragSessionStyle, onDragStart, dragCursor,
+            matrixLocked, drag, dragSessionStyle, onDragStart, dragCursor,
             rcConfig, rcRooms, rcGridStyle, rcLabels, rcSessionStyle,
             rcSelectedSession, rcSelectedEntry,
             rcForm, rcAssignMsg, cancelEditReception, editReception, submitReception, deleteReception, autoAssignReception,
@@ -1621,8 +1634,9 @@ createApp({
             resetAllData, resetMsg, resetMsgError, resetPassword,
             appTitle, settingsForm, settingsMsg, saveSettings,
             pwForm, pwMsg, pwMsgError, changePassword,
-            matrixStaffFilter, rcStaffFilter, scStaffFilter,
+            staffDetailFilter, matrixStaffFilter, rcStaffFilter, scStaffFilter,
             matrixStaffOptions, rcStaffOptions, scStaffOptions,
+            overallSessions,
             allStaffFilter, allSchedule, allConfig, allColumns, allGridStyle, allLabels, allSessionStyle, allSessionBg, allSessionOpacity,
             allSelectedSession, allSelectedEntry, allAssignMsg,
             allOvForm, cancelAllOverall, submitAllOverall,

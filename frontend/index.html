@@ -10,23 +10,34 @@
 <body>
 
 <div id="app">
-    <div class="container">
-        <h1 class="app-title">{{ appTitle }}</h1>
-        <div class="tabs">
-            <button class="tab" :class="{ active: tab === 'rooms' }" @click="switchTab('rooms')">部屋管理</button>
-            <button class="tab" :class="{ active: tab === 'all-matrix' }" @click="switchTab('all-matrix')">全体スケジュール</button>
-            <button class="tab" :class="{ active: tab === 'venue-maps' }" @click="switchTab('venue-maps')">会場地図</button>
-            <button class="tab" :class="{ active: tab === 'sessions' }" @click="switchTab('sessions')">セッション管理</button>
-            <button class="tab" :class="{ active: tab === 'staffs' }" @click="switchTab('staffs')">スタッフ管理</button>
-            <button class="tab" :class="{ active: tab === 'schedule' }" @click="switchTab('schedule')">セッション配置</button>
-            <button class="tab" :class="{ active: tab === 'matrix' }" @click="switchTab('matrix')">配置表</button>
-            <button class="tab" :class="{ active: tab === 'reception' }" @click="switchTab('reception')">受付案内</button>
-            <button class="tab" :class="{ active: tab === 'social' }" @click="switchTab('social')">懇親会担当</button>
-            <button class="tab" :class="{ active: tab === 'algorithm' }" @click="switchTab('algorithm')">配置アルゴリズム</button>
-            <button class="tab" :class="{ active: tab === 'io' }" @click="switchTab('io')">エクスポート/インポート</button>
-            <button class="tab" :class="{ active: tab === 'settings' }" @click="switchTab('settings')">設定</button>
-            <button class="tab" :class="{ active: tab === 'help' }" @click="switchTab('help')">利用方法</button>
-        </div>
+    <div class="app-layout">
+        <!-- 左サイドバー -->
+        <nav class="sidebar">
+            <h1 class="sidebar-title">{{ appTitle }}</h1>
+            <button class="sidebar-item" :class="{ active: tab === 'all-matrix' }" @click="switchTab('all-matrix')">全体スケジュール</button>
+            <button class="sidebar-item" :class="{ active: tab === 'staff-detail' }" @click="switchTab('staff-detail')">スタッフ別詳細</button>
+            <div class="sidebar-section">イベント設定</div>
+            <button class="sidebar-item" :class="{ active: tab === 'rooms' }" @click="switchTab('rooms')">部屋管理</button>
+            <button class="sidebar-item" :class="{ active: tab === 'venue-maps' }" @click="switchTab('venue-maps')">会場地図</button>
+            <button class="sidebar-item" :class="{ active: tab === 'sessions' }" @click="switchTab('sessions')">セッション管理</button>
+            <button class="sidebar-item" :class="{ active: tab === 'reception-manage' }" @click="switchTab('reception-manage')">受付管理</button>
+            <button class="sidebar-item" :class="{ active: tab === 'social-manage' }" @click="switchTab('social-manage')">懇親会管理</button>
+            <button class="sidebar-item" :class="{ active: tab === 'overall-manage' }" @click="switchTab('overall-manage')">全体スケジュール管理</button>
+            <button class="sidebar-item" :class="{ active: tab === 'staffs' }" @click="switchTab('staffs')">スタッフ管理</button>
+            <div class="sidebar-section">スタッフ配置</div>
+            <button class="sidebar-item" :class="{ active: tab === 'matrix' }" @click="switchTab('matrix')">セッション担当</button>
+            <button class="sidebar-item" :class="{ active: tab === 'reception' }" @click="switchTab('reception')">受付案内担当</button>
+            <button class="sidebar-item" :class="{ active: tab === 'social' }" @click="switchTab('social')">懇親会担当</button>
+            <button class="sidebar-item" :class="{ active: tab === 'algorithm' }" @click="switchTab('algorithm')">配置アルゴリズム</button>
+            <div class="sidebar-section">出力</div>
+            <button class="sidebar-item" :class="{ active: tab === 'io' }" @click="switchTab('io')">エクスポート/インポート</button>
+            <div class="sidebar-section">システム</div>
+            <button class="sidebar-item" :class="{ active: tab === 'settings' }" @click="switchTab('settings')">設定</button>
+            <button class="sidebar-item" :class="{ active: tab === 'help' }" @click="switchTab('help')">利用方法</button>
+        </nav>
+
+        <!-- メインコンテンツ -->
+        <main class="main-content">
 
         <!-- ===== 部屋管理 ===== -->
         <div class="panel" :class="{ active: tab === 'rooms' }">
@@ -379,60 +390,24 @@
             </div>
         </div>
 
-        <!-- ===== セッション配置 ===== -->
-        <div class="panel" :class="{ active: tab === 'schedule' }">
-            <h2>セッション配置</h2>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-                <button class="btn btn-success" @click="autoAssign">全セッション自動配置</button>
-                <button class="btn btn-success" @click="autoAssignSelected" :disabled="!selectedSessions.size" :style="{ background: selectedSessions.size ? '#0d7a42' : '#aaa', cursor: selectedSessions.size ? 'pointer' : 'not-allowed' }">選択したセッションを再配置 <span v-if="selectedSessions.size">({{ selectedSessions.size }}件)</span></button>
-                <button class="btn btn-sm" @click="toggleSelectAll" style="background:#666">{{ selectedSessions.size === sessionSchedule.length ? '全解除' : '全選択' }}</button>
-                <button class="btn btn-danger" @click="clearAssignments" style="margin-left:auto">配置をクリア</button>
-            </div>
-            <div style="margin-top:12px">
-                <div v-if="scheduleMsg" class="msg" :class="scheduleMsg.type">{{ scheduleMsg.text }}</div>
-                <div v-if="scheduleMsgError" class="msg error">{{ scheduleMsgError }}</div>
-            </div>
-            <div style="margin-top:16px">
-                <p v-if="!sessionSchedule.length">セッションがまだ登録されていません。</p>
-                <div v-for="e in sessionSchedule" :key="e.session.id" class="schedule-card">
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <input type="checkbox" :checked="selectedSessions.has(e.session.id)" @change="toggleSessionSelect(e.session.id)" style="width:18px;height:18px;cursor:pointer">
-                        <h3 style="margin:0"><a href="#" @click.prevent="toggleSessionDetail(e.session.id)" style="color:#1a73e8;text-decoration:none">{{ e.session.title }}</a></h3>
-                    </div>
-                    <div class="meta" style="display:flex;align-items:center;gap:8px">
-                        <img v-if="e.session.speaker_photo" :src="e.session.speaker_photo" class="speaker-photo" style="cursor:pointer" @click="toggleSessionDetail(e.session.id)">
-                        <span v-else class="speaker-photo-placeholder" style="cursor:pointer" @click="toggleSessionDetail(e.session.id)">{{ e.session.speaker.charAt(0) }}</span>
-                        <span>
-                            {{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }} |
-                            {{ e.session.room ? e.session.room.name : '' }} |
-                            登壇者: {{ e.session.speaker }} |
-                            <span class="badge">{{ catLabel(e.session.category) }}</span>
-                        </span>
-                    </div>
-                    <div class="staff-list" style="align-items:center">
-                        <strong>担当スタッフ:</strong>
-                        <template v-if="e.assigned_staff.length">
-                            <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
-                                {{ a.staff.name }} ({{ catLabel(a.staff.role) }})
-                                <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">✕</button>
-                            </span>
-                        </template>
-                        <span v-else class="badge warn">未配置</span>
-                        <span style="margin-left:8px;display:inline-flex;align-items:center;gap:4px">
-                            <select v-model.number="assignStaffSelect[e.session.id]" style="padding:4px 8px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px">
-                                <option :value="0">＋ スタッフ追加</option>
-                                <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }} ({{ catLabel(s.role) }})</option>
-                            </select>
-                            <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:4px 10px">追加</button>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- ===== 配置表 ===== -->
         <div class="panel" :class="{ active: tab === 'matrix' }">
-            <h2>配置表</h2>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                <h2 style="margin:0">セッション担当</h2>
+                <button @click="matrixLocked = !matrixLocked"
+                        :style="{ background: matrixLocked ? '#e8eaed' : '#fce8e6', color: matrixLocked ? '#5f6368' : '#c5221f', border: matrixLocked ? '1px solid #dadce0' : '1px solid #c5221f', borderRadius: '20px', padding: '5px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }">
+                    <span v-if="matrixLocked">&#128274; ロック中</span>
+                    <span v-else>&#128275; 編集中</span>
+                </button>
+            </div>
+
+            <!-- 自動配置ボタン（ロック解除時のみ表示） -->
+            <div v-if="!matrixLocked" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
+                <button class="btn btn-success" @click="autoAssign">スタッフ自動配置</button>
+                <button class="btn btn-danger" @click="clearAssignments">配置をクリア</button>
+                <div v-if="scheduleMsg" class="msg" :class="scheduleMsg.type" style="margin:0">{{ scheduleMsg.text }}</div>
+                <div v-if="scheduleMsgError" class="msg error" style="margin:0">{{ scheduleMsgError }}</div>
+            </div>
 
             <!-- スタッフフィルター -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -481,11 +456,11 @@
                         </template>
                         <div v-for="entry in sessionSchedule" :key="'s'+entry.session.id"
                              class="tl-session" :class="{ dragging: drag.active && drag.sessionId === entry.session.id }"
-                             :style="dragSessionStyle(entry)"
+                             :style="{ ...dragSessionStyle(entry), cursor: matrixLocked ? 'pointer' : undefined }"
                              @mousedown="onDragStart($event, entry)"
-                             @mousemove="dragCursor($event)"
+                             @mousemove="!matrixLocked && dragCursor($event)"
                              @click="toggleSessionDetail(entry.session.id)">
-                            <div class="drag-handle-top"></div>
+                            <div v-if="!matrixLocked" class="drag-handle-top"></div>
                             <div class="tl-session-time">
                                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
                             </div>
@@ -500,7 +475,7 @@
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
                             </div>
-                            <div class="drag-handle-bottom"></div>
+                            <div v-if="!matrixLocked" class="drag-handle-bottom"></div>
                         </div>
                         <div v-for="(brk, bi) in tlBreaks" :key="'brk'+bi"
                              class="tl-break" :style="brk.style">
@@ -511,69 +486,92 @@
 
             </template>
 
-            <!-- スタッフ別詳細 -->
-            <h3 style="margin-top:24px">スタッフ別詳細</h3>
-            <p v-if="!staffAssignments.length">スタッフがまだ登録されていません。</p>
-            <div v-for="e in staffAssignments" :key="e.staff.id" class="schedule-card"
-                 v-show="!matrixStaffFilter || e.staff.id === matrixStaffFilter">
-                <h3>{{ e.staff.name }} <span class="badge">{{ catLabel(e.staff.role) }}</span></h3>
-                <div v-if="e.staff.availabilities && e.staff.availabilities.length" style="margin-bottom:8px">
-                    <strong>活動可能時間:</strong>
-                    <span class="badge avail" v-for="a in e.staff.availabilities" :key="a.id">
-                        {{ fmt(a.start_time) }} - {{ fmtShort(a.end_time) }}
-                    </span>
-                </div>
-                <template v-if="e.assigned_sessions.length">
-                    <table>
-                        <thead><tr><th>セッション</th><th>時間</th><th>部屋</th></tr></thead>
-                        <tbody>
-                            <tr v-for="s in e.assigned_sessions" :key="s.id">
-                                <td>{{ s.title }}</td>
-                                <td>{{ fmt(s.start_time) }} - {{ fmt(s.end_time) }}</td>
-                                <td>{{ s.room ? s.room.name : '' }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </template>
-                <p v-else style="color:#666;margin-top:8px">担当セッションなし</p>
-            </div>
+            <!-- セッション一覧（スタッフ割り当て） -->
+            <h3 style="margin-top:24px">セッション一覧</h3>
+            <table v-if="sessionSchedule.length">
+                <thead><tr><th>セッション</th><th>時間</th><th>部屋</th><th>担当スタッフ</th></tr></thead>
+                <tbody>
+                    <tr v-for="e in sessionSchedule" :key="'mtbl-'+e.session.id"
+                        :style="{ opacity: matrixSessionOpacity(e) }">
+                        <td><a href="#" @click.prevent="toggleSessionDetail(e.session.id)" style="color:#1a73e8;text-decoration:none"><strong>{{ e.session.title }}</strong></a></td>
+                        <td style="white-space:nowrap">{{ fmtShort(e.session.start_time) }} - {{ fmtShort(e.session.end_time) }}</td>
+                        <td>{{ e.session.room ? e.session.room.name : '' }}</td>
+                        <td>
+                            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+                                <template v-if="e.assigned_staff.length">
+                                    <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                        {{ a.staff.name }}
+                                        <button v-if="!matrixLocked" @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                    </span>
+                                </template>
+                                <span v-else class="badge warn">未配置</span>
+                                <template v-if="!matrixLocked">
+                                    <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                        <option :value="0">＋追加</option>
+                                        <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                    </select>
+                                    <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                                </template>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
         <!-- ===== 受付案内 ===== -->
+        <!-- ===== 受付管理（イベント設定） ===== -->
+        <div class="panel" :class="{ active: tab === 'reception-manage' }">
+            <h2>受付管理</h2>
+            <div style="margin-bottom:20px;border:1px solid #c8e6c9;border-radius:8px;padding:16px;background:#e8f5e9">
+                <h3 style="margin:0 0 12px;color:#2e7d32">{{ rcForm.editId ? '受付編集' : '受付追加' }}</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>受付名</label><input v-model="rcForm.title" placeholder="例: メイン受付"></div>
+                    <div class="form-group"><label>必要スタッフ数</label><input v-model.number="rcForm.required_staff" type="number" min="1" placeholder="2"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>開始時刻</label><input v-model="rcForm.start_time" type="datetime-local"></div>
+                    <div class="form-group"><label>終了時刻</label><input v-model="rcForm.end_time" type="datetime-local"></div>
+                    <div class="form-group"><label>場所</label>
+                        <select v-model.number="rcForm.room_id">
+                            <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>英語対応</label>
+                        <label style="margin:0;display:flex;align-items:center;gap:4px;padding-top:4px"><input type="checkbox" v-model="rcForm.english_required" style="width:16px;height:16px;cursor:pointer"> 必要</label>
+                    </div>
+                </div>
+                <div class="form-group"><label>備考</label><textarea v-model="rcForm.notes" rows="2" placeholder="例: 参加者名簿を準備"></textarea></div>
+                <div style="display:flex;gap:8px">
+                    <button class="btn" style="background:#2e7d32" @click="submitReception">{{ rcForm.editId ? '更新' : '追加' }}</button>
+                    <button v-if="rcForm.editId" class="btn btn-danger" @click="cancelEditReception">キャンセル</button>
+                </div>
+            </div>
+            <h3>登録済み一覧</h3>
+            <p v-if="!receptionSessions.length" style="color:#666">受付がまだ登録されていません。</p>
+            <table v-else>
+                <thead><tr><th>受付名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>操作</th></tr></thead>
+                <tbody>
+                    <tr v-for="e in receptionSessions" :key="'rcm-'+e.session.id">
+                        <td><strong>{{ e.session.title }}</strong></td>
+                        <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
+                        <td>{{ e.session.room ? e.session.room.name : '' }}</td>
+                        <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
+                        <td>{{ e.session.required_staff }}</td>
+                        <td>
+                            <button class="btn btn-sm edit-btn" @click="editReception(e.session)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteReception(e.session.id)">削除</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ===== 受付案内担当（スタッフ配置） ===== -->
         <div class="panel" :class="{ active: tab === 'reception' }">
-            <h2>受付案内</h2>
-
-            <!-- 受付登録フォーム -->
-            <h3 style="margin-top:0">受付の登録</h3>
-            <div class="form-row">
-                <div class="form-group"><label>受付名</label><input v-model="rcForm.title" placeholder="例: メイン受付"></div>
-                <div class="form-group"><label>必要スタッフ数</label><input v-model.number="rcForm.required_staff" type="number" min="1" placeholder="2"></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label>開始時刻</label><input v-model="rcForm.start_time" type="datetime-local"></div>
-                <div class="form-group"><label>終了時刻</label><input v-model="rcForm.end_time" type="datetime-local"></div>
-                <div class="form-group"><label>場所</label>
-                    <select v-model.number="rcForm.room_id">
-                        <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label>英語対応</label>
-                    <label style="margin:0;display:flex;align-items:center;gap:4px;padding-top:4px"><input type="checkbox" v-model="rcForm.english_required" style="width:16px;height:16px;cursor:pointer"> 必要</label>
-                </div>
-            </div>
-            <div class="form-group"><label>備考</label><textarea v-model="rcForm.notes" rows="2" placeholder="例: 参加者名簿を準備"></textarea></div>
-            <div style="display:flex;gap:8px;margin-bottom:16px">
-                <button class="btn" @click="submitReception">{{ rcForm.editId ? '更新' : '追加' }}</button>
-                <button v-if="rcForm.editId" class="btn btn-danger" @click="cancelEditReception">キャンセル</button>
-            </div>
-
-            <!-- 自動配置ボタン -->
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
-                <button class="btn btn-success" @click="autoAssignReception" :disabled="!receptionSessions.length" :style="{ background: receptionSessions.length ? '#0d7a42' : '#aaa', cursor: receptionSessions.length ? 'pointer' : 'not-allowed' }">受付スタッフ自動配置</button>
-                <span v-if="rcAssignMsg" style="font-size:0.85rem;color:#137333">{{ rcAssignMsg }}</span>
-            </div>
+            <h2>受付案内担当</h2>
 
             <!-- スタッフフィルター -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -585,9 +583,8 @@
                 <span v-if="rcStaffFilter" style="font-size:0.85rem;color:#666">{{ filteredReceptionSessions.length }}/{{ receptionSessions.length }}件</span>
             </div>
 
-            <!-- 受付マトリクス -->
+            <p v-if="!receptionSessions.length" style="color:#888">受付がまだ登録されていません。「受付管理」から追加してください。</p>
             <template v-if="receptionSessions.length">
-                <h3>受付配置マトリクス</h3>
                 <div class="tl-wrapper">
                     <div class="tl-grid" :style="rcGridStyle">
                         <div class="tl-corner">時間</div>
@@ -610,17 +607,14 @@
                         <div v-for="entry in receptionSessions" :key="'rcs'+entry.session.id"
                              class="tl-session" :style="{...rcSessionStyle(entry), opacity: rcSessionOpacity(entry)}"
                              style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-color:#388e3c;cursor:pointer"
-                             @click="rcSelectedSession = (rcSelectedSession === entry.session.id ? null : entry.session.id)">
+                             @click="toggleSessionDetail(entry.session.id)">
                             <div class="tl-session-time" style="color:#388e3c">
                                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
                             </div>
                             <div class="tl-session-title" style="color:#1b5e20">{{ entry.session.title }}</div>
                             <div class="tl-session-staff">
                                 <template v-if="entry.assigned_staff.length">
-                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">
-                                        {{ a.staff.name }}
-                                        <span v-if="a.staff.english_ok" style="font-size:0.65rem;color:#00695c">(EN)</span>
-                                    </span>
+                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
                             </div>
@@ -628,112 +622,90 @@
                     </div>
                 </div>
 
-                <!-- 受付マトリクス詳細ポップアップ -->
-                <div v-if="rcSelectedEntry" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="rcSelectedSession=null">
-                    <div style="background:#fff;border-radius:12px;padding:24px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                            <h3 style="margin:0 0 12px 0">{{ rcSelectedEntry.session.title }}</h3>
-                            <button @click="rcSelectedSession=null" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#666;padding:0 4px">&#10005;</button>
-                        </div>
-                        <div style="font-size:0.9rem;color:#555;margin-bottom:12px">
-                            {{ fmt(rcSelectedEntry.session.start_time) }} - {{ fmt(rcSelectedEntry.session.end_time) }} |
-                            {{ rcSelectedEntry.session.room ? rcSelectedEntry.session.room.name : '' }}
-                            <span v-if="rcSelectedEntry.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c;margin-left:4px">英語対応</span>
-                        </div>
-                        <div v-if="rcSelectedEntry.session.notes" style="margin-bottom:12px">
-                            <strong style="font-size:0.85rem">備考:</strong>
-                            <p style="margin:4px 0;font-size:0.85rem;white-space:pre-wrap;color:#666">{{ rcSelectedEntry.session.notes }}</p>
-                        </div>
-                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
-                            <strong style="font-size:0.85rem">担当スタッフ:</strong>
-                            <template v-if="rcSelectedEntry.assigned_staff.length">
-                                <span class="badge" v-for="a in rcSelectedEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
-                                    {{ a.staff.name }}
-                                    <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
-                                    <button @click="removeAssignment(a.assignment_id); rcSelectedSession=null" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
-                                </span>
-                            </template>
-                            <span v-else class="badge warn">未配置</span>
-                            <span style="font-size:0.85rem;color:#888;margin-left:8px">（必要: {{ rcSelectedEntry.session.required_staff }}名）</span>
-                        </div>
+                <!-- 受付一覧（スタッフ割り当て） -->
+                <h3 style="margin-top:24px">受付一覧</h3>
+                <table>
+                    <thead><tr><th>受付名</th><th>時間</th><th>場所</th><th>担当スタッフ</th></tr></thead>
+                    <tbody>
+                        <tr v-for="e in receptionSessions" :key="'rctbl2-'+e.session.id"
+                            :style="{ opacity: rcSessionOpacity(e) }">
+                            <td><a href="#" @click.prevent="toggleSessionDetail(e.session.id)" style="color:#1a73e8;text-decoration:none"><strong>{{ e.session.title }}</strong></a></td>
+                            <td style="white-space:nowrap">{{ fmtShort(e.session.start_time) }} - {{ fmtShort(e.session.end_time) }}</td>
+                            <td>{{ e.session.room ? e.session.room.name : '' }}</td>
+                            <td>
+                                <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+                                    <template v-if="e.assigned_staff.length">
+                                        <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                            {{ a.staff.name }}
+                                            <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                        </span>
+                                    </template>
+                                    <span v-else class="badge warn">未配置</span>
+                                    <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                        <option :value="0">＋追加</option>
+                                        <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                    </select>
+                                    <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </template>
+        </div>
+
+        <!-- ===== 懇親会管理（イベント設定） ===== -->
+        <div class="panel" :class="{ active: tab === 'social-manage' }">
+            <h2>懇親会管理</h2>
+            <div style="margin-bottom:20px;border:1px solid #e1bee7;border-radius:8px;padding:16px;background:#f3e5f5">
+                <h3 style="margin:0 0 12px;color:#7b1fa2">{{ scForm.editId ? '役割編集' : '役割追加' }}</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>役割名</label><input v-model="scForm.title" placeholder="例: 会場設営、ドリンク担当、司会"></div>
+                    <div class="form-group"><label>必要スタッフ数</label><input v-model.number="scForm.required_staff" type="number" min="1" placeholder="2"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>開始時刻</label><input v-model="scForm.start_time" type="datetime-local"></div>
+                    <div class="form-group"><label>終了時刻</label><input v-model="scForm.end_time" type="datetime-local"></div>
+                    <div class="form-group"><label>場所</label>
+                        <select v-model.number="scForm.room_id">
+                            <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
+                        </select>
                     </div>
                 </div>
-            </template>
-
-            <!-- 受付一覧テーブル -->
-            <h3>受付一覧</h3>
-            <p v-if="!receptionSessions.length" style="color:#888">受付がまだ登録されていません。</p>
+                <div class="form-row">
+                    <div class="form-group"><label>英語対応</label>
+                        <label style="margin:0;display:flex;align-items:center;gap:4px;padding-top:4px"><input type="checkbox" v-model="scForm.english_required" style="width:16px;height:16px;cursor:pointer"> 必要</label>
+                    </div>
+                </div>
+                <div class="form-group"><label>備考</label><textarea v-model="scForm.notes" rows="2" placeholder="例: ケータリング業者との連携が必要"></textarea></div>
+                <div style="display:flex;gap:8px">
+                    <button class="btn" style="background:#7b1fa2" @click="submitSocial">{{ scForm.editId ? '更新' : '追加' }}</button>
+                    <button v-if="scForm.editId" class="btn btn-danger" @click="cancelEditSocial">キャンセル</button>
+                </div>
+            </div>
+            <h3>登録済み一覧</h3>
+            <p v-if="!socialSessions.length" style="color:#666">懇親会の役割がまだ登録されていません。</p>
             <table v-else>
-                <thead><tr><th>受付名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>担当スタッフ</th><th></th></tr></thead>
+                <thead><tr><th>役割名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>操作</th></tr></thead>
                 <tbody>
-                    <tr v-for="e in receptionSessions" :key="'rctbl-'+e.session.id"
-                        :style="{ opacity: rcSessionOpacity(e) }">
+                    <tr v-for="e in socialSessions" :key="'scm-'+e.session.id">
                         <td><strong>{{ e.session.title }}</strong></td>
                         <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
                         <td>{{ e.session.room ? e.session.room.name : '' }}</td>
                         <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
                         <td>{{ e.session.required_staff }}</td>
                         <td>
-                            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-                                <template v-if="e.assigned_staff.length">
-                                    <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
-                                        {{ a.staff.name }}
-                                        <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
-                                        <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
-                                    </span>
-                                </template>
-                                <span v-else class="badge warn">未配置</span>
-                                <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
-                                    <option :value="0">＋追加</option>
-                                    <option v-for="s in availableStaffs(e, 'reception')" :key="s.id" :value="s.id">{{ s.name }}</option>
-                                </select>
-                                <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
-                            </div>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm edit-btn" @click="editReception(e.session)" style="margin-right:4px">編集</button>
-                            <button class="del-btn" @click="deleteReception(e.session.id)">削除</button>
+                            <button class="btn btn-sm edit-btn" @click="editSocial(e.session)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteSocial(e.session.id)">削除</button>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <!-- ===== 懇親会担当 ===== -->
+        <!-- ===== 懇親会担当（スタッフ配置） ===== -->
         <div class="panel" :class="{ active: tab === 'social' }">
             <h2>懇親会担当</h2>
-
-            <!-- 役割登録フォーム -->
-            <h3 style="margin-top:0">役割の登録</h3>
-            <div class="form-row">
-                <div class="form-group"><label>役割名</label><input v-model="scForm.title" placeholder="例: 会場設営、ドリンク担当、司会"></div>
-                <div class="form-group"><label>必要スタッフ数</label><input v-model.number="scForm.required_staff" type="number" min="1" placeholder="2"></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label>開始時刻</label><input v-model="scForm.start_time" type="datetime-local"></div>
-                <div class="form-group"><label>終了時刻</label><input v-model="scForm.end_time" type="datetime-local"></div>
-                <div class="form-group"><label>場所</label>
-                    <select v-model.number="scForm.room_id">
-                        <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label>英語対応</label>
-                    <label style="margin:0;display:flex;align-items:center;gap:4px;padding-top:4px"><input type="checkbox" v-model="scForm.english_required" style="width:16px;height:16px;cursor:pointer"> 必要</label>
-                </div>
-            </div>
-            <div class="form-group"><label>備考</label><textarea v-model="scForm.notes" rows="2" placeholder="例: ケータリング業者との連携が必要"></textarea></div>
-            <div style="display:flex;gap:8px;margin-bottom:16px">
-                <button class="btn" @click="submitSocial">{{ scForm.editId ? '更新' : '追加' }}</button>
-                <button v-if="scForm.editId" class="btn btn-danger" @click="cancelEditSocial">キャンセル</button>
-            </div>
-
-            <!-- 自動配置ボタン -->
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
-                <button class="btn btn-success" @click="autoAssignSocial" :disabled="!socialSessions.length" :style="{ background: socialSessions.length ? '#0d7a42' : '#aaa', cursor: socialSessions.length ? 'pointer' : 'not-allowed' }">懇親会スタッフ自動配置</button>
-                <span v-if="scAssignMsg" style="font-size:0.85rem;color:#137333">{{ scAssignMsg }}</span>
-            </div>
 
             <!-- スタッフフィルター -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -745,9 +717,8 @@
                 <span v-if="scStaffFilter" style="font-size:0.85rem;color:#666">{{ filteredSocialSessions.length }}/{{ socialSessions.length }}件</span>
             </div>
 
-            <!-- 懇親会マトリクス -->
+            <p v-if="!socialSessions.length" style="color:#888">懇親会の役割がまだ登録されていません。「懇親会管理」から追加してください。</p>
             <template v-if="socialSessions.length">
-                <h3>懇親会配置マトリクス</h3>
                 <div class="tl-wrapper">
                     <div class="tl-grid" :style="scGridStyle">
                         <div class="tl-corner">時間</div>
@@ -770,17 +741,14 @@
                         <div v-for="entry in socialSessions" :key="'scs'+entry.session.id"
                              class="tl-session" :style="{...scSessionStyle(entry), opacity: scSessionOpacity(entry)}"
                              style="background:linear-gradient(135deg,#f3e5f5,#e1bee7);border-color:#7b1fa2;cursor:pointer"
-                             @click="scSelectedSession = (scSelectedSession === entry.session.id ? null : entry.session.id)">
+                             @click="toggleSessionDetail(entry.session.id)">
                             <div class="tl-session-time" style="color:#7b1fa2">
                                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
                             </div>
                             <div class="tl-session-title" style="color:#4a148c">{{ entry.session.title }}</div>
                             <div class="tl-session-staff">
                                 <template v-if="entry.assigned_staff.length">
-                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">
-                                        {{ a.staff.name }}
-                                        <span v-if="a.staff.english_ok" style="font-size:0.65rem;color:#00695c">(EN)</span>
-                                    </span>
+                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
                                 </template>
                                 <span v-else class="badge warn">未配置</span>
                             </div>
@@ -788,113 +756,49 @@
                     </div>
                 </div>
 
-                <!-- 懇親会マトリクス詳細ポップアップ -->
-                <div v-if="scSelectedEntry" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="scSelectedSession=null">
-                    <div style="background:#fff;border-radius:12px;padding:24px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                            <h3 style="margin:0 0 12px 0">{{ scSelectedEntry.session.title }}</h3>
-                            <button @click="scSelectedSession=null" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#666;padding:0 4px">&#10005;</button>
-                        </div>
-                        <div style="font-size:0.9rem;color:#555;margin-bottom:12px">
-                            {{ fmt(scSelectedEntry.session.start_time) }} - {{ fmt(scSelectedEntry.session.end_time) }} |
-                            {{ scSelectedEntry.session.room ? scSelectedEntry.session.room.name : '' }}
-                            <span v-if="scSelectedEntry.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c;margin-left:4px">英語対応</span>
-                        </div>
-                        <div v-if="scSelectedEntry.session.notes" style="margin-bottom:12px">
-                            <strong style="font-size:0.85rem">備考:</strong>
-                            <p style="margin:4px 0;font-size:0.85rem;white-space:pre-wrap;color:#666">{{ scSelectedEntry.session.notes }}</p>
-                        </div>
-                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
-                            <strong style="font-size:0.85rem">担当スタッフ:</strong>
-                            <template v-if="scSelectedEntry.assigned_staff.length">
-                                <span class="badge" v-for="a in scSelectedEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
-                                    {{ a.staff.name }}
-                                    <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
-                                    <button @click="removeAssignment(a.assignment_id); scSelectedSession=null" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
-                                </span>
-                            </template>
-                            <span v-else class="badge warn">未配置</span>
-                            <span style="font-size:0.85rem;color:#888;margin-left:8px">（必要: {{ scSelectedEntry.session.required_staff }}名）</span>
-                        </div>
-                    </div>
-                </div>
+                <!-- 懇親会一覧（スタッフ割り当て） -->
+                <h3 style="margin-top:24px">役割一覧</h3>
+                <table>
+                    <thead><tr><th>役割名</th><th>時間</th><th>場所</th><th>担当スタッフ</th></tr></thead>
+                    <tbody>
+                        <tr v-for="e in socialSessions" :key="'sctbl2-'+e.session.id"
+                            :style="{ opacity: scSessionOpacity(e) }">
+                            <td><a href="#" @click.prevent="toggleSessionDetail(e.session.id)" style="color:#1a73e8;text-decoration:none"><strong>{{ e.session.title }}</strong></a></td>
+                            <td style="white-space:nowrap">{{ fmtShort(e.session.start_time) }} - {{ fmtShort(e.session.end_time) }}</td>
+                            <td>{{ e.session.room ? e.session.room.name : '' }}</td>
+                            <td>
+                                <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+                                    <template v-if="e.assigned_staff.length">
+                                        <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
+                                            {{ a.staff.name }}
+                                            <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                                        </span>
+                                    </template>
+                                    <span v-else class="badge warn">未配置</span>
+                                    <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
+                                        <option :value="0">＋追加</option>
+                                        <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }}</option>
+                                    </select>
+                                    <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </template>
-
-            <!-- 役割一覧 -->
-            <h3>役割一覧</h3>
-            <p v-if="!socialSessions.length" style="color:#888">懇親会の役割がまだ登録されていません。</p>
-            <table v-else>
-                <thead><tr><th>役割名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>担当スタッフ</th><th></th></tr></thead>
-                <tbody>
-                    <tr v-for="e in socialSessions" :key="'sctbl-'+e.session.id"
-                        :style="{ opacity: scSessionOpacity(e) }">
-                        <td><strong>{{ e.session.title }}</strong></td>
-                        <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
-                        <td>{{ e.session.room ? e.session.room.name : '' }}</td>
-                        <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
-                        <td>{{ e.session.required_staff }}</td>
-                        <td>
-                            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-                                <template v-if="e.assigned_staff.length">
-                                    <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
-                                        {{ a.staff.name }}
-                                        <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
-                                        <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
-                                    </span>
-                                </template>
-                                <span v-else class="badge warn">未配置</span>
-                                <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
-                                    <option :value="0">＋追加</option>
-                                    <option v-for="s in availableStaffs(e, 'social')" :key="s.id" :value="s.id">{{ s.name }}</option>
-                                </select>
-                                <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
-                            </div>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm edit-btn" @click="editSocial(e.session)" style="margin-right:4px">編集</button>
-                            <button class="del-btn" @click="deleteSocial(e.session.id)">削除</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
 
         <!-- ===== 全体スケジュール ===== -->
+        <!-- ===== 全体スケジュール（表示専用） ===== -->
         <div class="panel" :class="{ active: tab === 'all-matrix' }">
             <h2>全体スケジュール</h2>
-
-            <!-- 全体スケジュール登録フォーム -->
-            <details style="margin-bottom:16px;border:1px solid #ffe0b2;border-radius:8px;padding:4px 12px;background:#fff8e1">
-                <summary style="cursor:pointer;font-weight:600;padding:8px 0;color:#e65100">全体スケジュールの登録</summary>
-                <div style="padding:8px 0">
-                    <div class="form-row">
-                        <div class="form-group"><label>タイトル</label><input v-model="allOvForm.title" placeholder="例: 集合時間、開場、昼休み"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>開始時刻</label><input v-model="allOvForm.start_time" type="datetime-local"></div>
-                        <div class="form-group"><label>終了時刻</label><input v-model="allOvForm.end_time" type="datetime-local"></div>
-                    </div>
-                    <div class="form-group"><label>備考</label><textarea v-model="allOvForm.notes" rows="2" placeholder="例: 正面入口に集合"></textarea></div>
-                    <div style="display:flex;gap:8px;margin-bottom:8px">
-                        <button class="btn" style="background:#e65100" @click="submitAllOverall">{{ allOvForm.editId ? '更新' : '追加' }}</button>
-                        <button v-if="allOvForm.editId" class="btn btn-danger" @click="cancelAllOverall">キャンセル</button>
-                    </div>
-                </div>
-            </details>
-
-            <!-- 自動配置・操作ボタン -->
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px">
-                <button class="btn btn-success" @click="autoAssignAll" :disabled="!allSchedule.length">全体自動配置</button>
-                <button class="btn btn-danger" @click="clearAssignments" style="margin-left:auto">配置をクリア</button>
-            </div>
-            <div v-if="allAssignMsg" style="font-size:0.85rem;color:#137333;margin-bottom:8px">{{ allAssignMsg }}</div>
 
             <!-- スタッフフィルター -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
                 <label style="font-weight:600;font-size:0.9rem">スタッフ絞り込み:</label>
                 <select v-model.number="allStaffFilter" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
                     <option :value="0">全員表示</option>
-                    <option v-for="s in staffs" :key="s.id" :value="s.id">{{ s.name }} ({{ catLabel(s.role) }})</option>
+                    <option v-for="s in staffs" :key="s.id" :value="s.id">{{ s.name }}</option>
                 </select>
             </div>
 
@@ -942,7 +846,7 @@
                         </template>
                         <div v-for="entry in allSchedule" :key="'as'+entry.session.id"
                              class="tl-session" :style="{...allSessionStyle(entry), opacity: allSessionOpacity(entry), ...allSessionBg(entry.session.category), cursor:'pointer'}"
-                             @click="allSelectedSession = (allSelectedSession === entry.session.id ? null : entry.session.id)">
+                             @click="toggleSessionDetail(entry.session.id)">
                             <div class="tl-session-time">
                                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
                             </div>
@@ -956,80 +860,87 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- マトリクス詳細ポップアップ（配置管理付き） -->
-                <div v-if="allSelectedEntry" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="allSelectedSession=null">
-                    <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                            <h3 style="margin:0 0 12px 0">{{ allSelectedEntry.session.title }}</h3>
-                            <button @click="allSelectedSession=null" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#666;padding:0 4px">&#10005;</button>
-                        </div>
-                        <div style="font-size:0.9rem;color:#555;margin-bottom:12px">
-                            {{ fmt(allSelectedEntry.session.start_time) }} - {{ fmt(allSelectedEntry.session.end_time) }} |
-                            {{ allSelectedEntry.session.room ? allSelectedEntry.session.room.name : '' }} |
-                            <span class="badge">{{ catLabel(allSelectedEntry.session.category) }}</span>
-                            <span v-if="allSelectedEntry.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c;margin-left:4px">英語対応</span>
-                        </div>
-                        <div v-if="allSelectedEntry.session.notes" style="margin-bottom:12px">
-                            <strong style="font-size:0.85rem">備考:</strong>
-                            <p style="margin:4px 0;font-size:0.85rem;white-space:pre-wrap;color:#666">{{ allSelectedEntry.session.notes }}</p>
-                        </div>
-                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e0e0">
-                            <strong style="font-size:0.85rem">担当スタッフ:</strong>
-                            <span style="font-size:0.85rem;color:#888;margin-left:8px">（必要: {{ allSelectedEntry.session.required_staff }}名）</span>
-                            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:8px">
-                                <template v-if="allSelectedEntry.assigned_staff.length">
-                                    <span class="badge" v-for="a in allSelectedEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
-                                        {{ a.staff.name }}
-                                        <span v-if="a.staff.english_ok" style="font-size:0.7rem;color:#00695c">(EN)</span>
-                                        <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
-                                    </span>
-                                </template>
-                                <span v-else class="badge warn">未配置</span>
-                                <select v-model.number="assignStaffSelect[allSelectedEntry.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
-                                    <option :value="0">＋追加</option>
-                                    <option v-for="s in availableStaffs(allSelectedEntry)" :key="s.id" :value="s.id">{{ s.name }} ({{ catLabel(s.role) }})</option>
-                                </select>
-                                <button v-if="assignStaffSelect[allSelectedEntry.session.id]" class="btn btn-sm" @click="addAssignment(allSelectedEntry.session.id)" style="padding:2px 8px">追加</button>
-                            </div>
-                        </div>
-                        <!-- 受付・懇親会の編集・削除 -->
-                        <div v-if="allSelectedEntry.session.category === 'overall'" style="margin-top:16px;padding-top:12px;border-top:1px solid #e0e0e0;display:flex;gap:8px">
-                            <button class="btn btn-sm edit-btn" @click="editAllEntry(allSelectedEntry.session)">編集</button>
-                            <button class="del-btn" @click="deleteAllEntry(allSelectedEntry.session.id, allSelectedEntry.session.category)">削除</button>
-                        </div>
-                    </div>
-                </div>
             </template>
+        </div>
 
-            <!-- 全体一覧テーブル -->
-            <h3>全スケジュール一覧</h3>
-            <table v-if="allSchedule.length">
-                <thead><tr><th>カテゴリ</th><th>タイトル</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>担当スタッフ</th></tr></thead>
+        <!-- ===== スタッフ別詳細 ===== -->
+        <div class="panel" :class="{ active: tab === 'staff-detail' }">
+            <h2>スタッフ別詳細</h2>
+
+            <!-- スタッフフィルター -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+                <label style="font-weight:600;font-size:0.9rem">スタッフ絞り込み:</label>
+                <select v-model.number="staffDetailFilter" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;min-width:180px">
+                    <option :value="0">全員表示</option>
+                    <option v-for="s in staffs" :key="s.id" :value="s.id">{{ s.name }}</option>
+                </select>
+            </div>
+
+            <p v-if="!staffAssignments.length">スタッフがまだ登録されていません。</p>
+            <div v-for="e in staffAssignments" :key="'sd-'+e.staff.id" class="schedule-card"
+                 v-show="!staffDetailFilter || e.staff.id === staffDetailFilter">
+                <h3>{{ e.staff.name }}
+                    <span class="badge">{{ catLabel(e.staff.role) }}</span>
+                    <span v-if="e.staff.english_ok" class="badge" style="background:#e0f2f1;color:#00695c">EN</span>
+                    <span class="badge" style="background:#e8f0fe;color:#1a73e8">担当: {{ e.assigned_sessions.length }}件</span>
+                </h3>
+                <div v-if="e.staff.availabilities && e.staff.availabilities.length" style="margin-bottom:8px">
+                    <strong style="font-size:0.85rem">活動可能時間:</strong>
+                    <span class="badge avail" v-for="a in e.staff.availabilities" :key="a.id">
+                        {{ fmt(a.start_time) }} - {{ fmtShort(a.end_time) }}
+                    </span>
+                </div>
+                <template v-if="e.assigned_sessions.length">
+                    <table>
+                        <thead><tr><th>カテゴリ</th><th>セッション</th><th>時間</th><th>部屋</th></tr></thead>
+                        <tbody>
+                            <tr v-for="s in e.assigned_sessions" :key="'sds-'+s.id">
+                                <td><span class="badge" :style="s.category==='reception' ? 'background:#e8f5e9;color:#1b5e20' : s.category==='social' ? 'background:#f3e5f5;color:#4a148c' : s.category==='overall' ? 'background:#fff3e0;color:#e65100' : ''">{{ catLabel(s.category) }}</span></td>
+                                <td><a href="#" @click.prevent="toggleSessionDetail(s.id)" style="color:#1a73e8;text-decoration:none">{{ s.title }}</a></td>
+                                <td style="white-space:nowrap">{{ fmt(s.start_time) }} - {{ fmtShort(s.end_time) }}</td>
+                                <td>{{ s.room ? s.room.name : '' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </template>
+                <p v-else style="color:#666;margin-top:8px">担当セッションなし</p>
+            </div>
+        </div>
+
+        <!-- ===== 全体スケジュール管理 ===== -->
+        <div class="panel" :class="{ active: tab === 'overall-manage' }">
+            <h2>全体スケジュール管理</h2>
+
+            <!-- 全体スケジュール登録フォーム -->
+            <div style="margin-bottom:20px;border:1px solid #ffe0b2;border-radius:8px;padding:16px;background:#fff8e1">
+                <h3 style="margin:0 0 12px;color:#e65100">{{ allOvForm.editId ? '全体スケジュール編集' : '全体スケジュール追加' }}</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>タイトル</label><input v-model="allOvForm.title" placeholder="例: 集合時間、開場、昼休み"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>開始時刻</label><input v-model="allOvForm.start_time" type="datetime-local"></div>
+                    <div class="form-group"><label>終了時刻</label><input v-model="allOvForm.end_time" type="datetime-local"></div>
+                </div>
+                <div class="form-group"><label>備考</label><textarea v-model="allOvForm.notes" rows="2" placeholder="例: 正面入口に集合"></textarea></div>
+                <div style="display:flex;gap:8px">
+                    <button class="btn" style="background:#e65100" @click="submitAllOverall">{{ allOvForm.editId ? '更新' : '追加' }}</button>
+                    <button v-if="allOvForm.editId" class="btn btn-danger" @click="cancelAllOverall">キャンセル</button>
+                </div>
+            </div>
+
+            <!-- 全体スケジュール一覧 -->
+            <h3>登録済み一覧</h3>
+            <p v-if="!overallSessions.length" style="color:#666">全体スケジュールがまだ登録されていません。</p>
+            <table v-else>
+                <thead><tr><th>タイトル</th><th>時間</th><th>備考</th><th>操作</th></tr></thead>
                 <tbody>
-                    <tr v-for="e in allSchedule" :key="'alltbl-'+e.session.id"
-                        :style="{ opacity: allSessionOpacity(e) }">
-                        <td><span class="badge" :style="e.session.category==='reception' ? 'background:#e8f5e9;color:#1b5e20' : e.session.category==='social' ? 'background:#f3e5f5;color:#4a148c' : ''">{{ catLabel(e.session.category) }}</span></td>
-                        <td><a href="#" @click.prevent="allSelectedSession = e.session.id" style="color:#1a73e8;text-decoration:none"><strong>{{ e.session.title }}</strong></a></td>
-                        <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
-                        <td>{{ e.session.room ? e.session.room.name : '' }}</td>
-                        <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
-                        <td>{{ e.session.required_staff }}</td>
+                    <tr v-for="s in overallSessions" :key="'ov-'+s.id">
+                        <td><strong>{{ s.title }}</strong></td>
+                        <td>{{ fmt(s.start_time) }} - {{ fmt(s.end_time) }}</td>
+                        <td style="font-size:0.85rem;color:#666">{{ s.notes || '-' }}</td>
                         <td>
-                            <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-                                <template v-if="e.assigned_staff.length">
-                                    <span class="badge" v-for="a in e.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px">
-                                        {{ a.staff.name }}
-                                        <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
-                                    </span>
-                                </template>
-                                <span v-else class="badge warn">未配置</span>
-                                <select v-model.number="assignStaffSelect[e.session.id]" style="padding:2px 6px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;margin-left:4px">
-                                    <option :value="0">＋追加</option>
-                                    <option v-for="s in availableStaffs(e)" :key="s.id" :value="s.id">{{ s.name }} ({{ catLabel(s.role) }})</option>
-                                </select>
-                                <button v-if="assignStaffSelect[e.session.id]" class="btn btn-sm" @click="addAssignment(e.session.id)" style="padding:2px 8px">追加</button>
-                            </div>
+                            <button class="btn btn-sm edit-btn" @click="editAllEntry(s)" style="margin-right:4px">編集</button>
+                            <button class="del-btn" @click="deleteAllEntry(s.id, 'overall')">削除</button>
                         </td>
                     </tr>
                 </tbody>
@@ -1309,7 +1220,7 @@
                         </div>
                         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#fafafa;border-radius:6px">
                             <span style="background:#1a73e8;color:#fff;border-radius:50%;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">5</span>
-                            <div><strong>配置アルゴリズム</strong>でスタッフの自動配置を実行。手動調整は<strong>セッション配置</strong>タブで</div>
+                            <div><strong>配置表</strong>タブで自動配置を実行。セッションクリックで手動調整も可能</div>
                         </div>
                         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:#fafafa;border-radius:6px">
                             <span style="background:#1a73e8;color:#fff;border-radius:50%;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem">6</span>
@@ -1350,12 +1261,8 @@
                                 <td style="padding:10px 12px">運営スタッフの登録。スキル（音響/配信/受付等）、英語対応可否、最大稼働時間、経験回数、対応可能時間帯、希望セッションを設定できます。</td>
                             </tr>
                             <tr style="border-bottom:1px solid #eee;background:#fafafa">
-                                <td style="padding:10px 12px;font-weight:600">セッション配置</td>
-                                <td style="padding:10px 12px">各セッションにスタッフを手動で割り当て・解除。ドロップダウンからスタッフを選択して配置します。</td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #eee">
                                 <td style="padding:10px 12px;font-weight:600">配置表</td>
-                                <td style="padding:10px 12px">スタッフ配置の一覧をマトリクス形式で表示。スタッフ×時間帯の一覧表として印刷できます。</td>
+                                <td style="padding:10px 12px">スタッフ配置の一覧をマトリクス形式で表示。自動配置の実行、セッションクリックで手動配置の追加・削除、ドラッグ&ドロップでのセッション移動が可能です。</td>
                             </tr>
                             <tr style="border-bottom:1px solid #eee;background:#fafafa">
                                 <td style="padding:10px 12px;font-weight:600">受付案内</td>
@@ -1419,6 +1326,7 @@
             </div>
         </div>
 
+        </main>
     </div>
 
     <!-- セッション詳細ポップアップ（全タブ共通） -->
@@ -1485,6 +1393,28 @@
                 <p style="margin:6px 0 0;font-size:0.9rem;white-space:pre-wrap;line-height:1.6;color:#666">{{ sessDetailSession.notes }}</p>
             </div>
             <div v-if="!sessDetailSession.description && !sessDetailSession.notes && !sessDetailSession.speaker_profile && sessDetailSession.category !== 'lt'" style="color:#aaa;font-size:0.85rem">詳細情報なし</div>
+
+            <!-- スタッフ配置 -->
+            <div v-if="sessDetailEntry" style="margin-top:16px;padding:16px;background:#f0f4ff;border-radius:8px">
+                <strong style="font-size:0.9rem">担当スタッフ</strong>
+                <span style="font-size:0.8rem;color:#666;margin-left:8px">(必要: {{ sessDetailSession.required_staff }}名)</span>
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+                    <template v-if="sessDetailEntry.assigned_staff.length">
+                        <span class="badge" v-for="a in sessDetailEntry.assigned_staff" :key="a.assignment_id" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px">
+                            {{ a.staff.name }}
+                            <button @click="removeAssignment(a.assignment_id)" style="background:none;border:none;color:#d93025;cursor:pointer;font-size:0.9rem;padding:0 2px" title="削除">&#10005;</button>
+                        </span>
+                    </template>
+                    <span v-else class="badge warn">未配置</span>
+                </div>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:6px">
+                    <select v-model.number="assignStaffSelect[sessDetailSession.id]" style="padding:4px 8px;font-size:0.85rem;border:1px solid #ccc;border-radius:4px;flex:1;max-width:240px">
+                        <option :value="0">＋ スタッフ追加</option>
+                        <option v-for="s in availableStaffs(sessDetailEntry)" :key="s.id" :value="s.id">{{ s.name }}</option>
+                    </select>
+                    <button v-if="assignStaffSelect[sessDetailSession.id]" class="btn btn-sm" @click="addAssignment(sessDetailSession.id)" style="padding:4px 12px">追加</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
