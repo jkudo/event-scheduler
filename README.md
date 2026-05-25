@@ -66,28 +66,30 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 | `GEOIP_ENABLED` | GeoIP制限 (`1`で有効) | 無効 |
 | `IPINFO_TOKEN` | ipinfo.ioトークン | (なし) |
 
-## Azure Web Apps へのデプロイ
+## デプロイ例
 
-### 方法1: GitHub Actions (現在の構成)
+### Azure Web Apps
+
+#### 方法1: GitHub Actions
 
 mainブランチへのpush時に自動デプロイされます。
 
-#### 初回セットアップ
+##### 初回セットアップ
 
 1. **リソース作成**
 
 ```bash
-az group create --name rg-confscheduler --location japaneast
+az group create --name <リソースグループ名> --location japaneast
 
 az appservice plan create \
-  --name plan-confscheduler \
-  --resource-group rg-confscheduler \
+  --name <プラン名> \
+  --resource-group <リソースグループ名> \
   --sku F1 --is-linux
 
 az webapp create \
   --name <アプリ名> \
-  --resource-group rg-confscheduler \
-  --plan plan-confscheduler \
+  --resource-group <リソースグループ名> \
+  --plan <プラン名> \
   --runtime "PYTHON|3.11"
 ```
 
@@ -96,7 +98,7 @@ az webapp create \
 ```bash
 az webapp config set \
   --name <アプリ名> \
-  --resource-group rg-confscheduler \
+  --resource-group <リソースグループ名> \
   --startup-file "gunicorn -w 1 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:8000"
 ```
 
@@ -105,7 +107,7 @@ az webapp config set \
 ```bash
 az webapp config appsettings set \
   --name <アプリ名> \
-  --resource-group rg-confscheduler \
+  --resource-group <リソースグループ名> \
   --settings \
     APP_PASSWORD="<ログインパスワード>" \
     SESSION_SECRET="<ランダム文字列>" \
@@ -142,13 +144,13 @@ jobs:
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
 ```
 
-### 方法2: Azure CLI で直接デプロイ (GitHubなし)
+#### 方法2: Azure CLI で直接デプロイ
 
 ```bash
 # プロジェクトディレクトリで実行
 az webapp up \
   --name <アプリ名> \
-  --resource-group rg-confscheduler \
+  --resource-group <リソースグループ名> \
   --runtime "PYTHON|3.11" \
   --sku F1
 ```
@@ -162,20 +164,20 @@ zip -r deploy.zip . -x ".git/*" "data/*" "__pycache__/*" "*.pyc"
 # デプロイ
 az webapp deploy \
   --name <アプリ名> \
-  --resource-group rg-confscheduler \
+  --resource-group <リソースグループ名> \
   --src-path deploy.zip \
   --type zip
 ```
 
 スタートアップコマンドと環境変数の設定は方法1と同じです。
 
-### 方法3: ローカルGitデプロイ (GitHubなし)
+#### 方法3: ローカルGitデプロイ
 
 ```bash
 # デプロイソースをローカルGitに設定
 az webapp deployment source config-local-git \
   --name <アプリ名> \
-  --resource-group rg-confscheduler
+  --resource-group <リソースグループ名>
 
 # 出力されたURLをリモートに追加
 git remote add azure https://<アプリ名>.scm.azurewebsites.net/<アプリ名>.git
@@ -190,15 +192,6 @@ git push azure main
 az webapp deployment user set --user-name <ユーザー名> --password <パスワード>
 ```
 
-## F1 (無料プラン) の制限
+## ライセンス
 
-| 項目 | 制限 |
-|------|------|
-| CPU | 60分/日 |
-| メモリ | 1 GB |
-| ストレージ | 1 GB |
-| カスタムドメイン | 不可 |
-| SSL | Azure提供のみ |
-| アイドル時 | 20分で停止 (コールドスタートあり) |
-
-通常の利用ではCPU制限に達することはありません（推定使用量: 1〜2分/日）。
+[MIT License](LICENSE)
