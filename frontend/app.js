@@ -953,7 +953,8 @@ createApp({
                 if (newStaffPhotoFile.value) {
                     const fd = new FormData();
                     fd.append('photo', newStaffPhotoFile.value);
-                    await fetch(API + `/api/staffs/${staffForm.editId}/photo`, { method: 'POST', body: fd });
+                    const resPhoto = await fetch(API + `/api/staffs/${staffForm.editId}/photo`, { method: 'POST', body: fd });
+                    if (!resPhoto.ok) { alert('スタッフ写真のアップロードに失敗しました'); }
                 }
             } else {
                 payload.availabilities = newStaffAvails.map(a => ({ start_time: a.start_time, end_time: a.end_time }));
