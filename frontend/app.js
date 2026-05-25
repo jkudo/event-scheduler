@@ -1315,12 +1315,14 @@ const app = createApp({
 
         // 共通: 時間→行番号
         function _timeToRow(cfg, dt) {
+            if (!cfg) return 2;
             const t = new Date(dt).getTime();
             return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
         }
 
         // 共通: セッションスタイル
         function _buildSessionStyle(cfg, rooms, entry) {
+            if (!cfg) return {};
             const startRow = _timeToRow(cfg, entry.session.start_time);
             const endRow = _timeToRow(cfg, entry.session.end_time);
             const ci = rooms.findIndex(([rid]) => rid === entry.session.room_id);
