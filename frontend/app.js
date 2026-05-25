@@ -925,13 +925,13 @@ const app = createApp({
             if (staffForm.experience_count === null || staffForm.experience_count === '' || staffForm.experience_count < 0) { alert('過去参加回数を入力してください'); return; }
             let slackName = (staffForm.slack_name || '').trim();
             if (slackName && !slackName.startsWith('@')) slackName = '@' + slackName;
-            const payload = { name: staffForm.name, slack_name: slackName, emergency_contact: (staffForm.emergency_contact || '').trim(), role: staffForm.role, experience_count: staffForm.experience_count, english_ok: staffForm.english_ok };
+            const payload = { name: staffForm.name, slack_name: slackName, emergency_contact: (staffForm.emergency_contact || '').trim(), role: staffForm.role, experience_count: staffForm.experience_count, english_ok: staffForm.english_ok, max_hours: staffForm.max_hours || 8 };
             if (staffForm.editId) {
                 const res = await fetch(API + `/api/staffs/${staffForm.editId}`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (!res.ok) { alert('スタッフの更新に失敗しました'); return; }
+                if (!res.ok) { const err = await res.text(); alert('スタッフの更新に失敗しました: ' + err); return; }
                 if (newStaffPhotoFile.value) {
                     const fd = new FormData();
                     fd.append('photo', newStaffPhotoFile.value);
