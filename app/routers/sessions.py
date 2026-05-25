@@ -10,6 +10,7 @@ from ..config import UPLOAD_DIR
 from ..database import get_db
 from ..models import Session as SessionModel, Room, LTTalk, Staff, StaffAvailability
 from ..schemas import SessionCreate, SessionResponse, LTTalkCreate, LTTalkResponse
+from ..utils import is_staff_available
 
 
 def _parse_dt(value: str) -> datetime:
@@ -235,18 +236,10 @@ def calc_required_staff(db: Session = Depends(get_db)):
     if not sessions:
         return {"message": "セッションがありません", "results": [], "min_total_staff": 0, "comfortable_total_staff": 0}
 
-    def _staff_available(staff: Staff, sess: SessionModel) -> bool:
-        if not staff.availabilities:
-            return True
-        for a in staff.availabilities:
-            if a.start_time <= sess.start_time and a.end_time >= sess.end_time:
-                return True
-        return False
-
     # --- 各セッションの必要スタッフ数を計算 ---
     results = []
     for sess in sessions:
-        available_count = sum(1 for s in staffs if _staff_available(s, sess))
+        available_count = sum(1 for s in staffs if is_staff_available(s, sess))
         concurrent = sum(
             1 for other in sessions
             if other.start_time < sess.end_time and other.end_time > sess.start_time
