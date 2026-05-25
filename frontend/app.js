@@ -847,39 +847,10 @@ createApp({
             if (sessForm.group_id) fd.append('group_id', sessForm.group_id);
             if (sessPhoto.value && sessPhoto.value.files[0]) fd.append('speaker_photo', sessPhoto.value.files[0]);
 
-            let sessionId = sessForm.editId;
-            if (sessionId) {
-                const res = await fetch(API + `/api/sessions/${sessionId}`, { method: 'PUT', body: fd });
-                if (!res.ok) { alert('セッションの更新に失敗しました'); return; }
-            } else {
-                const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
-                if (!res.ok) { alert('セッションの作成に失敗しました'); return; }
-                const created = await res.json();
-                sessionId = created.id;
-            }
-            // LTトーク保存
+            const sessionId = await _saveSession(fd, sessForm.editId);
+            if (!sessionId) return;
             if (sessForm.category === 'lt' && ltTalks.length) {
-                const talks = ltTalks.map((t, i) => ({
-                    title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana,
-                    speaker_org: t.speaker_org, speaker_title: t.speaker_title,
-                    speaker_photo: t.speaker_photo || '', order: i
-                }));
-                const res2 = await fetch(API + `/api/sessions/${sessionId}/lt-talks`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(talks)
-                });
-                if (!res2.ok) { alert('LTトークの保存に失敗しました'); return; }
-                const savedTalks = await res2.json();
-                // 新しい写真があればアップロード
-                for (let i = 0; i < ltTalks.length; i++) {
-                    if (ltTalks[i].photoFile && savedTalks[i]) {
-                        const fd2 = new FormData();
-                        fd2.append('photo', ltTalks[i].photoFile);
-                        const res3 = await fetch(API + `/api/sessions/${sessionId}/lt-talks/${savedTalks[i].id}/photo`, { method: 'POST', body: fd2 });
-                        if (!res3.ok) { alert(`LT登壇者 ${i+1} の写真アップロードに失敗しました`); }
-                    }
-                }
+                await _saveLtTalks(sessionId, ltTalks);
             }
             cancelEditSession();
             await loadSessions();
@@ -1244,6 +1215,43 @@ createApp({
             assignStaffSelect[sessionId] = '0';
         }
 
+        // 共通: セッション保存ヘルパー
+        async function _saveSession(fd, editId) {
+            if (editId) {
+                const res = await fetch(API + `/api/sessions/${editId}`, { method: 'PUT', body: fd });
+                if (!res.ok) { alert('セッションの更新に失敗しました'); return null; }
+                return editId;
+            } else {
+                const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+                if (!res.ok) { alert('セッションの作成に失敗しました'); return null; }
+                return (await res.json()).id;
+            }
+        }
+
+        // 共通: LTトーク保存ヘルパー
+        async function _saveLtTalks(sessionId, talks) {
+            const talkData = talks.map((t, i) => ({
+                title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana || '',
+                speaker_org: t.speaker_org || '', speaker_title: t.speaker_title || '',
+                speaker_photo: t.speaker_photo || '',
+                start_time: t.start_time || '', end_time: t.end_time || '', order: i
+            }));
+            const res = await fetch(API + `/api/sessions/${sessionId}/lt-talks`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(talkData)
+            });
+            if (!res.ok) { alert('LTトークの保存に失敗しました'); return; }
+            const savedTalks = await res.json();
+            for (let i = 0; i < talks.length; i++) {
+                if (talks[i].photoFile && savedTalks[i]) {
+                    const fd2 = new FormData();
+                    fd2.append('photo', talks[i].photoFile);
+                    const res3 = await fetch(API + `/api/sessions/${sessionId}/lt-talks/${savedTalks[i].id}/photo`, { method: 'POST', body: fd2 });
+                    if (!res3.ok) { alert(`LT登壇者 ${i+1} の写真アップロードに失敗しました`); }
+                }
+            }
+        }
+
         // 共通: 配置クリアヘルパー
         async function _doClearAssignments(assignmentIds) {
             for (const id of assignmentIds) {
@@ -1416,39 +1424,10 @@ createApp({
             const photoInput = document.querySelector(`[data-group-photo="${gid}"]`);
             if (photoInput && photoInput.files[0]) fd.append('speaker_photo', photoInput.files[0]);
 
-            let sessionId = form.editId;
-            if (sessionId) {
-                const res = await fetch(API + `/api/sessions/${sessionId}`, { method: 'PUT', body: fd });
-                if (!res.ok) { alert('セッションの更新に失敗しました'); return; }
-            } else {
-                const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
-                if (!res.ok) { alert('セッションの作成に失敗しました'); return; }
-                const created = await res.json();
-                sessionId = created.id;
-            }
-            // LTトーク保存
+            const sessionId = await _saveSession(fd, form.editId);
+            if (!sessionId) return;
             if (form.category === 'lt' && talks.length) {
-                const talkData = talks.map((t, i) => ({
-                    title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana,
-                    speaker_org: t.speaker_org, speaker_title: t.speaker_title,
-                    speaker_photo: t.speaker_photo || '',
-                    start_time: t.start_time || '', end_time: t.end_time || '',
-                    order: i
-                }));
-                const res2 = await fetch(API + `/api/sessions/${sessionId}/lt-talks`, {
-                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(talkData)
-                });
-                if (!res2.ok) { alert('LTトークの保存に失敗しました'); return; }
-                const savedTalks = await res2.json();
-                for (let i = 0; i < talks.length; i++) {
-                    if (talks[i].photoFile && savedTalks[i]) {
-                        const fd2 = new FormData();
-                        fd2.append('photo', talks[i].photoFile);
-                        const res3 = await fetch(API + `/api/sessions/${sessionId}/lt-talks/${savedTalks[i].id}/photo`, { method: 'POST', body: fd2 });
-                        if (!res3.ok) { alert(`LT登壇者 ${i+1} の写真アップロードに失敗しました`); }
-                    }
-                }
+                await _saveLtTalks(sessionId, talks);
             }
             cancelEditGroupSession(gid);
             await loadSessions();
@@ -1629,13 +1608,8 @@ createApp({
             fd.append('speaker_org', ''); fd.append('speaker_title', ''); fd.append('speaker_profile', '');
             const gid = catGroupTabs[catKey];
             if (gid) fd.append('group_id', gid);
-            if (form.editId) {
-                const res = await fetch(API + `/api/sessions/${form.editId}`, { method: 'PUT', body: fd });
-                if (!res.ok) { alert('セッションの更新に失敗しました'); return; }
-            } else {
-                const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
-                if (!res.ok) { alert('セッションの作成に失敗しました'); return; }
-            }
+            const sessionId = await _saveSession(fd, form.editId);
+            if (!sessionId) return;
             cancelEditCategory(catKey);
             await loadSessions(); await loadSchedule();
         }
@@ -2406,13 +2380,8 @@ createApp({
             fd.append('notes', allOvForm.notes);
             fd.append('description', ''); fd.append('speaker_kana', '');
             fd.append('speaker_org', ''); fd.append('speaker_title', ''); fd.append('speaker_profile', '');
-            if (allOvForm.editId) {
-                const res = await fetch(API + `/api/sessions/${allOvForm.editId}`, { method: 'PUT', body: fd });
-                if (!res.ok) { alert('セッションの更新に失敗しました'); return; }
-            } else {
-                const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
-                if (!res.ok) { alert('セッションの作成に失敗しました'); return; }
-            }
+            const sessionId = await _saveSession(fd, allOvForm.editId);
+            if (!sessionId) return;
             cancelAllOverall();
             await loadSessions(); await loadSchedule();
         }
