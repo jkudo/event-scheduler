@@ -1244,6 +1244,16 @@ createApp({
             assignStaffSelect[sessionId] = '0';
         }
 
+        // 共通: 配置クリアヘルパー
+        async function _doClearAssignments(assignmentIds) {
+            for (const id of assignmentIds) {
+                const res = await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+                if (!res.ok) { alert('配置の削除に失敗しました'); return false; }
+            }
+            await loadSchedule();
+            return true;
+        }
+
         // 共通: 自動配置ヘルパー
         async function _doAutoAssign(ids) {
             const res = await fetch(API + '/api/assignments/auto-assign', {
@@ -1278,13 +1288,10 @@ createApp({
         async function clearAssignments() {
             if (!confirm('セッション担当の配置をすべてクリアします。よろしいですか？')) return;
             const ids = sessionSchedule.value.flatMap(e => e.assigned_staff.map(a => a.assignment_id));
-            for (const id of ids) {
-                const res = await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
-                if (!res.ok) { alert('配置の削除に失敗しました'); return; }
+            if (await _doClearAssignments(ids)) {
+                scheduleMsg.value = { type: 'success', text: 'セッション担当の配置をクリアしました' };
+                scheduleMsgError.value = '';
             }
-            scheduleMsg.value = { type: 'success', text: 'セッション担当の配置をクリアしました' };
-            scheduleMsgError.value = '';
-            await loadSchedule();
         }
 
         // ====================================================================
@@ -1474,12 +1481,9 @@ createApp({
         async function clearGroupAssignments(gid) {
             if (!confirm('このグループの配置をすべてクリアします。よろしいですか？')) return;
             const ids = (groupSchedule.value[gid] || []).flatMap(e => e.assigned_staff.map(a => a.assignment_id));
-            for (const id of ids) {
-                const res = await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
-                if (!res.ok) { alert('配置の削除に失敗しました'); return; }
+            if (await _doClearAssignments(ids)) {
+                groupScheduleMsgs[gid] = '配置をクリアしました';
             }
-            groupScheduleMsgs[gid] = '配置をクリアしました';
-            await loadSchedule();
         }
         function toggleGroupSessionSelect(gid, id) {
             if (!groupSelectedSessions[gid]) groupSelectedSessions[gid] = new Set();
@@ -1655,12 +1659,9 @@ createApp({
             const label = cat ? cat.label : catKey;
             if (!confirm(`${label}のスタッフ配置をすべてクリアします。よろしいですか？`)) return;
             const ids = (categorySessions.value[catKey] || []).flatMap(e => e.assigned_staff.map(a => a.assignment_id));
-            for (const id of ids) {
-                const res = await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
-                if (!res.ok) { alert('配置の削除に失敗しました'); return; }
+            if (await _doClearAssignments(ids)) {
+                categoryAssignMsgs[catKey] = `${label}の配置をクリアしました`;
             }
-            categoryAssignMsgs[catKey] = `${label}の配置をクリアしました`;
-            await loadSchedule();
         }
         async function autoAssignCategorySelected(catKey) {
             const ids = [...(catSelectedSessions[catKey] || [])];
@@ -2305,12 +2306,9 @@ createApp({
         async function clearOverallAssignments() {
             if (!confirm('全体スケジュールの配置をクリアしますか？')) return;
             const ids = overallDateFiltered().flatMap(e => e.assigned_staff.map(a => a.assignment_id));
-            for (const id of ids) {
-                const res = await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
-                if (!res.ok) { alert('配置の削除に失敗しました'); return; }
+            if (await _doClearAssignments(ids)) {
+                overallAssignMsg.value = '配置をクリアしました';
             }
-            overallAssignMsg.value = '配置をクリアしました';
-            await loadSchedule();
         }
         // overallGrid (マトリクス用)
         function ovGridConfig() {
