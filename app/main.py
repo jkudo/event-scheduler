@@ -65,8 +65,8 @@ from .security import SecurityHeadersMiddleware, RateLimitMiddleware
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
 
-import os as _os
-if _os.environ.get("APP_PASSWORD"):
+import os
+if os.environ.get("APP_PASSWORD"):
     from .auth_middleware import AuthMiddleware
     app.add_middleware(AuthMiddleware)
 
@@ -83,25 +83,39 @@ app.include_router(categories.router)
 app.include_router(session_groups.router)
 
 
-def _seed_initial_data():
-    """seed/data.json が存在し、DB が空なら初期データを投入する"""
-    seed_dir = Path(__file__).resolve().parent.parent / "seed"
-    seed_file = seed_dir / "data.json"
-    if not seed_file.exists():
-        return
-
+def _seed_all():
+    """初期データ投入: seed/data.json + デフォルトカテゴリ + デフォルトセッショングループ"""
     db = SessionLocal()
     try:
+        # --- デフォルトカテゴリ ---
+        if db.query(Category).count() == 0:
+            db.add(Category(key="reception", label="受付案内", color="#388e3c", order=1))
+            db.add(Category(key="social", label="懇親会", color="#7b1fa2", order=2))
+            db.commit()
+
+        # --- デフォルトセッショングループ ---
+        if db.query(SessionGroup).count() == 0:
+            grp = SessionGroup(label="Day 1", date="", order=1, color="#1a73e8")
+            db.add(grp)
+            db.commit()
+            db.query(SessionModel).filter(SessionModel.group_id.is_(None)).update(
+                {SessionModel.group_id: grp.id}, synchronize_session=False
+            )
+            db.commit()
+
+        # --- seed/data.json からの初期データ ---
+        seed_dir = Path(__file__).resolve().parent.parent / "seed"
+        seed_file = seed_dir / "data.json"
+        if not seed_file.exists():
+            return
         if db.query(Room).count() > 0:
             return
 
         with open(seed_file, encoding="utf-8") as f:
             data = json.load(f)
-
         if "rooms" not in data:
             return
 
-        # seed/uploads/ の画像を UPLOAD_DIR にコピー
         seed_uploads = seed_dir / "uploads"
         file_path_map: dict[str, str] = {}
         if seed_uploads.exists():
@@ -203,46 +217,7 @@ def _seed_initial_data():
         db.close()
 
 
-_seed_initial_data()
-
-
-def _seed_categories():
-    """デフォルトカテゴリが無ければ作成"""
-    db = SessionLocal()
-    try:
-        if db.query(Category).count() == 0:
-            db.add(Category(key="reception", label="受付案内", color="#388e3c", order=1))
-            db.add(Category(key="social", label="懇親会", color="#7b1fa2", order=2))
-            db.commit()
-    except Exception:
-        db.rollback()
-    finally:
-        db.close()
-
-
-_seed_categories()
-
-
-def _seed_session_groups():
-    """デフォルトセッショングループが無ければ作成"""
-    db = SessionLocal()
-    try:
-        if db.query(SessionGroup).count() == 0:
-            grp = SessionGroup(label="Day 1", date="", order=1, color="#1a73e8")
-            db.add(grp)
-            db.commit()
-            # 既存セッション（group_id=NULL）をデフォルトグループに紐付け
-            db.query(SessionModel).filter(SessionModel.group_id.is_(None)).update(
-                {SessionModel.group_id: grp.id}, synchronize_session=False
-            )
-            db.commit()
-    except Exception:
-        db.rollback()
-    finally:
-        db.close()
-
-
-_seed_session_groups()
+_seed_all()
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
