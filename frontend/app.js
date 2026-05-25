@@ -1395,9 +1395,11 @@ createApp({
 
             let sessionId = form.editId;
             if (sessionId) {
-                await fetch(API + `/api/sessions/${sessionId}`, { method: 'PUT', body: fd });
+                const res = await fetch(API + `/api/sessions/${sessionId}`, { method: 'PUT', body: fd });
+                if (!res.ok) { alert('セッションの更新に失敗しました'); return; }
             } else {
                 const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+                if (!res.ok) { alert('セッションの作成に失敗しました'); return; }
                 const created = await res.json();
                 sessionId = created.id;
             }
@@ -1414,12 +1416,14 @@ createApp({
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(talkData)
                 });
+                if (!res2.ok) { alert('LTトークの保存に失敗しました'); return; }
                 const savedTalks = await res2.json();
                 for (let i = 0; i < talks.length; i++) {
                     if (talks[i].photoFile && savedTalks[i]) {
                         const fd2 = new FormData();
                         fd2.append('photo', talks[i].photoFile);
-                        await fetch(API + `/api/sessions/${sessionId}/lt-talks/${savedTalks[i].id}/photo`, { method: 'POST', body: fd2 });
+                        const res3 = await fetch(API + `/api/sessions/${sessionId}/lt-talks/${savedTalks[i].id}/photo`, { method: 'POST', body: fd2 });
+                        if (!res3.ok) { alert(`LT登壇者 ${i+1} の写真アップロードに失敗しました`); }
                     }
                 }
             }
@@ -1428,7 +1432,8 @@ createApp({
         }
         async function deleteGroupSession(gid, id) {
             if (!confirm('このセッションを削除しますか？')) return;
-            await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
+            const res = await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
+            if (!res.ok) { alert('セッションの削除に失敗しました'); return; }
             await loadSessions();
             await loadSchedule();
         }
@@ -1460,7 +1465,10 @@ createApp({
         async function clearGroupAssignments(gid) {
             if (!confirm('このグループの配置をすべてクリアします。よろしいですか？')) return;
             const ids = (groupSchedule.value[gid] || []).flatMap(e => e.assigned_staff.map(a => a.assignment_id));
-            for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+            for (const id of ids) {
+                const res = await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+                if (!res.ok) { alert('配置の削除に失敗しました'); return; }
+            }
             groupScheduleMsgs[gid] = '配置をクリアしました';
             await loadSchedule();
         }
