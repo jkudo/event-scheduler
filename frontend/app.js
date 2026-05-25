@@ -125,7 +125,7 @@ createApp({
             if (form.start_time && !form.end_time) {
                 const d = new Date(form.start_time);
                 d.setMinutes(d.getMinutes() + 5);
-                form.end_time = d.toISOString().slice(0, 16);
+                form.end_time = toLocalInput(d);
             }
         }
         function catLabel(cat) { return CATEGORY_LABELS.value[cat] || cat; }
