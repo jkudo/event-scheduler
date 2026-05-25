@@ -708,15 +708,21 @@ createApp({
             fd.append('title', venueMapForm.title);
             fd.append('order', venueMapForm.order);
             if (venueMapInput.value && venueMapInput.value.files[0]) fd.append('image', venueMapInput.value.files[0]);
+            let res;
             if (venueMapForm.editId) {
-                await fetch(API + `/api/venue-maps/${venueMapForm.editId}`, { method: 'PUT', body: fd });
+                res = await fetch(API + `/api/venue-maps/${venueMapForm.editId}`, { method: 'PUT', body: fd });
             } else {
-                await fetch(API + '/api/venue-maps/', { method: 'POST', body: fd });
+                res = await fetch(API + '/api/venue-maps/', { method: 'POST', body: fd });
             }
+            if (!res.ok) { alert('会場地図の保存に失敗しました'); return; }
             cancelEditVenueMap();
             await loadVenueMaps();
         }
-        async function deleteVenueMap(id) { await fetch(API + `/api/venue-maps/${id}`, { method: 'DELETE' }); await loadVenueMaps(); }
+        async function deleteVenueMap(id) {
+            const res = await fetch(API + `/api/venue-maps/${id}`, { method: 'DELETE' });
+            if (!res.ok) { alert('会場地図の削除に失敗しました'); return; }
+            await loadVenueMaps();
+        }
 
         // --- セッション ---
         function toggleSessionDetail(id) {
