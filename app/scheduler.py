@@ -45,7 +45,7 @@ def run_backup(trigger: str = "auto") -> dict:
     """Execute a backup synchronously. Returns metadata entry."""
     now = datetime.now()
     backup_id = now.strftime("%Y%m%d_%H%M%S")
-    filename = f"conf_backup_{backup_id}.zip"
+    filename = f"backup_{backup_id}.zip"
     filepath = BACKUP_DIR / filename
 
     db = SessionLocal()

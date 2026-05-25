@@ -54,6 +54,21 @@ def _auto_migrate():
 try:
     _auto_migrate()
     print("[migration] Auto-migration complete")
+
+    # 既存DBにsetup_completedがない場合、データが存在すれば自動設定
+    with engine.connect() as conn:
+        row = conn.execute(sa_text("SELECT value FROM app_settings WHERE key='setup_completed'")).fetchone()
+        if not row:
+            data_exists = conn.execute(sa_text(
+                "SELECT 1 FROM sessions LIMIT 1"
+            )).fetchone()
+            if data_exists:
+                conn.execute(sa_text(
+                    "INSERT INTO app_settings (key, value) VALUES ('setup_completed', '1')"
+                ))
+                conn.commit()
+                print("[migration] Existing data found — setup_completed auto-set")
+
 except Exception as e:
     print(f"[migration] ERROR: {e}")
     import traceback

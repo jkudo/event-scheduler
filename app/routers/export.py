@@ -34,11 +34,11 @@ THIN_BORDER = Border(
 WRAP = Alignment(wrap_text=True, vertical="top")
 CENTER = Alignment(horizontal="center", vertical="center")
 
-SESSION_CATS = ("general", "tech", "workshop", "keynote", "lt")
+SESSION_CATS = ("general", "tech", "workshop", "keynote", "lt", "panel")
 ROLE_LABELS_BASE = {"session": "セッション"}
 CAT_LABELS_BASE = {
     "general": "一般", "tech": "技術", "workshop": "ワークショップ",
-    "keynote": "基調講演", "lt": "LT", "overall": "全体",
+    "keynote": "基調講演", "lt": "LT", "panel": "パネルディスカッション", "overall": "全体",
 }
 
 PHOTO_PX = 48  # Excel内の写真サイズ (px)
@@ -175,7 +175,7 @@ def export_excel(db: Session = Depends(get_db)):
     for s in sessions:
         if s.category not in SESSION_CATS:
             continue
-        if s.category == "lt" and s.lt_talks:
+        if s.category in ("lt", "panel") and s.lt_talks:
             speakers = "\n".join(
                 f"{t.speaker}（{t.title}）" + (f" {t.start_time}〜{t.end_time}" if t.start_time else "")
                 for t in s.lt_talks
@@ -378,11 +378,12 @@ def export_excel(db: Session = Depends(get_db)):
             "workshop": PatternFill(start_color="E8F0FE", end_color="E8F0FE", fill_type="solid"),
             "keynote": PatternFill(start_color="E8F0FE", end_color="E8F0FE", fill_type="solid"),
             "lt": PatternFill(start_color="E8F0FE", end_color="E8F0FE", fill_type="solid"),
+            "panel": PatternFill(start_color="E8F0FE", end_color="E8F0FE", fill_type="solid"),
         }
         CAT_FONT_COLOR = {
             "overall": "E65100",
             "general": "1A73E8", "tech": "1A73E8", "workshop": "1A73E8",
-            "keynote": "1A73E8", "lt": "1A73E8",
+            "keynote": "1A73E8", "lt": "1A73E8", "panel": "1A73E8",
         }
         # 動的カテゴリの色を追加
         for cat_obj in db_categories:
@@ -537,7 +538,7 @@ def export_excel(db: Session = Depends(get_db)):
     stream.seek(0)
 
     now = datetime.now().strftime("%Y%m%d_%H%M")
-    filename = f"conference_schedule_{now}.xlsx"
+    filename = f"event_schedule_{now}.xlsx"
 
     return StreamingResponse(
         stream,
