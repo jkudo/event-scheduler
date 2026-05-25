@@ -53,6 +53,9 @@ except Exception as e:
 
 app = FastAPI(title="Conference Scheduler API", version="1.0.0")
 
+from starlette.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

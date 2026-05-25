@@ -71,11 +71,13 @@ def _apply_border(ws, row):
         cell.alignment = WRAP
 
 
-def _auto_width(ws):
+def _auto_width(ws, max_rows=100):
     for col in ws.columns:
         max_len = 0
         col_letter = col[0].column_letter
-        for cell in col:
+        for i, cell in enumerate(col):
+            if i >= max_rows:
+                break
             try:
                 val = str(cell.value or "")
                 length = sum(2 if ord(c) > 127 else 1 for c in val)
