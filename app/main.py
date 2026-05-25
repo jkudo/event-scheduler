@@ -73,7 +73,7 @@ async def lifespan(app):
     except asyncio.CancelledError:
         pass
 
-app = FastAPI(title="Conference Scheduler API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Event Scheduler API", version="1.0.0", lifespan=lifespan)
 
 from starlette.middleware.gzip import GZipMiddleware
 app.add_middleware(GZipMiddleware, minimum_size=500)
@@ -245,7 +245,7 @@ def login_page():
     db = SessionLocal()
     try:
         row = db.query(AppSetting).filter(AppSetting.key == "app_title").first()
-        title = row.value if row and row.value else "Conference Scheduler"
+        title = row.value if row and row.value else "Event Scheduler"
     finally:
         db.close()
     html = Path("frontend/login.html").read_text(encoding="utf-8")

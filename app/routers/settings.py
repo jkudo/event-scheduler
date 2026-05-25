@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 # Defaults
 DEFAULTS = {
-    "app_title": "カンファレンススケジューラー",
+    "app_title": "Event Scheduler",
     "allow_overlap": "0",
 }
 

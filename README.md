@@ -1,4 +1,4 @@
-# Conference Scheduler
+# Event Scheduler
 
 カンファレンスのセッション管理・スタッフ配置を行うWebアプリケーション。
 
