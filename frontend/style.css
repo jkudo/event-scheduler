@@ -213,3 +213,20 @@ th { background: #f8f9fa; font-weight: 600; }
 .tl-legend-swatch {
     width: 20px; height: 14px; border-radius: 2px; border: 1px solid #ccc;
 }
+
+/* 共通: タブコンテナ */
+.tab-bar {
+    display: flex; gap: 0; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0;
+}
+/* 共通: タブボタン */
+.tab-btn {
+    padding: 8px 20px; border: none; cursor: pointer; font-size: 0.9rem;
+    font-weight: 600; border-radius: 6px 6px 0 0; transition: all .2s;
+}
+/* 共通: 必須マーカー */
+.req { color: #d93025; font-size: 0.75rem; }
+/* 共通: モーダルオーバーレイ */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 100; display: flex; align-items: center; justify-content: center;
+}

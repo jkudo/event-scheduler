@@ -43,7 +43,7 @@
         <div class="panel" :class="{ active: tab === 'rooms' }">
             <h2>部屋管理</h2>
             <div class="form-row">
-                <div class="form-group"><label>部屋名 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="roomForm.name" placeholder="例: ホールA"></div>
+                <div class="form-group"><label>部屋名 <span class="req">必須</span></label><input v-model="roomForm.name" placeholder="例: ホールA"></div>
                 <div class="form-group"><label>定員</label><input v-model.number="roomForm.capacity" type="number" placeholder="100"></div>
                 <div class="form-group"><label>階</label><input v-model.number="roomForm.floor" type="number" placeholder="1"></div>
             </div>
@@ -69,7 +69,7 @@
         <div class="panel" :class="{ active: tab === 'venue-maps' }">
             <h2>会場地図</h2>
             <div class="form-row">
-                <div class="form-group"><label>タイトル <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="venueMapForm.title" placeholder="例: 1F フロアマップ"></div>
+                <div class="form-group"><label>タイトル <span class="req">必須</span></label><input v-model="venueMapForm.title" placeholder="例: 1F フロアマップ"></div>
                 <div class="form-group"><label>表示順</label><input v-model.number="venueMapForm.order" type="number" placeholder="0"></div>
             </div>
             <div class="form-row">
@@ -103,7 +103,7 @@
             </div>
 
             <!-- 地図拡大モーダル -->
-            <div v-if="mapModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="mapModal=null">
+            <div v-if="mapModal" class="modal-overlay" @click.self="mapModal=null">
                 <div style="background:#fff;border-radius:8px;padding:20px;max-width:90vw;max-height:90vh;overflow:auto;position:relative">
                     <h3 style="margin-bottom:12px">{{ mapModal.title }}</h3>
                     <img :src="mapModal.image" style="max-width:80vw;max-height:70vh;border-radius:4px">
@@ -118,14 +118,14 @@
             <h2>{{ grp.label }}管理</h2>
 
             <!-- 日程タブ -->
-            <div v-if="grpDates(grp.id).length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+            <div v-if="grpDates(grp.id).length > 1" class="tab-bar">
                 <button v-for="date in grpDates(grp.id)" :key="'grpm-dtab-'+grp.id+'-'+date"
-                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    class="tab-btn"
                     :style="grpDateTabs[grp.id] === date ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="grpDateTabs[grp.id] = date">
                     {{ date }}
                 </button>
-                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                <button class="tab-btn"
                     :style="grpDateTabs[grp.id] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="grpDateTabs[grp.id] = 0">
                     全日程
@@ -133,12 +133,12 @@
             </div>
 
             <div class="form-row">
-                <div class="form-group"><label>タイトル <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="groupSessForms[grp.id].title" placeholder="例: Kubernetes実践入門"></div>
+                <div class="form-group"><label>タイトル <span class="req">必須</span></label><input v-model="groupSessForms[grp.id].title" placeholder="例: Kubernetes実践入門"></div>
             </div>
             <!-- 通常セッション: 登壇者情報 -->
             <template v-if="!['lt', ...dynamicCatKeys].includes(groupSessForms[grp.id].category)">
                 <div class="form-row">
-                    <div class="form-group"><label>登壇者名 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="groupSessForms[grp.id].speaker" placeholder="例: 山田 太郎"></div>
+                    <div class="form-group"><label>登壇者名 <span class="req">必須</span></label><input v-model="groupSessForms[grp.id].speaker" placeholder="例: 山田 太郎"></div>
                     <div class="form-group"><label>ふりがな</label><input v-model="groupSessForms[grp.id].speaker_kana" placeholder="例: やまだ たろう"></div>
                 </div>
                 <div class="form-row">
@@ -165,12 +165,12 @@
                 </div>
             </template>
             <div class="form-row">
-                <div class="form-group"><label>開始時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="groupSessForms[grp.id].start_time" type="datetime-local" step="300" @change="autoSetEndTime(groupSessForms[grp.id])"></div>
-                <div class="form-group"><label>終了時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="groupSessForms[grp.id].end_time" type="datetime-local" step="300"></div>
+                <div class="form-group"><label>開始時刻 <span class="req">必須</span></label><input v-model="groupSessForms[grp.id].start_time" type="datetime-local" step="300" @change="autoSetEndTime(groupSessForms[grp.id])"></div>
+                <div class="form-group"><label>終了時刻 <span class="req">必須</span></label><input v-model="groupSessForms[grp.id].end_time" type="datetime-local" step="300"></div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>部屋 <span style="color:#d93025;font-size:0.75rem">必須</span></label>
+                    <label>部屋 <span class="req">必須</span></label>
                     <select v-model.number="groupSessForms[grp.id].room_id">
                         <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
                     </select>
@@ -292,7 +292,7 @@
                 </div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>名前 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="staffForm.name" placeholder="例: 山田 太郎"></div>
+                <div class="form-group"><label>名前 <span class="req">必須</span></label><input v-model="staffForm.name" placeholder="例: 山田 太郎"></div>
                 <div class="form-group"><label>Slack名</label><input v-model="staffForm.slack_name" placeholder="例: @yamada-taro"></div>
                 <div class="form-group" style="position:relative">
                     <label>担当</label>
@@ -314,7 +314,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>過去参加回数 <span style="color:#d93025;font-size:0.75rem">必須</span></label>
+                    <label>過去参加回数 <span class="req">必須</span></label>
                     <input v-model.number="staffForm.experience_count" type="number" min="0" placeholder="過去参加回数" required>
                     <span style="font-size:0.75rem;color:#888">0 = 初めて（経験者と一緒に配置されます）</span>
                 </div>
@@ -469,14 +469,14 @@
             </div>
 
             <!-- 日程タブ -->
-            <div v-if="overallDates().length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+            <div v-if="overallDates().length > 1" class="tab-bar">
                 <button v-for="date in overallDates()" :key="'ov-dtab-'+date"
-                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    class="tab-btn"
                     :style="overallDateTab === date ? {background:'#e65100', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="overallDateTab = date">
                     {{ date }}
                 </button>
-                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                <button class="tab-btn"
                     :style="overallDateTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="overallDateTab = 0">
                     全日程
@@ -597,14 +597,14 @@
             </div>
 
             <!-- 日程タブ -->
-            <div v-if="grpDates(grp.id).length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+            <div v-if="grpDates(grp.id).length > 1" class="tab-bar">
                 <button v-for="date in grpDates(grp.id)" :key="'grp-dtab-'+grp.id+'-'+date"
-                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    class="tab-btn"
                     :style="grpDateTabs[grp.id] === date ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="grpDateTabs[grp.id] = date">
                     {{ date }}
                 </button>
-                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                <button class="tab-btn"
                     :style="grpDateTabs[grp.id] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="grpDateTabs[grp.id] = 0">
                     全日程
@@ -712,14 +712,14 @@
             <h2>{{ cat.label }}管理</h2>
 
             <!-- 日程タブ -->
-            <div v-if="catKeyDates(cat.key).length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+            <div v-if="catKeyDates(cat.key).length > 1" class="tab-bar">
                 <button v-for="date in catKeyDates(cat.key)" :key="'catm-tab-'+cat.key+'-'+date"
-                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    class="tab-btn"
                     :style="catGroupTabs[cat.key] === date ? {background: cat.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="catGroupTabs[cat.key] = date">
                     {{ date }}
                 </button>
-                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                <button class="tab-btn"
                     :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="catGroupTabs[cat.key] = 0">
                     全日程
@@ -729,13 +729,13 @@
             <div style="margin-bottom:20px;border-radius:8px;padding:16px" :style="{ border: '1px solid ' + cat.color + '40', background: cat.color + '10' }">
                 <h3 style="margin:0 0 12px" :style="{ color: cat.color }">{{ categoryForms[cat.key]?.editId ? cat.label + '編集' : cat.label + '追加' }}</h3>
                 <div class="form-row">
-                    <div class="form-group"><label>{{ cat.label }}名 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="categoryForms[cat.key].title" placeholder="名前を入力"></div>
+                    <div class="form-group"><label>{{ cat.label }}名 <span class="req">必須</span></label><input v-model="categoryForms[cat.key].title" placeholder="名前を入力"></div>
                     <div class="form-group"><label>必要スタッフ数</label><input v-model.number="categoryForms[cat.key].required_staff" type="number" min="1" placeholder="2"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>開始時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="categoryForms[cat.key].start_time" type="datetime-local" step="300" @change="autoSetEndTime(categoryForms[cat.key])"></div>
-                    <div class="form-group"><label>終了時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="categoryForms[cat.key].end_time" type="datetime-local" step="300"></div>
-                    <div class="form-group"><label>場所 <span style="color:#d93025;font-size:0.75rem">必須</span></label>
+                    <div class="form-group"><label>開始時刻 <span class="req">必須</span></label><input v-model="categoryForms[cat.key].start_time" type="datetime-local" step="300" @change="autoSetEndTime(categoryForms[cat.key])"></div>
+                    <div class="form-group"><label>終了時刻 <span class="req">必須</span></label><input v-model="categoryForms[cat.key].end_time" type="datetime-local" step="300"></div>
+                    <div class="form-group"><label>場所 <span class="req">必須</span></label>
                         <select v-model.number="categoryForms[cat.key].room_id">
                             <option v-for="r in rooms" :key="r.id" :value="r.id">{{ r.name }}</option>
                         </select>
@@ -786,14 +786,14 @@
             </div>
 
             <!-- 日程タブ -->
-            <div v-if="catKeyDates(cat.key).length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+            <div v-if="catKeyDates(cat.key).length > 1" class="tab-bar">
                 <button v-for="date in catKeyDates(cat.key)" :key="'cat-tab-'+cat.key+'-'+date"
-                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    class="tab-btn"
                     :style="catGroupTabs[cat.key] === date ? {background: cat.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="catGroupTabs[cat.key] = date">
                     {{ date }}
                 </button>
-                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                <button class="tab-btn"
                     :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="catGroupTabs[cat.key] = 0">
                     全日程
@@ -904,14 +904,14 @@
             <h2>全体スケジュール</h2>
 
             <!-- 日程タブ -->
-            <div v-if="catDates.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+            <div v-if="catDates.length > 1" class="tab-bar">
                 <button v-for="date in catDates" :key="'all-tab-'+date"
-                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    class="tab-btn"
                     :style="allGroupTab === date ? {background:'#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="allGroupTab = date">
                     {{ date }}<span v-if="dateGroupLabels(date).length" style="font-weight:400;margin-left:6px;font-size:0.8rem">({{ dateGroupLabels(date).join(', ') }})</span>
                 </button>
-                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                <button class="tab-btn"
                     :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="allGroupTab = 0">
                     全日程
@@ -1091,7 +1091,7 @@
                 <img :src="m.image" style="max-width:100%;max-height:500px;border-radius:6px;border:1px solid #ddd;cursor:pointer" @click="mapModal=m">
             </div>
             <!-- 地図拡大モーダル（共有） -->
-            <div v-if="mapModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center" @click.self="mapModal=null">
+            <div v-if="mapModal" class="modal-overlay" @click.self="mapModal=null">
                 <div style="background:#fff;border-radius:8px;padding:20px;max-width:90vw;max-height:90vh;overflow:auto;position:relative">
                     <h3 style="margin-bottom:12px">{{ mapModal.title }}</h3>
                     <img :src="mapModal.image" style="max-width:80vw;max-height:70vh;border-radius:4px">
@@ -1105,14 +1105,14 @@
             <h2>全体スケジュール管理</h2>
 
             <!-- 日程タブ -->
-            <div v-if="catDates.length > 1" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0">
+            <div v-if="catDates.length > 1" class="tab-bar">
                 <button v-for="date in catDates" :key="'ovm-tab-'+date"
-                    style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                    class="tab-btn"
                     :style="allGroupTab === date ? {background:'#e65100', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="allGroupTab = date">
                     {{ date }}<span v-if="dateGroupLabels(date).length" style="font-weight:400;margin-left:6px;font-size:0.8rem">({{ dateGroupLabels(date).join(', ') }})</span>
                 </button>
-                <button style="padding:8px 20px;border:none;cursor:pointer;font-size:0.9rem;font-weight:600;border-radius:6px 6px 0 0;transition:all .2s"
+                <button class="tab-btn"
                     :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="allGroupTab = 0">
                     全日程
@@ -1123,11 +1123,11 @@
             <div style="margin-bottom:20px;border:1px solid #ffe0b2;border-radius:8px;padding:16px;background:#fff8e1">
                 <h3 style="margin:0 0 12px;color:#e65100">{{ allOvForm.editId ? '全体スケジュール編集' : '全体スケジュール追加' }}</h3>
                 <div class="form-row">
-                    <div class="form-group"><label>タイトル <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="allOvForm.title" placeholder="例: 集合時間、開場、昼休み"></div>
+                    <div class="form-group"><label>タイトル <span class="req">必須</span></label><input v-model="allOvForm.title" placeholder="例: 集合時間、開場、昼休み"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>開始時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="allOvForm.start_time" type="datetime-local" step="300" @change="autoSetEndTime(allOvForm)"></div>
-                    <div class="form-group"><label>終了時刻 <span style="color:#d93025;font-size:0.75rem">必須</span></label><input v-model="allOvForm.end_time" type="datetime-local" step="300"></div>
+                    <div class="form-group"><label>開始時刻 <span class="req">必須</span></label><input v-model="allOvForm.start_time" type="datetime-local" step="300" @change="autoSetEndTime(allOvForm)"></div>
+                    <div class="form-group"><label>終了時刻 <span class="req">必須</span></label><input v-model="allOvForm.end_time" type="datetime-local" step="300"></div>
                 </div>
                 <div class="form-group"><label>備考</label><textarea v-model="allOvForm.notes" rows="2" placeholder="例: 正面入口に集合"></textarea></div>
                 <div style="display:flex;gap:8px">
