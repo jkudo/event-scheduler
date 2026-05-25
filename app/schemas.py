@@ -78,7 +78,7 @@ class SessionCreate(BaseModel):
     start_time: datetime
     end_time: datetime
     room_id: int
-    required_staff: int = 1
+    required_staff: int = 0
     category: str = "general"
     english_required: bool = False
     group_id: int | None = None

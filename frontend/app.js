@@ -3,7 +3,13 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 const app = createApp({
     setup() {
         const API = '';
-        const STATIC_LABELS = { general: '一般', tech: '技術', workshop: 'ワークショップ', keynote: '基調講演', lt: 'LT', session: 'セッション', overall: '全体' };
+        const DEFAULT_SESSION_CATS = [
+            { key: 'general', label: '一般' }, { key: 'tech', label: '技術' },
+            { key: 'workshop', label: 'ワークショップ' }, { key: 'keynote', label: '基調講演' }, { key: 'lt', label: 'LT' },
+        ];
+        const extraSessionCats = ref([]);
+        const sessionCatOptions = computed(() => [...DEFAULT_SESSION_CATS, ...extraSessionCats.value]);
+        const STATIC_LABELS = { session: 'セッション', overall: '全体' };
         const SLOT_MIN = 5; // 5分刻み
 
         const tab = ref('all-matrix');
@@ -48,6 +54,7 @@ const app = createApp({
         const dynamicCatKeys = computed(() => categories.value.map(c => c.key));
         const CATEGORY_LABELS = computed(() => {
             const m = { ...STATIC_LABELS };
+            sessionCatOptions.value.forEach(c => { m[c.key] = c.label; });
             categories.value.forEach(c => { m[c.key] = c.label; });
             return m;
         });
@@ -73,7 +80,7 @@ const app = createApp({
                 if (!(g.id in groupSessForms)) {
                     groupSessForms[g.id] = {
                         editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
-                        room_id: null, category: 'general', required_staff: 1, english_required: false,
+                        room_id: null, category: 'general', required_staff: 0, english_required: false,
                         description: '', notes: '', currentPhoto: '', photoPreview: '',
                         speaker_org: '', speaker_title: '', speaker_profile: '',
                         _ltTalks: reactive([])
@@ -110,7 +117,7 @@ const app = createApp({
         const mapModal = ref(null);
         const sessForm = reactive({
             editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
-            room_id: null, category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '',
+            room_id: null, category: 'general', required_staff: 0, english_required: false, description: '', notes: '', currentPhoto: '',
             speaker_org: '', speaker_title: '', speaker_profile: '', group_id: null
         });
         const ltTalks = reactive([]);
@@ -389,6 +396,9 @@ const app = createApp({
                 }
                 allowOverlap.value = data.allow_overlap === '1';
                 settingsForm.allow_overlap = data.allow_overlap === '1';
+                if (data.session_categories) {
+                    try { extraSessionCats.value = JSON.parse(data.session_categories); } catch (e) { extraSessionCats.value = []; }
+                }
             } catch (e) { /* ignore */ }
         }
         async function saveSettings() {
@@ -408,6 +418,51 @@ const app = createApp({
                 settingsMsg.value = '保存しました';
             } catch (e) { settingsMsg.value = '保存に失敗しました'; }
         }
+
+        // --- セッションカテゴリ管理 ---
+        const sessCatForm = reactive({ label: '', editIdx: null });
+        const sessCatMsg = ref('');
+        function editSessCat(idx) {
+            const c = extraSessionCats.value[idx];
+            sessCatForm.label = c.label; sessCatForm.editIdx = idx;
+        }
+        function cancelSessCat() {
+            sessCatForm.label = ''; sessCatForm.editIdx = null;
+        }
+        function _genCatKey() {
+            return 'cat_' + Date.now().toString(36);
+        }
+        async function saveSessCat() {
+            if (!sessCatForm.label) { sessCatMsg.value = '表示名を入力してください'; return; }
+            const list = [...extraSessionCats.value];
+            if (sessCatForm.editIdx !== null) {
+                list[sessCatForm.editIdx] = { key: list[sessCatForm.editIdx].key, label: sessCatForm.label };
+            } else {
+                list.push({ key: _genCatKey(), label: sessCatForm.label });
+            }
+            try {
+                await fetch(API + '/api/settings/', {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_categories: JSON.stringify(list) })
+                });
+                extraSessionCats.value = list;
+                cancelSessCat();
+                sessCatMsg.value = '保存しました';
+            } catch (e) { sessCatMsg.value = '保存に失敗しました'; }
+        }
+        async function deleteSessCat(idx) {
+            if (!confirm('このカテゴリを削除しますか？')) return;
+            const list = extraSessionCats.value.filter((_, i) => i !== idx);
+            try {
+                await fetch(API + '/api/settings/', {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_categories: JSON.stringify(list) })
+                });
+                extraSessionCats.value = list;
+                sessCatMsg.value = '削除しました';
+            } catch (e) { sessCatMsg.value = '削除に失敗しました'; }
+        }
+
         async function changePassword() {
             pwMsg.value = ''; pwMsgError.value = false;
             try {
@@ -877,7 +932,7 @@ const app = createApp({
             Object.assign(sessForm, {
                 editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
                 room_id: rooms.value.length ? rooms.value[0].id : null,
-                category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '',
+                category: 'general', required_staff: 0, english_required: false, description: '', notes: '', currentPhoto: '',
                 speaker_org: '', speaker_title: '', speaker_profile: '', group_id: sessForm.group_id
             });
             ltTalks.splice(0);
@@ -1512,7 +1567,7 @@ const app = createApp({
             Object.assign(groupSessForms[gid], {
                 editId: null, title: '', speaker: '', speaker_kana: '', start_time: '', end_time: '',
                 room_id: rooms.value.length ? rooms.value[0].id : null,
-                category: 'general', required_staff: 1, english_required: false, description: '', notes: '', currentPhoto: '', photoPreview: '',
+                category: 'general', required_staff: 0, english_required: false, description: '', notes: '', currentPhoto: '', photoPreview: '',
                 speaker_org: '', speaker_title: '', speaker_profile: ''
             });
             // Clear LT talks for this group
@@ -2659,6 +2714,7 @@ const app = createApp({
             pwForm, pwMsg, pwMsgError, changePassword,
             catSettingForm, catSettingMsg, editCatSetting, cancelCatSetting, saveCatSetting, deleteCatSetting,
             grpSettingForm, grpSettingMsg, editGrpSetting, cancelGrpSetting, saveGrpSetting, deleteGrpSetting,
+            sessionCatOptions, extraSessionCats, sessCatForm, sessCatMsg, editSessCat, cancelSessCat, saveSessCat, deleteSessCat,
             staffDetailFilter, matrixStaffFilter,
             matrixStaffOptions,
             overallSessions,

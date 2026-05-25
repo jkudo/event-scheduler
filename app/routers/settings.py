@@ -40,12 +40,14 @@ def get_settings(db: Session = Depends(get_db)):
     return {
         "app_title": _get(db, "app_title"),
         "allow_overlap": _get(db, "allow_overlap"),
+        "session_categories": _get(db, "session_categories"),
     }
 
 
 class UpdateSettingsRequest(BaseModel):
     app_title: str | None = None
     allow_overlap: str | None = None
+    session_categories: str | None = None
 
 
 @router.put("/")
@@ -55,6 +57,8 @@ def update_settings(body: UpdateSettingsRequest, db: Session = Depends(get_db)):
         _set(db, "app_title", body.app_title)
     if body.allow_overlap is not None:
         _set(db, "allow_overlap", body.allow_overlap)
+    if body.session_categories is not None:
+        _set(db, "session_categories", body.session_categories)
     return {"status": "ok"}
 
 
