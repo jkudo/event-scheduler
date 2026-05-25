@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 # Defaults
 DEFAULTS = {
-    "app_title": "イベントスケジューラー",
+    "app_title": "カンファレンススケジューラー",
 }
 
 
