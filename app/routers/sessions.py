@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..config import UPLOAD_DIR
 from ..database import get_db
-from ..models import Session as SessionModel, Room, LTTalk, Staff, StaffAvailability
-from ..schemas import SessionCreate, SessionResponse, LTTalkCreate, LTTalkResponse
+from ..models import Session as SessionModel, Room, LTTalk, Staff
+from ..schemas import SessionResponse, LTTalkCreate, LTTalkResponse
 from ..utils import is_staff_available
 
 
