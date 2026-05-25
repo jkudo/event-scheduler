@@ -1447,11 +1447,21 @@
 
             <!-- アプリタイトル -->
             <div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:8px;padding:20px;margin-bottom:20px">
-                <h3 style="margin:0 0 12px;color:#1565c0">アプリタイトル</h3>
-                <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+                <h3 style="margin:0 0 12px;color:#1565c0">アプリ設定</h3>
+                <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px">
                     <div class="form-group" style="margin:0;flex:1;min-width:240px">
+                        <label style="font-size:0.85rem">アプリケーションタイトル</label>
                         <input v-model="settingsForm.app_title" placeholder="アプリケーションタイトル" style="width:100%">
                     </div>
+                </div>
+                <div style="margin-bottom:12px">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" v-model="settingsForm.allow_overlap">
+                        <span>スタッフの時間重複配置を許可する</span>
+                    </label>
+                    <div style="font-size:0.8rem;color:#666;margin-top:4px;margin-left:26px">有効にすると、同一スタッフを時間が重なるセッションに配置できます</div>
+                </div>
+                <div>
                     <button class="btn" @click="saveSettings">保存</button>
                 </div>
                 <div v-if="settingsMsg" style="margin-top:10px;font-size:0.85rem;color:#2e7d32">{{ settingsMsg }}</div>

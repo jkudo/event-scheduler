@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
-from ..models import Session as SessionModel, Staff, Assignment, StaffSkill, StaffPreferredSession, StaffAvailability, Category
+from ..models import Session as SessionModel, Staff, Assignment, StaffSkill, StaffPreferredSession, StaffAvailability, Category, AppSetting
 from ..schemas import (
     AssignmentCreate,
     AssignmentResponse,
@@ -384,20 +384,22 @@ def create_assignment(data: AssignmentCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Already assigned")
 
-    # 時間重複チェック: このスタッフが既に割り当てられているセッションと時間が被らないか
-    staff_assignments = (
-        db.query(Assignment)
-        .options(joinedload(Assignment.session))
-        .filter(Assignment.staff_id == data.staff_id)
-        .all()
-    )
-    for a in staff_assignments:
-        other = a.session
-        if session.start_time < other.end_time and session.end_time > other.start_time:
-            raise HTTPException(
-                status_code=400,
-                detail=f"時間が重複しています: {staff.name} は {other.title}（{other.start_time.strftime('%H:%M')}-{other.end_time.strftime('%H:%M')}）に配置済みです",
-            )
+    # 時間重複チェック（allow_overlap設定で無効化可能）
+    allow_overlap = db.query(AppSetting).filter(AppSetting.key == "allow_overlap").first()
+    if not (allow_overlap and allow_overlap.value == "1"):
+        staff_assignments = (
+            db.query(Assignment)
+            .options(joinedload(Assignment.session))
+            .filter(Assignment.staff_id == data.staff_id)
+            .all()
+        )
+        for a in staff_assignments:
+            other = a.session
+            if session.start_time < other.end_time and session.end_time > other.start_time:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"時間が重複しています: {staff.name} は {other.title}（{other.start_time.strftime('%H:%M')}-{other.end_time.strftime('%H:%M')}）に配置済みです",
+                )
 
     assignment = Assignment(session_id=data.session_id, staff_id=data.staff_id, role=data.role)
     db.add(assignment)

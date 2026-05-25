@@ -371,7 +371,8 @@ createApp({
 
         // --- Settings ---
         const appTitle = ref('カンファレンススケジューラー');
-        const settingsForm = reactive({ app_title: '' });
+        const allowOverlap = ref(false);
+        const settingsForm = reactive({ app_title: '', allow_overlap: false });
         const settingsMsg = ref('');
         const pwForm = reactive({ current: '', newPw: '' });
         const pwMsg = ref('');
@@ -385,6 +386,8 @@ createApp({
                     settingsForm.app_title = data.app_title;
                     document.title = data.app_title;
                 }
+                allowOverlap.value = data.allow_overlap === '1';
+                settingsForm.allow_overlap = data.allow_overlap === '1';
             } catch (e) { /* ignore */ }
         }
         async function saveSettings() {
@@ -393,10 +396,14 @@ createApp({
                 await fetch(API + '/api/settings/', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ app_title: settingsForm.app_title })
+                    body: JSON.stringify({
+                        app_title: settingsForm.app_title,
+                        allow_overlap: settingsForm.allow_overlap ? '1' : '0'
+                    })
                 });
                 appTitle.value = settingsForm.app_title;
                 document.title = settingsForm.app_title;
+                allowOverlap.value = settingsForm.allow_overlap;
                 settingsMsg.value = '保存しました';
             } catch (e) { settingsMsg.value = '保存に失敗しました'; }
         }
@@ -1174,10 +1181,12 @@ createApp({
                     const roles = Array.isArray(s.role) ? s.role : (s.role || '').split(',');
                     if (!roles.includes(targetRole)) return false;
                 }
-                // 時間重複チェック
-                const busy = staffBusyMap[s.id] || [];
-                for (const b of busy) {
-                    if (sessStart < b.end && sessEnd > b.start) return false;
+                // 時間重複チェック（重複許可設定時はスキップ）
+                if (!allowOverlap.value) {
+                    const busy = staffBusyMap[s.id] || [];
+                    for (const b of busy) {
+                        if (sessStart < b.end && sessEnd > b.start) return false;
+                    }
                 }
                 return true;
             });
@@ -2675,7 +2684,7 @@ createApp({
             connpassTimeline, speakerTemplate, connpassBaseUrl, generateConnpassTimeline, generateSpeakerTemplate, copyToClipboard,
             resetAllData, resetMsg, resetMsgError, resetPassword,
             resetPwForm, resetPwMsg, resetPwMsgError, changeResetPassword,
-            appTitle, settingsForm, settingsMsg, saveSettings,
+            appTitle, allowOverlap, settingsForm, settingsMsg, saveSettings,
             pwForm, pwMsg, pwMsgError, changePassword,
             catSettingForm, catSettingMsg, editCatSetting, cancelCatSetting, saveCatSetting, deleteCatSetting,
             grpSettingForm, grpSettingMsg, editGrpSetting, cancelGrpSetting, saveGrpSetting, deleteGrpSetting,

@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 # Defaults
 DEFAULTS = {
     "app_title": "カンファレンススケジューラー",
+    "allow_overlap": "0",
 }
 
 
@@ -38,11 +39,13 @@ def get_settings(db: Session = Depends(get_db)):
     """Get all application settings."""
     return {
         "app_title": _get(db, "app_title"),
+        "allow_overlap": _get(db, "allow_overlap"),
     }
 
 
 class UpdateSettingsRequest(BaseModel):
     app_title: str | None = None
+    allow_overlap: str | None = None
 
 
 @router.put("/")
@@ -50,6 +53,8 @@ def update_settings(body: UpdateSettingsRequest, db: Session = Depends(get_db)):
     """Update application settings."""
     if body.app_title is not None:
         _set(db, "app_title", body.app_title)
+    if body.allow_overlap is not None:
+        _set(db, "allow_overlap", body.allow_overlap)
     return {"status": "ok"}
 
 
