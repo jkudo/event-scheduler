@@ -998,7 +998,8 @@ createApp({
         }
         async function deleteStaff(id) {
             if (!confirm('このスタッフを削除しますか？配置情報も削除されます。')) return;
-            await fetch(API + `/api/staffs/${id}`, { method: 'DELETE' });
+            const res = await fetch(API + `/api/staffs/${id}`, { method: 'DELETE' });
+            if (!res.ok) { alert('スタッフの削除に失敗しました'); return; }
             await loadStaffs();
             await loadSchedule();
         }
