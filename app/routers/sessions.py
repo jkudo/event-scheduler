@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..config import UPLOAD_DIR
 from ..database import get_db
-from ..models import Session as SessionModel, Room, LTTalk, Staff, SessionGroup
+from ..models import Session as SessionModel, Room, LTTalk, Staff
 from ..schemas import SessionResponse, LTTalkCreate, LTTalkResponse
 from ..utils import is_staff_available
 
@@ -64,12 +64,6 @@ async def create_session(
     parsed_end = _parse_dt(end_time)
     if parsed_start >= parsed_end:
         raise HTTPException(status_code=400, detail="開始時刻は終了時刻より前にしてください")
-
-    # group_id 未指定時はデフォルトグループに割り当て
-    if group_id is None:
-        default_grp = db.query(SessionGroup).order_by(SessionGroup.order).first()
-        if default_grp:
-            group_id = default_grp.id
 
     db_session = SessionModel(
         title=title,

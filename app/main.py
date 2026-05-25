@@ -102,14 +102,6 @@ def _seed_all():
             db.add(grp)
             db.commit()
 
-        # group_id が NULL のセッションをデフォルトグループに割り当て
-        default_grp = db.query(SessionGroup).order_by(SessionGroup.order).first()
-        if default_grp:
-            db.query(SessionModel).filter(SessionModel.group_id.is_(None)).update(
-                {SessionModel.group_id: default_grp.id}, synchronize_session=False
-            )
-            db.commit()
-
         # --- seed/data.json からの初期データ ---
         seed_dir = Path(__file__).resolve().parent.parent / "seed"
         seed_file = seed_dir / "data.json"

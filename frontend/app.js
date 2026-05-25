@@ -1359,25 +1359,33 @@ const app = createApp({
         const groupSchedule = computed(() => {
             const result = {};
             const dkeys = dynamicCatKeys.value;
+            const defaultGid = sessionGroups.value.length ? sessionGroups.value[0].id : null;
             sessionGroups.value.forEach(g => {
-                result[g.id] = schedule.value.filter(e =>
-                    e.session.group_id === g.id && !dkeys.includes(e.session.category) && e.session.category !== 'overall'
-                );
+                result[g.id] = schedule.value.filter(e => {
+                    const gid = e.session.group_id;
+                    const match = gid === g.id || (gid == null && g.id === defaultGid);
+                    return match && !dkeys.includes(e.session.category) && e.session.category !== 'overall';
+                });
             });
             return result;
         });
         // グループ内の日付一覧（sessions.valueから直接計算）
         function grpDates(gid) {
             const dates = new Set();
-            sessions.value.filter(s => s.group_id === gid).forEach(s => {
+            const defaultGid = sessionGroups.value.length ? sessionGroups.value[0].id : null;
+            sessions.value.filter(s => s.group_id === gid || (s.group_id == null && gid === defaultGid)).forEach(s => {
                 if (s.start_time) dates.add(s.start_time.slice(0, 10));
             });
             return [...dates].sort();
         }
         // 日付に紐づくグループ名一覧
         function dateGroupLabels(date) {
+            const defaultGid = sessionGroups.value.length ? sessionGroups.value[0].id : null;
             return sessionGroups.value
-                .filter(g => sessions.value.some(s => s.group_id === g.id && s.start_time && s.start_time.startsWith(date)))
+                .filter(g => sessions.value.some(s => {
+                    const match = s.group_id === g.id || (s.group_id == null && g.id === defaultGid);
+                    return match && s.start_time && s.start_time.startsWith(date);
+                }))
                 .map(g => g.label);
         }
         // 日付タブで絞り込んだグループスケジュール
@@ -1401,7 +1409,11 @@ const app = createApp({
 
         // グループ別セッション管理
         function groupSessions(gid) {
-            let list = sessions.value.filter(s => s.group_id === gid && !dynamicCatKeys.value.includes(s.category) && s.category !== 'overall');
+            const defaultGid = sessionGroups.value.length ? sessionGroups.value[0].id : null;
+            let list = sessions.value.filter(s => {
+                const match = s.group_id === gid || (s.group_id == null && gid === defaultGid);
+                return match && !dynamicCatKeys.value.includes(s.category) && s.category !== 'overall';
+            });
             const tab = grpDateTabs[gid];
             if (tab && tab !== 0) {
                 list = list.filter(s => s.start_time && s.start_time.startsWith(tab));
