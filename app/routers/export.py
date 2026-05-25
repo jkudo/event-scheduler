@@ -721,6 +721,7 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
         db.query(Category).delete()
         db.query(VenueMap).delete()
         db.query(Room).delete()
+        db.query(AppSetting).filter(AppSetting.key != "reset_password").delete()
         db.flush()
 
         # --- uploads ディレクトリをクリア＆画像ファイルを復元 ---
@@ -846,8 +847,10 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
                     session_id=new_sess_id, staff_id=new_staff_id, role=a.get("role", "support"),
                 ))
 
-        # --- 設定 ---
+        # --- 設定 (reset_password はバックアップから上書きしない) ---
         for s in data.get("settings", []):
+            if s["key"] == "reset_password":
+                continue
             existing = db.query(AppSetting).filter(AppSetting.key == s["key"]).first()
             if existing:
                 existing.value = s["value"]
