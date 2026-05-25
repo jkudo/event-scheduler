@@ -349,7 +349,7 @@ RESET_PASSWORD_DEFAULT = os.environ.get("RESET_PASSWORD", "password")
 
 
 def _get_reset_password(db: Session) -> str:
-    """環境変数 > DB設定 > デフォルト の優先順で初期化パスワードを取得"""
+    """環境変数 > DB設定 > デフォルト の優先順で管理者パスワードを取得"""
     if os.environ.get("RESET_PASSWORD"):
         return os.environ["RESET_PASSWORD"]
     row = db.query(AppSetting).filter(AppSetting.key == "reset_password").first()
@@ -404,7 +404,7 @@ class ChangeResetPasswordRequest(BaseModel):
 
 @router.post("/reset-password")
 def change_reset_password(body: ChangeResetPasswordRequest, db: Session = Depends(get_db)):
-    """初期化パスワードを変更する"""
+    """管理者パスワードを変更する"""
     if body.current_password != _get_reset_password(db):
         return JSONResponse(status_code=403, content={"detail": "現在のパスワードが正しくありません"})
     if not body.new_password:
@@ -415,4 +415,4 @@ def change_reset_password(body: ChangeResetPasswordRequest, db: Session = Depend
     else:
         db.add(AppSetting(key="reset_password", value=body.new_password))
     db.commit()
-    return {"status": "ok", "message": "初期化パスワードを変更しました"}
+    return {"status": "ok", "message": "管理者パスワードを変更しました"}

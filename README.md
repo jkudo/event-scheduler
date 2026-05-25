@@ -23,7 +23,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 |--------|------|-----------|
 | `APP_PASSWORD` | ログインパスワード | `password` |
 | `SESSION_SECRET` | Cookie署名キー | (ランダム生成) |
-| `RESET_PASSWORD` | データ初期化パスワード | `password` |
+| `RESET_PASSWORD` | 管理者パスワード | `password` |
 | `DATA_DIR` | SQLiteファイル保存先 | `./data` |
 | `GEOIP_ENABLED` | GeoIP制限 (`1`で有効) | 無効 |
 | `IPINFO_TOKEN` | ipinfo.ioトークン | (なし) |
@@ -71,7 +71,7 @@ az webapp config appsettings set \
   --settings \
     APP_PASSWORD="<ログインパスワード>" \
     SESSION_SECRET="<ランダム文字列>" \
-    RESET_PASSWORD="<初期化パスワード>" \
+    RESET_PASSWORD="<管理者パスワード>" \
     DATA_DIR="/home/data" \
     SCM_DO_BUILD_DURING_DEPLOYMENT="true"
 ```

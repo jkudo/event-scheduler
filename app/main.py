@@ -4,8 +4,9 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import UPLOAD_DIR
@@ -13,6 +14,7 @@ from .database import Base, engine, SessionLocal
 from .models import (
     Room, Session as SessionModel, LTTalk, Staff, StaffSkill,
     StaffPreferredSession, StaffAvailability, VenueMap, Assignment, Category, SessionGroup,
+    AppSetting,
 )
 from .routers import rooms, sessions, staffs, assignments, venue_maps, export, backup, auth, settings, categories, session_groups, auto_backup
 
@@ -237,6 +239,19 @@ def _seed_all():
 
 
 _seed_all()
+
+@app.get("/login.html", response_class=HTMLResponse)
+def login_page():
+    db = SessionLocal()
+    try:
+        row = db.query(AppSetting).filter(AppSetting.key == "app_title").first()
+        title = row.value if row and row.value else "Conference Scheduler"
+    finally:
+        db.close()
+    html = Path("frontend/login.html").read_text(encoding="utf-8")
+    html = html.replace("{{APP_TITLE}}", title)
+    return HTMLResponse(content=html)
+
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

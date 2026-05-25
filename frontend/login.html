@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ログイン - カンファレンススケジューラー</title>
+    <title>ログイン - {{APP_TITLE}}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333;
@@ -30,7 +30,7 @@
 <body>
     <div class="login-card">
         <div class="login-header">
-            <h1>Conference Scheduler</h1>
+            <h1>{{APP_TITLE}}</h1>
             <p>アクセスにはパスワードが必要です</p>
         </div>
         <form id="loginForm" onsubmit="return handleLogin(event)" autocomplete="off">
