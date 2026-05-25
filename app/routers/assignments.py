@@ -271,12 +271,12 @@ def auto_assign_staff(body: AutoAssignRequest | None = None, db: Session = Depen
         db.query(Assignment).filter(
             Assignment.session_id == to_session_id, Assignment.staff_id == to_staff_id
         ).delete()
-        db.add(Assignment(session_id=from_session_id, staff_id=to_staff_id, role=staffs_by_id[to_staff_id].role))
-        db.add(Assignment(session_id=to_session_id, staff_id=from_staff_id, role=staffs_by_id[from_staff_id].role))
-        staff_sessions[from_staff_id] = [s for s in staff_sessions[from_staff_id] if s.id != from_session_id]
-        staff_sessions[to_staff_id] = [s for s in staff_sessions[to_staff_id] if s.id != to_session_id]
         from_sess = next(s for s in sessions if s.id == from_session_id)
         to_sess = next(s for s in sessions if s.id == to_session_id)
+        db.add(Assignment(session_id=from_session_id, staff_id=to_staff_id, role=from_sess.category or "support"))
+        db.add(Assignment(session_id=to_session_id, staff_id=from_staff_id, role=to_sess.category or "support"))
+        staff_sessions[from_staff_id] = [s for s in staff_sessions[from_staff_id] if s.id != from_session_id]
+        staff_sessions[to_staff_id] = [s for s in staff_sessions[to_staff_id] if s.id != to_session_id]
         staff_sessions[to_staff_id].append(from_sess)
         staff_sessions[from_staff_id].append(to_sess)
         staff_hours[from_staff_id] += dur_to - dur_from
