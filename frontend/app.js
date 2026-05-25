@@ -869,7 +869,8 @@ createApp({
                     if (ltTalks[i].photoFile && savedTalks[i]) {
                         const fd2 = new FormData();
                         fd2.append('photo', ltTalks[i].photoFile);
-                        await fetch(API + `/api/sessions/${sessionId}/lt-talks/${savedTalks[i].id}/photo`, { method: 'POST', body: fd2 });
+                        const res3 = await fetch(API + `/api/sessions/${sessionId}/lt-talks/${savedTalks[i].id}/photo`, { method: 'POST', body: fd2 });
+                        if (!res3.ok) { alert(`LT登壇者 ${i+1} の写真アップロードに失敗しました`); }
                     }
                 }
             }
