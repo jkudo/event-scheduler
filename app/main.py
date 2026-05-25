@@ -14,7 +14,7 @@ from .models import (
     Room, Session as SessionModel, LTTalk, Staff, StaffSkill,
     StaffPreferredSession, StaffAvailability, VenueMap, Assignment, Category, SessionGroup,
 )
-from .routers import rooms, sessions, staffs, assignments, venue_maps, export, auth, settings, categories, session_groups
+from .routers import rooms, sessions, staffs, assignments, venue_maps, export, backup, auth, settings, categories, session_groups
 
 Base.metadata.create_all(bind=engine)
 
@@ -77,6 +77,7 @@ app.include_router(staffs.router)
 app.include_router(assignments.router)
 app.include_router(venue_maps.router)
 app.include_router(export.router)
+app.include_router(backup.router)
 app.include_router(settings.router)
 app.include_router(categories.router)
 app.include_router(session_groups.router)
