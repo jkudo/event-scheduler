@@ -1,0 +1,166 @@
+# Conference Scheduler
+
+カンファレンスのセッション管理・スタッフ配置を行うWebアプリケーション。
+
+## 技術構成
+
+- **Backend**: Python 3.11 + FastAPI + SQLAlchemy + SQLite
+- **Frontend**: Vue 3 (CDN) + vanilla JS/CSS
+- **Server**: Gunicorn + Uvicorn Worker
+
+## ローカル実行
+
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+ブラウザで http://localhost:8000 にアクセス。
+
+## 環境変数
+
+| 変数名 | 説明 | デフォルト |
+|--------|------|-----------|
+| `APP_PASSWORD` | ログインパスワード | `password` |
+| `SESSION_SECRET` | Cookie署名キー | (ランダム生成) |
+| `RESET_PASSWORD` | データ初期化パスワード | `password` |
+| `DATA_DIR` | SQLiteファイル保存先 | `./data` |
+| `GEOIP_ENABLED` | GeoIP制限 (`1`で有効) | 無効 |
+| `IPINFO_TOKEN` | ipinfo.ioトークン | (なし) |
+
+## Azure Web Apps へのデプロイ
+
+### 方法1: GitHub Actions (現在の構成)
+
+mainブランチへのpush時に自動デプロイされます。
+
+#### 初回セットアップ
+
+1. **リソース作成**
+
+```bash
+az group create --name rg-confscheduler --location japaneast
+
+az appservice plan create \
+  --name plan-confscheduler \
+  --resource-group rg-confscheduler \
+  --sku F1 --is-linux
+
+az webapp create \
+  --name <アプリ名> \
+  --resource-group rg-confscheduler \
+  --plan plan-confscheduler \
+  --runtime "PYTHON|3.11"
+```
+
+2. **スタートアップコマンド設定**
+
+```bash
+az webapp config set \
+  --name <アプリ名> \
+  --resource-group rg-confscheduler \
+  --startup-file "gunicorn -w 1 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:8000"
+```
+
+3. **環境変数設定**
+
+```bash
+az webapp config appsettings set \
+  --name <アプリ名> \
+  --resource-group rg-confscheduler \
+  --settings \
+    APP_PASSWORD="<ログインパスワード>" \
+    SESSION_SECRET="<ランダム文字列>" \
+    RESET_PASSWORD="<初期化パスワード>" \
+    DATA_DIR="/home/data" \
+    SCM_DO_BUILD_DURING_DEPLOYMENT="true"
+```
+
+`DATA_DIR` を `/home/data` に設定すると、デプロイ時にデータが消えません（`/home` は永続ストレージ）。
+
+4. **GitHub Actions設定**
+
+Azureポータルで発行プロファイルをダウンロードし、GitHubリポジトリの Settings > Secrets に `AZURE_WEBAPP_PUBLISH_PROFILE` として登録。
+
+`.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to Azure App Service
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: <アプリ名>
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+```
+
+### 方法2: Azure CLI で直接デプロイ (GitHubなし)
+
+```bash
+# プロジェクトディレクトリで実行
+az webapp up \
+  --name <アプリ名> \
+  --resource-group rg-confscheduler \
+  --runtime "PYTHON|3.11" \
+  --sku F1
+```
+
+または ZIP デプロイ:
+
+```bash
+# プロジェクトをZIPに圧縮
+zip -r deploy.zip . -x ".git/*" "data/*" "__pycache__/*" "*.pyc"
+
+# デプロイ
+az webapp deploy \
+  --name <アプリ名> \
+  --resource-group rg-confscheduler \
+  --src-path deploy.zip \
+  --type zip
+```
+
+スタートアップコマンドと環境変数の設定は方法1と同じです。
+
+### 方法3: ローカルGitデプロイ (GitHubなし)
+
+```bash
+# デプロイソースをローカルGitに設定
+az webapp deployment source config-local-git \
+  --name <アプリ名> \
+  --resource-group rg-confscheduler
+
+# 出力されたURLをリモートに追加
+git remote add azure https://<アプリ名>.scm.azurewebsites.net/<アプリ名>.git
+
+# デプロイ
+git push azure main
+```
+
+初回pushでAzureのデプロイ資格情報を求められます。資格情報は以下で設定:
+
+```bash
+az webapp deployment user set --user-name <ユーザー名> --password <パスワード>
+```
+
+## F1 (無料プラン) の制限
+
+| 項目 | 制限 |
+|------|------|
+| CPU | 60分/日 |
+| メモリ | 1 GB |
+| ストレージ | 1 GB |
+| カスタムドメイン | 不可 |
+| SSL | Azure提供のみ |
+| アイドル時 | 20分で停止 (コールドスタートあり) |
+
+通常の利用ではCPU制限に達することはありません（推定使用量: 1〜2分/日）。
