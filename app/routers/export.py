@@ -905,6 +905,7 @@ def reset_all_data(body: ResetRequest, db: Session = Depends(get_db)):
         db.query(Category).delete()
         db.query(VenueMap).delete()
         db.query(Room).delete()
+        db.query(AppSetting).filter(AppSetting.key == "app_title").delete()
         db.flush()
 
         # uploads ディレクトリをクリア
