@@ -69,9 +69,8 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
 
 import os
-if os.environ.get("APP_PASSWORD"):
-    from .auth_middleware import AuthMiddleware
-    app.add_middleware(AuthMiddleware)
+from .auth_middleware import AuthMiddleware
+app.add_middleware(AuthMiddleware)
 
 app.include_router(auth.router)
 app.include_router(rooms.router)

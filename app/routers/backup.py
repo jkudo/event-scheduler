@@ -342,7 +342,7 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
         return JSONResponse(status_code=500, content={"detail": f"復元に失敗しました: {str(e)}"})
 
 
-RESET_PASSWORD_DEFAULT = os.environ.get("RESET_PASSWORD", "conf-reset-2026")
+RESET_PASSWORD_DEFAULT = os.environ.get("RESET_PASSWORD", "password")
 
 
 def _get_reset_password(db: Session) -> str:

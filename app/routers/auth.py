@@ -17,7 +17,7 @@ from ..security import record_login_failure, clear_login_failures
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "password")
 
 
 class LoginRequest(BaseModel):

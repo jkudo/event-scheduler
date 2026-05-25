@@ -66,7 +66,7 @@ class ChangePasswordRequest(BaseModel):
 @router.post("/change-password")
 def change_password(body: ChangePasswordRequest):
     """Change the application login password."""
-    app_password = os.environ.get("APP_PASSWORD", "")
+    app_password = os.environ.get("APP_PASSWORD", "password")
     if app_password and body.current_password != app_password:
         raise HTTPException(status_code=403, detail="現在のパスワードが正しくありません")
 
