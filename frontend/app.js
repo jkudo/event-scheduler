@@ -877,7 +877,11 @@ createApp({
             cancelEditSession();
             await loadSessions();
         }
-        async function deleteSession(id) { await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' }); await loadSessions(); }
+        async function deleteSession(id) {
+            const res = await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
+            if (!res.ok) { alert('セッションの削除に失敗しました'); return; }
+            await loadSessions();
+        }
 
         const calcStaffMsg = ref('');
         const calcStaffSummary = ref(null);
