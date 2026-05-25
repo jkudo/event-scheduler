@@ -1617,9 +1617,11 @@ createApp({
             const gid = catGroupTabs[catKey];
             if (gid) fd.append('group_id', gid);
             if (form.editId) {
-                await fetch(API + `/api/sessions/${form.editId}`, { method: 'PUT', body: fd });
+                const res = await fetch(API + `/api/sessions/${form.editId}`, { method: 'PUT', body: fd });
+                if (!res.ok) { alert('セッションの更新に失敗しました'); return; }
             } else {
-                await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+                const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+                if (!res.ok) { alert('セッションの作成に失敗しました'); return; }
             }
             cancelEditCategory(catKey);
             await loadSessions(); await loadSchedule();
@@ -1627,7 +1629,8 @@ createApp({
         async function deleteCategory(catKey, id) {
             const cat = categories.value.find(c => c.key === catKey);
             if (!confirm(`この${cat ? cat.label : catKey}を削除します。よろしいですか？`)) return;
-            await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
+            const res = await fetch(API + `/api/sessions/${id}`, { method: 'DELETE' });
+            if (!res.ok) { alert('セッションの削除に失敗しました'); return; }
             await loadSessions(); await loadSchedule();
         }
         async function autoAssignCategory(catKey) {
@@ -1635,10 +1638,12 @@ createApp({
             const label = cat ? cat.label : catKey;
             if (!confirm(`${label}スタッフを自動配置します。現在の${label}配置は上書きされます。よろしいですか？`)) return;
             const ids = (categorySessions.value[catKey] || []).map(e => e.session.id);
-            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+            const res = await fetch(API + '/api/assignments/auto-assign', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_ids: ids })
-            })).json();
+            });
+            if (!res.ok) { alert('自動配置に失敗しました'); return; }
+            const data = await res.json();
             categoryAssignMsgs[catKey] = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
             await loadSchedule();
         }
@@ -1647,7 +1652,10 @@ createApp({
             const label = cat ? cat.label : catKey;
             if (!confirm(`${label}のスタッフ配置をすべてクリアします。よろしいですか？`)) return;
             const ids = (categorySessions.value[catKey] || []).flatMap(e => e.assigned_staff.map(a => a.assignment_id));
-            for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+            for (const id of ids) {
+                const res = await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+                if (!res.ok) { alert('配置の削除に失敗しました'); return; }
+            }
             categoryAssignMsgs[catKey] = `${label}の配置をクリアしました`;
             await loadSchedule();
         }
@@ -1655,10 +1663,12 @@ createApp({
             const ids = [...(catSelectedSessions[catKey] || [])];
             if (!ids.length) return;
             if (!confirm(`選択した${ids.length}件を再配置します。よろしいですか？`)) return;
-            const data = await (await fetch(API + '/api/assignments/auto-assign', {
+            const res = await fetch(API + '/api/assignments/auto-assign', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_ids: ids })
-            })).json();
+            });
+            if (!res.ok) { alert('自動配置に失敗しました'); return; }
+            const data = await res.json();
             categoryAssignMsgs[catKey] = `再配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
             if (catSelectedSessions[catKey]) catSelectedSessions[catKey].clear();
             await loadSchedule();
