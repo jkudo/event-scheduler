@@ -1865,11 +1865,16 @@ createApp({
             }
         }
 
-        async function onDragEnd() {
+        // 共通: ドラッグ終了処理
+        function _toISO(ms) {
+            const d = new Date(ms);
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+        async function _doDragEnd(cfg, rooms, mouseupHandler) {
             document.removeEventListener('mousemove', onDragMove);
-            document.removeEventListener('mouseup', onDragEnd);
+            document.removeEventListener('mouseup', mouseupHandler);
 
-            // 閾値未到達 = 単なるクリック → 何もしない
             if (!drag.active) {
                 drag.pending = false;
                 drag.sessionId = null;
@@ -1881,23 +1886,15 @@ createApp({
                          || drag.curColIdx !== drag.origColIdx;
 
             if (changed) {
-                const cfg = tlConfig.value;
                 const newStartMs = cfg.minTime + (drag.curStartRow - 2) * cfg.slotMs;
                 const newEndMs = cfg.minTime + (drag.curEndRow - 2) * cfg.slotMs;
-                const newRoomId = tlRooms.value[drag.curColIdx]?.[0];
+                const newRoomId = rooms[drag.curColIdx]?.[0];
 
                 if (!newRoomId || newStartMs >= newEndMs) {
-                    // 無効な移動先 — 元に戻す
                     drag.active = false;
                     drag.pending = false;
                     drag.sessionId = null;
                     return;
-                }
-
-                function toISO(ms) {
-                    const d = new Date(ms);
-                    const pad = (n) => String(n).padStart(2, '0');
-                    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
                 }
 
                 try {
@@ -1905,8 +1902,8 @@ createApp({
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            start_time: toISO(newStartMs),
-                            end_time: toISO(newEndMs),
+                            start_time: _toISO(newStartMs),
+                            end_time: _toISO(newEndMs),
                             room_id: newRoomId,
                         }),
                     });
@@ -1924,6 +1921,10 @@ createApp({
             drag.pending = false;
             drag.mode = null;
             drag.sessionId = null;
+        }
+
+        async function onDragEnd() {
+            await _doDragEnd(tlConfig.value, tlRooms.value, onDragEnd);
         }
 
         function dragCursor(e) {
@@ -2003,64 +2004,8 @@ createApp({
         }
 
         async function onGrpDragEnd() {
-            document.removeEventListener('mousemove', onDragMove);
-            document.removeEventListener('mouseup', onGrpDragEnd);
-
-            if (!drag.active) {
-                drag.pending = false;
-                drag.sessionId = null;
-                return;
-            }
-
-            const changed = drag.curStartRow !== drag.origStartRow
-                         || drag.curEndRow !== drag.origEndRow
-                         || drag.curColIdx !== drag.origColIdx;
-
-            if (changed) {
-                const gid = drag._grpId;
-                const cfg = grpGridConfig(gid);
-                const newStartMs = cfg.minTime + (drag.curStartRow - 2) * cfg.slotMs;
-                const newEndMs = cfg.minTime + (drag.curEndRow - 2) * cfg.slotMs;
-                const rms = grpGridRooms(gid);
-                const newRoomId = rms[drag.curColIdx]?.[0];
-
-                if (!newRoomId || newStartMs >= newEndMs) {
-                    drag.active = false;
-                    drag.pending = false;
-                    drag.sessionId = null;
-                    return;
-                }
-
-                function toISO(ms) {
-                    const d = new Date(ms);
-                    const pad = (n) => String(n).padStart(2, '0');
-                    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-                }
-
-                try {
-                    const resp = await fetch(API + `/api/sessions/${drag.sessionId}/move`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            start_time: toISO(newStartMs),
-                            end_time: toISO(newEndMs),
-                            room_id: newRoomId,
-                        }),
-                    });
-                    if (resp.ok) {
-                        await loadSchedule();
-                        await loadSessions();
-                        await loadStaffAssignments();
-                    }
-                } catch (err) {
-                    console.error('Move failed:', err);
-                }
-            }
-
-            drag.active = false;
-            drag.pending = false;
-            drag.mode = null;
-            drag.sessionId = null;
+            const gid = drag._grpId;
+            await _doDragEnd(grpGridConfig(gid), grpGridRooms(gid), onGrpDragEnd);
         }
 
         // 部屋ごとのセッション一覧（セッションカテゴリのみ）
