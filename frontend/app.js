@@ -323,7 +323,7 @@ createApp({
                 } else {
                     md += `## ${s.title}\n`;
                     md += `${time} / ${room}`;
-                    if (s.category !== 'general') md += ` / ${CATEGORY_LABELS[s.category] || s.category}`;
+                    if (s.category !== 'general') md += ` / ${CATEGORY_LABELS.value[s.category] || s.category}`;
                     md += '\n\n';
                     if (s.speaker_photo) {
                         md += `![${s.speaker}](${photoUrl(s.speaker_photo)})\n\n`;
