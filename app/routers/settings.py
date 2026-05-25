@@ -2,7 +2,7 @@
 
 import os
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -68,7 +68,7 @@ def change_password(body: ChangePasswordRequest):
     """Change the application login password."""
     app_password = os.environ.get("APP_PASSWORD", "")
     if app_password and body.current_password != app_password:
-        return {"status": "error", "detail": "現在のパスワードが正しくありません"}
+        raise HTTPException(status_code=403, detail="現在のパスワードが正しくありません")
 
     # Update environment variable (runtime only, persists until restart)
     os.environ["APP_PASSWORD"] = body.new_password

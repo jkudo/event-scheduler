@@ -198,7 +198,7 @@ def update_required_staff(session_id: int, body: RequiredStaffUpdate, db: Sessio
         raise HTTPException(status_code=404, detail="Session not found")
     session.required_staff = body.required_staff
     db.commit()
-    return {"ok": True}
+    return {"status": "ok"}
 
 
 @router.delete("/{session_id}", status_code=204)

@@ -416,8 +416,8 @@ const app = createApp({
                     body: JSON.stringify({ current_password: pwForm.current, new_password: pwForm.newPw })
                 });
                 const data = await resp.json();
-                if (data.status === 'ok') {
-                    pwMsg.value = data.message;
+                if (resp.ok) {
+                    pwMsg.value = data.message || 'パスワードを変更しました';
                     pwMsgError.value = false;
                     pwForm.current = ''; pwForm.newPw = '';
                 } else {
