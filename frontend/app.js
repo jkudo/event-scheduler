@@ -842,9 +842,11 @@ createApp({
 
             let sessionId = sessForm.editId;
             if (sessionId) {
-                await fetch(API + `/api/sessions/${sessionId}`, { method: 'PUT', body: fd });
+                const res = await fetch(API + `/api/sessions/${sessionId}`, { method: 'PUT', body: fd });
+                if (!res.ok) { alert('セッションの更新に失敗しました'); return; }
             } else {
                 const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
+                if (!res.ok) { alert('セッションの作成に失敗しました'); return; }
                 const created = await res.json();
                 sessionId = created.id;
             }
