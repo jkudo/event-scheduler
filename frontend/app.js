@@ -1274,6 +1274,57 @@ createApp({
             return data;
         }
 
+        // 共通: タイムライングリッド ラベル生成
+        function _buildGridLabels(cfg) {
+            if (!cfg) return [];
+            const labels = [];
+            const slotsPerLabel = 15 / SLOT_MIN;
+            const labelCount = cfg.totalSlots / slotsPerLabel;
+            for (let i = 0; i < labelCount; i++) {
+                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
+                const mins = t.getMinutes();
+                labels.push({
+                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
+                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
+                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
+                });
+            }
+            return labels;
+        }
+
+        // 共通: グリッド部屋一覧
+        function _buildGridRooms(entries) {
+            const map = new Map();
+            entries.forEach(e => {
+                const r = e.session.room;
+                if (r && !map.has(r.id)) map.set(r.id, r.name);
+            });
+            return [...map.entries()].sort((a, b) => a[0] - b[0]);
+        }
+
+        // 共通: グリッドスタイル
+        function _buildGridStyle(cfg, rooms) {
+            if (!cfg) return {};
+            return {
+                gridTemplateColumns: `70px repeat(${rooms.length}, 1fr)`,
+                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
+            };
+        }
+
+        // 共通: 時間→行番号
+        function _timeToRow(cfg, dt) {
+            const t = new Date(dt).getTime();
+            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
+        }
+
+        // 共通: セッションスタイル
+        function _buildSessionStyle(cfg, rooms, entry) {
+            const startRow = _timeToRow(cfg, entry.session.start_time);
+            const endRow = _timeToRow(cfg, entry.session.end_time);
+            const ci = rooms.findIndex(([rid]) => rid === entry.session.room_id);
+            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
+        }
+
         async function autoAssign() {
             if (!confirm('スタッフを自動配置します。現在の配置はすべて上書きされます。よろしいですか？')) return;
             const data = await _doAutoAssign(sessionSchedule.value.map(e => e.session.id));
@@ -1520,52 +1571,11 @@ createApp({
             }
             return unifiedGroupConfig.value[gid] || null;
         }
-        function grpGridRooms(gid) {
-            const map = new Map();
-            grpDateFiltered(gid).forEach(e => {
-                const r = e.session.room;
-                if (r && !map.has(r.id)) map.set(r.id, r.name);
-            });
-            return [...map.entries()].sort((a, b) => a[0] - b[0]);
-        }
-        function grpGridStyle(gid) {
-            const cfg = grpGridConfig(gid);
-            if (!cfg) return {};
-            const rms = grpGridRooms(gid);
-            return {
-                gridTemplateColumns: `70px repeat(${rms.length}, 1fr)`,
-                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
-            };
-        }
-        function grpTimeToRow(gid, dt) {
-            const cfg = grpGridConfig(gid);
-            const t = new Date(dt).getTime();
-            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
-        }
-        function grpGridLabels(gid) {
-            const cfg = grpGridConfig(gid);
-            if (!cfg) return [];
-            const labels = [];
-            const slotsPerLabel = 15 / SLOT_MIN;
-            const labelCount = cfg.totalSlots / slotsPerLabel;
-            for (let i = 0; i < labelCount; i++) {
-                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
-                const mins = t.getMinutes();
-                labels.push({
-                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
-                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
-                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
-                });
-            }
-            return labels;
-        }
-        function grpSessionStyle(gid, entry) {
-            const startRow = grpTimeToRow(gid, entry.session.start_time);
-            const endRow = grpTimeToRow(gid, entry.session.end_time);
-            const rms = grpGridRooms(gid);
-            const ci = rms.findIndex(([rid]) => rid === entry.session.room_id);
-            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
-        }
+        function grpGridRooms(gid) { return _buildGridRooms(grpDateFiltered(gid)); }
+        function grpGridStyle(gid) { return _buildGridStyle(grpGridConfig(gid), grpGridRooms(gid)); }
+        function grpTimeToRow(gid, dt) { return _timeToRow(grpGridConfig(gid), dt); }
+        function grpGridLabels(gid) { return _buildGridLabels(grpGridConfig(gid)); }
+        function grpSessionStyle(gid, entry) { return _buildSessionStyle(grpGridConfig(gid), grpGridRooms(gid), entry); }
         const grpSelectedSession = reactive({});
         function grpSelectedEntry(gid) {
             const sid = grpSelectedSession[gid];
@@ -1682,66 +1692,19 @@ createApp({
         });
 
         // 部屋一覧（セッションカテゴリのみ）
-        const tlRooms = computed(() => {
-            const map = new Map();
-            sessionSchedule.value.forEach(e => {
-                const r = e.session.room;
-                if (r && !map.has(r.id)) map.set(r.id, r.name);
-            });
-            return [...map.entries()].sort((a, b) => a[0] - b[0]);
-        });
+        const tlRooms = computed(() => _buildGridRooms(sessionSchedule.value));
 
         // グリッドスタイル
-        const tlGridStyle = computed(() => {
-            const cfg = tlConfig.value;
-            if (!cfg) return {};
-            return {
-                gridTemplateColumns: `70px repeat(${tlRooms.value.length}, 1fr)`,
-                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
-            };
-        });
+        const tlGridStyle = computed(() => _buildGridStyle(tlConfig.value, tlRooms.value));
 
         // 時間 → グリッド行番号
-        function timeToRow(dt) {
-            const cfg = tlConfig.value;
-            const t = new Date(dt).getTime();
-            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2; // +2: header(1) + 1-based
-        }
+        function timeToRow(dt) { return _timeToRow(tlConfig.value, dt); }
 
         // 15分ごとの時間ラベル + 背景セル
-        const tlLabels = computed(() => {
-            const cfg = tlConfig.value;
-            if (!cfg) return [];
-            const labels = [];
-            const slotsPerLabel = 15 / SLOT_MIN; // 3スロット = 15分
-            const labelCount = cfg.totalSlots / slotsPerLabel;
-            for (let i = 0; i < labelCount; i++) {
-                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
-                const mins = t.getMinutes();
-                labels.push({
-                    text: (mins === 0 || mins === 30)
-                        ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-                        : '',
-                    gridRow: i * slotsPerLabel + 2,
-                    span: slotsPerLabel,
-                    isHour: mins === 0,
-                    isHalf: mins === 30,
-                    isQuarter: mins === 15 || mins === 45,
-                });
-            }
-            return labels;
-        });
+        const tlLabels = computed(() => _buildGridLabels(tlConfig.value));
 
         // セッションのグリッドスタイル
-        function tlSessionStyle(entry) {
-            const startRow = timeToRow(entry.session.start_time);
-            const endRow = timeToRow(entry.session.end_time);
-            const ci = tlRooms.value.findIndex(([rid]) => rid === entry.session.room_id);
-            return {
-                gridRow: `${startRow} / ${endRow}`,
-                gridColumn: `${ci + 2}`,
-            };
-        }
+        function tlSessionStyle(entry) { return _buildSessionStyle(tlConfig.value, tlRooms.value, entry); }
 
         // ====================================================================
         //  ドラッグ & ドロップ（Googleカレンダー風）
@@ -2166,52 +2129,11 @@ createApp({
             maxT = Math.ceil(maxT / slotMs) * slotMs;
             return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
         }
-        function catGridRooms(catKey) {
-            const map = new Map();
-            catGroupFiltered(catKey).forEach(e => {
-                const r = e.session.room;
-                if (r && !map.has(r.id)) map.set(r.id, r.name);
-            });
-            return [...map.entries()].sort((a, b) => a[0] - b[0]);
-        }
-        function catGridStyle(catKey) {
-            const cfg = catGridConfig(catKey);
-            if (!cfg) return {};
-            const rms = catGridRooms(catKey);
-            return {
-                gridTemplateColumns: `70px repeat(${rms.length}, 1fr)`,
-                gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)`,
-            };
-        }
-        function catTimeToRow(catKey, dt) {
-            const cfg = catGridConfig(catKey);
-            const t = new Date(dt).getTime();
-            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
-        }
-        function catGridLabels(catKey) {
-            const cfg = catGridConfig(catKey);
-            if (!cfg) return [];
-            const labels = [];
-            const slotsPerLabel = 15 / SLOT_MIN;
-            const labelCount = cfg.totalSlots / slotsPerLabel;
-            for (let i = 0; i < labelCount; i++) {
-                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
-                const mins = t.getMinutes();
-                labels.push({
-                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
-                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
-                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
-                });
-            }
-            return labels;
-        }
-        function catSessionStyle(catKey, entry) {
-            const startRow = catTimeToRow(catKey, entry.session.start_time);
-            const endRow = catTimeToRow(catKey, entry.session.end_time);
-            const rms = catGridRooms(catKey);
-            const ci = rms.findIndex(([rid]) => rid === entry.session.room_id);
-            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
-        }
+        function catGridRooms(catKey) { return _buildGridRooms(catGroupFiltered(catKey)); }
+        function catGridStyle(catKey) { return _buildGridStyle(catGridConfig(catKey), catGridRooms(catKey)); }
+        function catTimeToRow(catKey, dt) { return _timeToRow(catGridConfig(catKey), dt); }
+        function catGridLabels(catKey) { return _buildGridLabels(catGridConfig(catKey)); }
+        function catSessionStyle(catKey, entry) { return _buildSessionStyle(catGridConfig(catKey), catGridRooms(catKey), entry); }
         const catSelectedSession = reactive({});
         function catSelectedEntry(catKey) {
             const sid = catSelectedSession[catKey];
@@ -2305,49 +2227,11 @@ createApp({
             maxT = Math.ceil(maxT / slotMs) * slotMs;
             return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
         }
-        function ovGridRooms() {
-            const map = new Map();
-            overallDateFiltered().forEach(e => {
-                const r = e.session.room;
-                if (r && !map.has(r.id)) map.set(r.id, r.name);
-            });
-            return [...map.entries()].sort((a, b) => a[0] - b[0]);
-        }
-        function ovGridStyle() {
-            const cfg = ovGridConfig();
-            if (!cfg) return {};
-            const rms = ovGridRooms();
-            return { gridTemplateColumns: `70px repeat(${rms.length}, 1fr)`, gridTemplateRows: `auto repeat(${cfg.totalSlots}, 20px)` };
-        }
-        function ovTimeToRow(dt) {
-            const cfg = ovGridConfig();
-            const t = new Date(dt).getTime();
-            return Math.round((t - cfg.minTime) / cfg.slotMs) + 2;
-        }
-        function ovGridLabels() {
-            const cfg = ovGridConfig();
-            if (!cfg) return [];
-            const labels = [];
-            const slotsPerLabel = 15 / SLOT_MIN;
-            const labelCount = cfg.totalSlots / slotsPerLabel;
-            for (let i = 0; i < labelCount; i++) {
-                const t = new Date(cfg.minTime + i * slotsPerLabel * cfg.slotMs);
-                const mins = t.getMinutes();
-                labels.push({
-                    text: (mins === 0 || mins === 30) ? t.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
-                    gridRow: i * slotsPerLabel + 2, span: slotsPerLabel,
-                    isHour: mins === 0, isHalf: mins === 30, isQuarter: mins === 15 || mins === 45,
-                });
-            }
-            return labels;
-        }
-        function ovSessionStyle(entry) {
-            const startRow = ovTimeToRow(entry.session.start_time);
-            const endRow = ovTimeToRow(entry.session.end_time);
-            const rms = ovGridRooms();
-            const ci = rms.findIndex(([rid]) => rid === entry.session.room_id);
-            return { gridRow: `${startRow} / ${endRow}`, gridColumn: `${ci + 2}` };
-        }
+        function ovGridRooms() { return _buildGridRooms(overallDateFiltered()); }
+        function ovGridStyle() { return _buildGridStyle(ovGridConfig(), ovGridRooms()); }
+        function ovTimeToRow(dt) { return _timeToRow(ovGridConfig(), dt); }
+        function ovGridLabels() { return _buildGridLabels(ovGridConfig()); }
+        function ovSessionStyle(entry) { return _buildSessionStyle(ovGridConfig(), ovGridRooms(), entry); }
 
         // --- 全体スケジュール（表示用） ---
         const allGroupTab = ref(0); // 0=全日程, 日付文字列=日別
