@@ -1196,21 +1196,24 @@ createApp({
             await loadSchedule();
         }
         async function removeAssignment(assignmentId) {
-            await fetch(API + `/api/assignments/${assignmentId}`, { method: 'DELETE' });
+            const res = await fetch(API + `/api/assignments/${assignmentId}`, { method: 'DELETE' });
+            if (!res.ok) { alert('配置の削除に失敗しました'); return; }
             await loadSchedule();
         }
         async function setAllStaff(sessionId) {
-            await fetch(API + `/api/sessions/${sessionId}/required-staff`, {
+            const res = await fetch(API + `/api/sessions/${sessionId}/required-staff`, {
                 method: 'PATCH', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ required_staff: -1 })
             });
+            if (!res.ok) { alert('全員設定に失敗しました'); return; }
             await loadSchedule();
         }
         async function unsetAllStaff(sessionId) {
-            await fetch(API + `/api/sessions/${sessionId}/required-staff`, {
+            const res = await fetch(API + `/api/sessions/${sessionId}/required-staff`, {
                 method: 'PATCH', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ required_staff: 0 })
             });
+            if (!res.ok) { alert('全員設定の解除に失敗しました'); return; }
             await loadSchedule();
         }
         async function addAssignmentOrAll(sessionId) {
@@ -1220,10 +1223,11 @@ createApp({
             } else {
                 const staffId = Number(val);
                 if (!staffId) return;
-                await fetch(API + '/api/assignments/', {
+                const res = await fetch(API + '/api/assignments/', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ session_id: sessionId, staff_id: staffId })
                 });
+                if (!res.ok) { alert('配置の追加に失敗しました'); return; }
                 await loadSchedule();
             }
             assignStaffSelect[sessionId] = '0';
@@ -1258,7 +1262,10 @@ createApp({
         async function clearAssignments() {
             if (!confirm('セッション担当の配置をすべてクリアします。よろしいですか？')) return;
             const ids = sessionSchedule.value.flatMap(e => e.assigned_staff.map(a => a.assignment_id));
-            for (const id of ids) await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+            for (const id of ids) {
+                const res = await fetch(API + `/api/assignments/${id}`, { method: 'DELETE' });
+                if (!res.ok) { alert('配置の削除に失敗しました'); return; }
+            }
             scheduleMsg.value = { type: 'success', text: 'セッション担当の配置をクリアしました' };
             scheduleMsgError.value = '';
             await loadSchedule();
