@@ -862,6 +862,7 @@ createApp({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(talks)
                 });
+                if (!res2.ok) { alert('LTトークの保存に失敗しました'); return; }
                 const savedTalks = await res2.json();
                 // 新しい写真があればアップロード
                 for (let i = 0; i < ltTalks.length; i++) {
