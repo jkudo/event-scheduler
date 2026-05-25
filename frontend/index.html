@@ -1467,23 +1467,6 @@
                 <div v-if="settingsMsg" style="margin-top:10px;font-size:0.85rem;color:#2e7d32">{{ settingsMsg }}</div>
             </div>
 
-            <!-- パスワード変更 -->
-            <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:8px;padding:20px;margin-bottom:20px">
-                <h3 style="margin:0 0 12px;color:#e65100">ログインパスワード変更</h3>
-                <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
-                    <div class="form-group" style="margin:0">
-                        <label style="font-size:0.85rem">現在のパスワード</label>
-                        <input v-model="pwForm.current" type="password" placeholder="現在のパスワード" style="width:200px">
-                    </div>
-                    <div class="form-group" style="margin:0">
-                        <label style="font-size:0.85rem">新しいパスワード</label>
-                        <input v-model="pwForm.newPw" type="password" placeholder="新しいパスワード" style="width:200px">
-                    </div>
-                    <button class="btn" @click="changePassword" :disabled="!pwForm.current || !pwForm.newPw">変更</button>
-                </div>
-                <div v-if="pwMsg" :style="{marginTop:'10px',fontSize:'0.85rem',color: pwMsgError ? '#c62828' : '#2e7d32'}">{{ pwMsg }}</div>
-            </div>
-
             <!-- セッショングループ管理 -->
             <div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:8px;padding:20px;margin-bottom:20px">
                 <h3 style="margin:0 0 12px;color:#1565c0">セッショングループ管理</h3>
@@ -1556,6 +1539,23 @@
                     </div>
                     <div v-if="catSettingMsg" style="margin-top:8px;font-size:0.85rem;color:#2e7d32">{{ catSettingMsg }}</div>
                 </div>
+            </div>
+
+            <!-- パスワード変更 -->
+            <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:8px;padding:20px;margin-bottom:20px">
+                <h3 style="margin:0 0 12px;color:#e65100">ログインパスワード変更</h3>
+                <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+                    <div class="form-group" style="margin:0">
+                        <label style="font-size:0.85rem">現在のパスワード</label>
+                        <input v-model="pwForm.current" type="password" placeholder="現在のパスワード" style="width:200px">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label style="font-size:0.85rem">新しいパスワード</label>
+                        <input v-model="pwForm.newPw" type="password" placeholder="新しいパスワード" style="width:200px">
+                    </div>
+                    <button class="btn" @click="changePassword" :disabled="!pwForm.current || !pwForm.newPw">変更</button>
+                </div>
+                <div v-if="pwMsg" :style="{marginTop:'10px',fontSize:'0.85rem',color: pwMsgError ? '#c62828' : '#2e7d32'}">{{ pwMsg }}</div>
             </div>
 
             <!-- 初期化パスワード変更 -->
