@@ -1027,7 +1027,8 @@ createApp({
             event.target.value = '';
         }
         async function deleteStaffPhoto(staffId) {
-            await fetch(API + `/api/staffs/${staffId}/photo`, { method: 'DELETE' });
+            const res = await fetch(API + `/api/staffs/${staffId}/photo`, { method: 'DELETE' });
+            if (!res.ok) { alert('スタッフ写真の削除に失敗しました'); return; }
             await loadStaffs();
             if (staffForm.editId === staffId) staffForm.currentPhoto = '';
         }
