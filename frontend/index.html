@@ -2074,7 +2074,7 @@
                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
             </div>
             <div class="tl-session-title">{{ entry.session.title }}</div>
-            <div v-if="showSpeaker && isMultiSpeakerCat(entry.session.category) && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
+            <div v-if="showSpeaker && ['lt','panel'].includes(entry.session.category) && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
                 <span v-for="t in entry.session.lt_talks" :key="t.id" style="display:block;font-size:0.7rem">{{ t.speaker }}{{ t.title ? ' - ' + t.title : '' }}</span>
             </div>
             <div v-else-if="showSpeaker && entry.session.speaker && entry.session.speaker !== '-' && entry.session.speaker !== 'スタッフ'" class="tl-session-speaker">{{ entry.session.speaker }}</div>
