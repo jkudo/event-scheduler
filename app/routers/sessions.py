@@ -59,6 +59,11 @@ async def create_session(
         save_path.write_bytes(content)
         photo_path = f"/uploads/{filename}"
 
+    parsed_start = _parse_dt(start_time)
+    parsed_end = _parse_dt(end_time)
+    if parsed_start >= parsed_end:
+        raise HTTPException(status_code=400, detail="開始時刻は終了時刻より前にしてください")
+
     db_session = SessionModel(
         title=title,
         description=description,
@@ -69,8 +74,8 @@ async def create_session(
         speaker_org=speaker_org,
         speaker_title=speaker_title,
         speaker_profile=speaker_profile,
-        start_time=_parse_dt(start_time),
-        end_time=_parse_dt(end_time),
+        start_time=parsed_start,
+        end_time=parsed_end,
         room_id=room_id,
         required_staff=required_staff,
         category=category,
@@ -117,14 +122,19 @@ async def update_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    parsed_start = _parse_dt(start_time)
+    parsed_end = _parse_dt(end_time)
+    if parsed_start >= parsed_end:
+        raise HTTPException(status_code=400, detail="開始時刻は終了時刻より前にしてください")
+
     session.title = title
     session.speaker = speaker
     session.speaker_kana = speaker_kana
     session.speaker_org = speaker_org
     session.speaker_title = speaker_title
     session.speaker_profile = speaker_profile
-    session.start_time = _parse_dt(start_time)
-    session.end_time = _parse_dt(end_time)
+    session.start_time = parsed_start
+    session.end_time = parsed_end
     session.room_id = room_id
     session.description = description
     session.notes = notes
