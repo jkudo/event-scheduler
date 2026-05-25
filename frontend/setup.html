@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初期設定 - Event Scheduler</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333;
+               display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .setup-card { background: white; border-radius: 12px; padding: 40px;
+                      box-shadow: 0 2px 12px rgba(0,0,0,0.12); width: 100%; max-width: 480px; }
+        .setup-header { background: #388e3c; color: white; padding: 20px 24px;
+                        border-radius: 8px; margin-bottom: 28px; text-align: center; }
+        .setup-header h1 { font-size: 1.2rem; margin-bottom: 4px; }
+        .setup-header p { font-size: 0.85rem; opacity: 0.85; }
+        .section-label { font-size: 0.8rem; font-weight: 700; color: #666; text-transform: uppercase;
+                         letter-spacing: 0.05em; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+        .form-group input { width: 100%; padding: 12px 14px; border: 1px solid #ccc;
+                            border-radius: 6px; font-size: 1rem; }
+        .form-group input:focus { outline: none; border-color: #388e3c; box-shadow: 0 0 0 2px rgba(56,142,60,0.2); }
+        .form-group .hint { font-size: 0.8rem; color: #888; margin-top: 4px; }
+        .btn-setup { width: 100%; padding: 12px; background: #388e3c; color: white; border: none;
+                     border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: 600; margin-top: 8px; }
+        .btn-setup:hover { background: #2e7d32; }
+        .btn-setup:disabled { background: #999; cursor: not-allowed; }
+        .error-msg { color: #d93025; font-size: 0.85rem; margin-top: 12px; text-align: center; display: none; }
+        .hp-field { position: absolute; left: -9999px; top: -9999px; opacity: 0; height: 0; width: 0; }
+    </style>
+</head>
+<body>
+    <div class="setup-card">
+        <div class="setup-header">
+            <h1>Event Scheduler</h1>
+            <p>初期設定を行ってください</p>
+        </div>
+        <form id="setupForm" onsubmit="return handleSetup(event)" autocomplete="off">
+            <div class="hp-field" aria-hidden="true">
+                <label for="email">Email</label>
+                <input type="text" id="email" name="email" tabindex="-1" autocomplete="off">
+            </div>
+
+            <div class="section-label">ログインパスワード</div>
+            <div class="form-group">
+                <label for="loginPw">パスワード</label>
+                <input type="password" id="loginPw" placeholder="ログインパスワードを設定" autofocus required>
+            </div>
+            <div class="form-group">
+                <label for="loginPwConfirm">パスワード（確認）</label>
+                <input type="password" id="loginPwConfirm" placeholder="もう一度入力" required>
+            </div>
+
+            <div class="section-label">管理者パスワード</div>
+            <div class="form-group">
+                <label for="adminPw">パスワード</label>
+                <input type="password" id="adminPw" placeholder="管理者パスワードを設定" required>
+                <div class="hint">データ初期化などの管理者操作に使用します</div>
+            </div>
+            <div class="form-group">
+                <label for="adminPwConfirm">パスワード（確認）</label>
+                <input type="password" id="adminPwConfirm" placeholder="もう一度入力" required>
+            </div>
+
+            <div class="section-label">アプリ設定（任意）</div>
+            <div class="form-group">
+                <label for="appTitle">アプリタイトル</label>
+                <input type="text" id="appTitle" placeholder="Event Scheduler">
+                <div class="hint">未入力の場合は「Event Scheduler」が使用されます</div>
+            </div>
+
+            <button type="submit" class="btn-setup" id="setupBtn">設定を保存して開始</button>
+            <div class="error-msg" id="errorMsg"></div>
+        </form>
+    </div>
+
+    <script>
+        async function handleSetup(e) {
+            e.preventDefault();
+
+            if (document.getElementById('email').value) {
+                return false;
+            }
+
+            const btn = document.getElementById('setupBtn');
+            const errEl = document.getElementById('errorMsg');
+            const loginPw = document.getElementById('loginPw').value;
+            const loginPwConfirm = document.getElementById('loginPwConfirm').value;
+            const adminPw = document.getElementById('adminPw').value;
+            const adminPwConfirm = document.getElementById('adminPwConfirm').value;
+            const appTitle = document.getElementById('appTitle').value;
+
+            errEl.style.display = 'none';
+
+            if (loginPw !== loginPwConfirm) {
+                errEl.textContent = 'ログインパスワードが一致しません';
+                errEl.style.display = 'block';
+                return false;
+            }
+            if (adminPw !== adminPwConfirm) {
+                errEl.textContent = '管理者パスワードが一致しません';
+                errEl.style.display = 'block';
+                return false;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '保存中...';
+
+            try {
+                const resp = await fetch('/auth/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        login_password: loginPw,
+                        admin_password: adminPw,
+                        app_title: appTitle || ''
+                    }),
+                });
+                if (resp.ok) {
+                    window.location.href = '/login.html';
+                } else {
+                    const data = await resp.json();
+                    errEl.textContent = data.detail || '設定の保存に失敗しました';
+                    errEl.style.display = 'block';
+                }
+            } catch (err) {
+                errEl.textContent = '通信エラーが発生しました';
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '設定を保存して開始';
+            }
+        }
+    </script>
+</body>
+</html>
