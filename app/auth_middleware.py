@@ -28,7 +28,7 @@ if not SESSION_SECRET:
     SESSION_SECRET = secrets.token_hex(32)
     print("[WARNING] SESSION_SECRET not set — generated a random key. Sessions will not survive restarts.")
 COOKIE_NAME = "cs_session"
-COOKIE_MAX_AGE = 60 * 60 * 24  # 24 hours
+COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days
 GEOIP_ENABLED = os.environ.get("GEOIP_ENABLED", "0") == "1"
 IPINFO_TOKEN = os.environ.get("IPINFO_TOKEN", "")
 
@@ -137,7 +137,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Allow static assets on login page
-        if path == "/login.html":
+        if path in ("/login.html", "/robots.txt"):
             return await call_next(request)
 
         # GeoIP check (before auth, blocks entire access)

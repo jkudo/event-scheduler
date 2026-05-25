@@ -14,7 +14,7 @@ from .models import (
     Room, Session as SessionModel, LTTalk, Staff, StaffSkill,
     StaffPreferredSession, StaffAvailability, VenueMap, Assignment, Category, SessionGroup,
 )
-from .routers import rooms, sessions, staffs, assignments, venue_maps, export, backup, auth, settings, categories, session_groups
+from .routers import rooms, sessions, staffs, assignments, venue_maps, export, backup, auth, settings, categories, session_groups, auto_backup
 
 Base.metadata.create_all(bind=engine)
 
@@ -42,6 +42,12 @@ def _auto_migrate():
                     conn.execute(sa_text(stmt))
                     conn.commit()
                     print(f"[migration] OK: added {table.name}.{col.name}")
+                    # Set default value for new text columns (ALTER TABLE adds NULL)
+                    if str(col_type).upper() in ("VARCHAR", "TEXT", "STRING"):
+                        conn.execute(sa_text(
+                            f"UPDATE {table.name} SET {col.name} = '' WHERE {col.name} IS NULL"
+                        ))
+                        conn.commit()
 
 try:
     _auto_migrate()
@@ -51,7 +57,21 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
-app = FastAPI(title="Conference Scheduler API", version="1.0.0")
+import asyncio
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app):
+    from .scheduler import backup_scheduler_loop
+    task = asyncio.create_task(backup_scheduler_loop())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+app = FastAPI(title="Conference Scheduler API", version="1.0.0", lifespan=lifespan)
 
 from starlette.middleware.gzip import GZipMiddleware
 app.add_middleware(GZipMiddleware, minimum_size=500)
@@ -83,6 +103,7 @@ app.include_router(backup.router)
 app.include_router(settings.router)
 app.include_router(categories.router)
 app.include_router(session_groups.router)
+app.include_router(auto_backup.router)
 
 
 def _seed_all():

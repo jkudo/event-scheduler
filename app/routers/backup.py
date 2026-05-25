@@ -29,9 +29,8 @@ def _dt_str(dt: datetime | None) -> str:
     return dt.isoformat() if dt else ""
 
 
-@router.get("/backup")
-def export_backup(db: Session = Depends(get_db)):
-    """全データを ZIP でエクスポート（data.json + 画像ファイル）"""
+def create_backup_zip(db: Session) -> bytes:
+    """全データを ZIP バイト列として作成（auto_backup / export 共用）"""
     rooms = db.query(Room).order_by(Room.id).all()
     venue_maps = db.query(VenueMap).order_by(VenueMap.id).all()
     sessions = (
@@ -132,20 +131,23 @@ def export_backup(db: Session = Depends(get_db)):
 
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as zf:
-        # data.json
         zf.writestr("data.json", json.dumps(data, ensure_ascii=False, indent=2))
-        # 画像ファイルを uploads/ に格納
         if UPLOAD_DIR.exists():
             for file_path in UPLOAD_DIR.iterdir():
                 if file_path.is_file():
                     zf.write(file_path, f"uploads/{file_path.name}")
 
-    stream.seek(0)
+    return stream.getvalue()
+
+
+@router.get("/backup")
+def export_backup(db: Session = Depends(get_db)):
+    """全データを ZIP でエクスポート（data.json + 画像ファイル）"""
+    zip_bytes = create_backup_zip(db)
     now = datetime.now().strftime("%Y%m%d_%H%M")
     filename = f"conf_backup_{now}.zip"
-
     return StreamingResponse(
-        stream,
+        io.BytesIO(zip_bytes),
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )

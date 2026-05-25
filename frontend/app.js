@@ -371,7 +371,7 @@ const app = createApp({
         const resetPwMsgError = ref(false);
 
         // --- Settings ---
-        const appTitle = ref('カンファレンススケジューラー');
+        const appTitle = ref('');
         const allowOverlap = ref(false);
         const settingsForm = reactive({ app_title: '', allow_overlap: false });
         const settingsMsg = ref('');
@@ -623,6 +623,88 @@ const app = createApp({
             }
         }
 
+        // --- Auto Backup ---
+        const abSettings = reactive({ enabled: false, schedule_type: 'interval', interval_minutes: 720, daily_time: '03:00', retention_count: 28 });
+        const abStatus = reactive({ running: false, last_run: null, last_status: null, next_run: null, error: null });
+        const abHistory = ref([]);
+        const abMsg = ref('');
+        const abDownload = ref(false);
+        let _abPoll = null;
+
+        async function loadAbSettings() {
+            try {
+                const data = await fetch(API + '/api/backup/auto/settings').then(r => r.json());
+                Object.assign(abSettings, data);
+            } catch (e) { /* ignore */ }
+        }
+        async function loadAbStatus() {
+            try {
+                const data = await fetch(API + '/api/backup/auto/status').then(r => r.json());
+                Object.assign(abStatus, data);
+            } catch (e) { /* ignore */ }
+        }
+        async function loadAbHistory() {
+            try {
+                abHistory.value = await fetch(API + '/api/backup/auto/history').then(r => r.json());
+            } catch (e) { /* ignore */ }
+        }
+        async function saveAbSettings() {
+            abMsg.value = '';
+            try {
+                await fetch(API + '/api/backup/auto/settings', {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(abSettings)
+                });
+                abMsg.value = '設定を保存しました';
+                await loadAbStatus();
+            } catch (e) { abMsg.value = '保存に失敗しました'; }
+        }
+        async function triggerBackupNow() {
+            abMsg.value = 'バックアップを実行中...';
+            try {
+                const res = await fetch(API + '/api/backup/auto/run', { method: 'POST' });
+                if (res.ok) {
+                    const result = await res.json();
+                    abMsg.value = 'バックアップが完了しました';
+                    await loadAbHistory();
+                    await loadAbStatus();
+                    if (abDownload.value && result.id) {
+                        const a = document.createElement('a');
+                        a.href = API + '/api/backup/auto/history/' + result.id + '/download';
+                        a.download = result.filename || 'backup.zip';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                } else {
+                    const err = await res.json();
+                    abMsg.value = 'バックアップに失敗しました: ' + (err.detail || '');
+                }
+            } catch (e) { abMsg.value = 'バックアップに失敗しました'; }
+        }
+        async function deleteBackupEntry(id) {
+            if (!confirm('このバックアップを削除しますか？')) return;
+            await fetch(API + '/api/backup/auto/history/' + id, { method: 'DELETE' });
+            await loadAbHistory();
+        }
+
+        async function downloadBackupEntry(id, createdAt) {
+            try {
+                const res = await fetch(API + '/api/backup/auto/history/' + id + '/download');
+                if (!res.ok) { alert('ダウンロードに失敗しました'); return; }
+                const blob = await res.blob();
+                const d = new Date(createdAt);
+                const ts = d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2) + '_' + ('0'+d.getHours()).slice(-2) + ('0'+d.getMinutes()).slice(-2);
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'conf_backup_' + ts + '.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+            } catch (e) { alert('ダウンロードに失敗しました'); }
+        }
+
         async function switchTab(name) {
             tab.value = name;
             sidebarOpen.value = false;
@@ -659,6 +741,7 @@ const app = createApp({
             }
             if (name === 'venue-view') await loadVenueMaps();
             if (name === 'io') { await loadRooms(); await loadSessions(); }
+            if (name === 'auto-backup') { await loadAbSettings(); await loadAbHistory(); await loadAbStatus(); }
         }
 
         // --- 部屋 ---
@@ -2590,6 +2673,8 @@ const app = createApp({
             editAllEntry, deleteAllEntry, autoAssignAll,
             filteredMatrixSchedule,
             matrixSessionOpacity, _hasStaff, CAT_BG,
+            abSettings, abStatus, abHistory, abMsg, abDownload,
+            loadAbSettings, loadAbStatus, loadAbHistory, saveAbSettings, triggerBackupNow, deleteBackupEntry, downloadBackupEntry,
         };
     }
 });

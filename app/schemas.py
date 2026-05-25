@@ -218,6 +218,11 @@ class StaffResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @field_validator("emergency_contact", mode="before")
+    @classmethod
+    def _default_emergency_contact(cls, v):
+        return v or ""
+
     @field_validator("role", mode="before")
     @classmethod
     def _split_role(cls, v):
