@@ -107,7 +107,7 @@ def export_backup(db: Session = Depends(get_db)):
                 "id": st.id, "name": st.name, "slack_name": st.slack_name,
                 "photo": st.photo,
                 "english_ok": st.english_ok, "role": st.role,
-                "max_hours": st.max_hours, "experience_count": st.experience_count,
+                "max_hours": st.max_hours, "experience_count": st.experience_count, "emergency_contact": st.emergency_contact,
                 "skills": [sk.skill for sk in st.skills],
                 "preferred_sessions": [
                     {"session_id": p.session_id, "priority": p.priority}
@@ -288,6 +288,7 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
                 role=st.get("role", "general"),
                 max_hours=st.get("max_hours", 8),
                 experience_count=st.get("experience_count", 0),
+                emergency_contact=st.get("emergency_contact", ""),
             )
             db.add(db_staff)
             db.flush()

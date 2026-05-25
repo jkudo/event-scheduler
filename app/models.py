@@ -71,6 +71,7 @@ class Staff(Base):
     role = Column(String, default="general")
     max_hours = Column(Integer, default=8)
     experience_count = Column(Integer, default=0)  # 過去参加回数（0=初めて）
+    emergency_contact = Column(String, default="")
 
     skills = relationship("StaffSkill", back_populates="staff", cascade="all, delete-orphan")
     preferred_sessions = relationship("StaffPreferredSession", back_populates="staff", cascade="all, delete-orphan")

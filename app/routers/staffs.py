@@ -34,7 +34,7 @@ def list_staffs(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=StaffResponse, status_code=201)
 def create_staff(staff: StaffCreate, db: Session = Depends(get_db)):
-    db_staff = Staff(name=staff.name, slack_name=staff.slack_name, english_ok=int(staff.english_ok), role=",".join(staff.role), max_hours=staff.max_hours, experience_count=staff.experience_count)
+    db_staff = Staff(name=staff.name, slack_name=staff.slack_name, english_ok=int(staff.english_ok), role=",".join(staff.role), max_hours=staff.max_hours, experience_count=staff.experience_count, emergency_contact=staff.emergency_contact)
     db.add(db_staff)
     db.flush()
     for skill in staff.skills:
@@ -69,6 +69,7 @@ def update_staff(staff_id: int, data: StaffUpdate, db: Session = Depends(get_db)
     staff.role = ",".join(data.role)
     staff.max_hours = data.max_hours
     staff.experience_count = data.experience_count
+    staff.emergency_contact = data.emergency_contact
     # スキルを更新（既存を削除して再作成）
     db.query(StaffSkill).filter(StaffSkill.staff_id == staff_id).delete()
     for skill in data.skills:

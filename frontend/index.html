@@ -297,6 +297,7 @@
             <div class="form-row">
                 <div class="form-group"><label>名前 <span class="req">必須</span></label><input v-model="staffForm.name" placeholder="例: 山田 太郎"></div>
                 <div class="form-group"><label>Slack表示名</label><input v-model="staffForm.slack_name" placeholder="例: @yamada-taro"></div>
+                <div class="form-group"><label>緊急連絡先</label><input v-model="staffForm.emergency_contact" placeholder="例: 090-1234-5678"></div>
                 <div class="form-group" style="position:relative">
                     <label>担当</label>
                     <div @click.stop="roleDropdownOpen = !roleDropdownOpen"
@@ -434,6 +435,7 @@
                                 <span v-else class="badge avail">{{ s.experience_count }}回目</span>
                                 <span class="badge" style="background:#e8f0fe;color:#1a73e8">担当: {{ staffAssignCount[s.id] || 0 }}件</span>
                             </h3>
+                            <div v-if="s.emergency_contact" style="font-size:0.8rem;color:#888;margin-top:2px">緊急連絡先: {{ s.emergency_contact }}</div>
                         </div>
                         <div>
                             <button class="btn btn-sm edit-btn" @click="editStaff(s)" style="margin-right:4px">編集</button>

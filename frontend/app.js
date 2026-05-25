@@ -114,7 +114,7 @@ const app = createApp({
             speaker_org: '', speaker_title: '', speaker_profile: '', group_id: null
         });
         const ltTalks = reactive([]);
-        const staffForm = reactive({ editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
+        const staffForm = reactive({ editId: null, name: '', slack_name: '', emergency_contact: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
         const roleDropdownOpen = ref(false);
         const newStaffPhotoFile = ref(null);
         const staffPhotoPreview = ref('');
@@ -925,7 +925,7 @@ const app = createApp({
             if (staffForm.experience_count === null || staffForm.experience_count === '' || staffForm.experience_count < 0) { alert('過去参加回数を入力してください'); return; }
             let slackName = (staffForm.slack_name || '').trim();
             if (slackName && !slackName.startsWith('@')) slackName = '@' + slackName;
-            const payload = { name: staffForm.name, slack_name: slackName, role: staffForm.role, experience_count: staffForm.experience_count, english_ok: staffForm.english_ok };
+            const payload = { name: staffForm.name, slack_name: slackName, emergency_contact: (staffForm.emergency_contact || '').trim(), role: staffForm.role, experience_count: staffForm.experience_count, english_ok: staffForm.english_ok };
             if (staffForm.editId) {
                 const res = await fetch(API + `/api/staffs/${staffForm.editId}`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -961,6 +961,7 @@ const app = createApp({
             staffForm.editId = s.id;
             staffForm.name = s.name;
             staffForm.slack_name = s.slack_name || '';
+            staffForm.emergency_contact = s.emergency_contact || '';
             staffForm.role = Array.isArray(s.role) ? [...s.role] : (s.role ? s.role.split(',') : ['session']);
             staffForm.experience_count = s.experience_count;
             staffForm.english_ok = !!s.english_ok;
@@ -969,7 +970,7 @@ const app = createApp({
             staffPhotoPreview.value = '';
         }
         function cancelEditStaff() {
-            Object.assign(staffForm, { editId: null, name: '', slack_name: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
+            Object.assign(staffForm, { editId: null, name: '', slack_name: '', emergency_contact: '', role: ['session'], experience_count: 0, english_ok: false, currentPhoto: '' });
             clearNewStaffPhoto();
             newStaffAvails.splice(0);
             newAvailForm.start = '';

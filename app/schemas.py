@@ -185,6 +185,7 @@ class StaffCreate(BaseModel):
     role: list[str] = ["session"]
     max_hours: int = 8
     experience_count: int = 0
+    emergency_contact: str = ""
     skills: list[str] = []
     preferred_sessions: list[StaffPreferredSessionCreate] = []
     availabilities: list[StaffAvailabilityCreate] = []
@@ -197,6 +198,7 @@ class StaffUpdate(BaseModel):
     role: list[str] = ["session"]
     max_hours: int = 8
     experience_count: int = 0
+    emergency_contact: str = ""
     skills: list[str] = []
 
 
@@ -209,6 +211,7 @@ class StaffResponse(BaseModel):
     role: list[str]
     max_hours: int
     experience_count: int
+    emergency_contact: str
     skills: list[StaffSkillResponse] = []
     preferred_sessions: list[StaffPreferredSessionResponse] = []
     availabilities: list[StaffAvailabilityResponse] = []
