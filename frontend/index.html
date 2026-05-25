@@ -1494,7 +1494,7 @@
             <!-- 管理者パスワード変更 -->
             <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:20px;margin-bottom:20px">
                 <h3 style="margin:0 0 8px;color:#e65100">管理者パスワードの変更</h3>
-                <p style="margin:0 0 12px;font-size:0.9rem;color:#555">データ完全初期化に使用するパスワードを変更します。</p>
+                <p style="margin:0 0 12px;font-size:0.9rem;color:#555">管理者操作に使用するパスワードを変更します。</p>
                 <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
                     <div class="form-group" style="margin:0">
                         <label style="font-size:0.85rem">現在のパスワード</label>
@@ -1761,8 +1761,8 @@
                         <ul style="margin:0;padding-left:20px;font-size:0.88rem;color:#444;line-height:1.8">
                             <li><strong>基本情報</strong>: タイトル・登壇者名・ふりがな・開始/終了時刻・部屋・カテゴリ</li>
                             <li><strong>登壇者詳細</strong>: 所属・肩書き・プロフィール・写真アップロード</li>
-                            <li><strong>カテゴリ</strong>: 一般・技術・ワークショップ・基調講演・LT から選択</li>
-                            <li><strong>LTセッション</strong>: カテゴリを「LT」にすると登壇者を個別に追加可能。各登壇者に開始/終了時刻・写真を設定</li>
+                            <li><strong>カテゴリ</strong>: 一般・技術・ワークショップ・基調講演・LT・パネルディスカッション から選択</li>
+                            <li><strong>LT・パネルディスカッション</strong>: カテゴリを「LT」または「パネルディスカッション」にすると登壇者を個別に追加可能。各登壇者に開始/終了時刻・写真を設定</li>
                             <li><strong>必要スタッフ数</strong>: 手動入力または「必要スタッフ計算」で部屋定員から推奨値を算出</li>
                             <li><strong>英語対応</strong>: チェックすると英語対応可能なスタッフが優先配置されます</li>
                             <li>日付タブはセッションの日付から自動生成されます</li>
@@ -1862,11 +1862,21 @@
                     <h3 style="margin:0 0 16px;color:#333;border-bottom:2px solid #7b1fa2;padding-bottom:8px">出力</h3>
 
                     <div style="margin-bottom:20px;border:1px solid #e0e0e0;border-radius:8px;padding:16px">
-                        <h4 style="margin:0 0 8px;color:#7b1fa2">エクスポート/インポート</h4>
+                        <h4 style="margin:0 0 8px;color:#7b1fa2">エクスポート</h4>
                         <ul style="margin:0;padding-left:20px;font-size:0.9rem;color:#444;line-height:2">
                             <li><strong>Excelエクスポート</strong>: 部屋管理・セッション管理・スタッフ管理・セッション配置・全体スケジュールマトリクス・カテゴリ別シートを含むExcelファイルを出力。登壇者写真も埋め込まれます</li>
-                            <li><strong>バックアップ（ZIP）</strong>: 全データと画像ファイルをZIP形式でエクスポート。別環境への移行やデータ保全に使用します</li>
+                            <li><strong>connpassタイムライン</strong>: connpassイベントページに貼り付け可能なMarkdown形式のタイムテーブルを生成。ベースURLを設定すると登壇者写真のリンクも含まれます</li>
+                            <li><strong>connpass登壇者テンプレート</strong>: connpassイベントページ用の登壇者一覧をMarkdown形式で生成</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:20px;border:1px solid #e0e0e0;border-radius:8px;padding:16px">
+                        <h4 style="margin:0 0 8px;color:#7b1fa2">バックアップ</h4>
+                        <ul style="margin:0;padding-left:20px;font-size:0.9rem;color:#444;line-height:2">
+                            <li><strong>手動バックアップ</strong>: 全データと画像ファイルをZIP形式でエクスポート。別環境への移行やデータ保全に使用します</li>
                             <li><strong>バックアップ復元</strong>: エクスポートしたZIPファイルからデータを復元。既存データはすべて上書きされます</li>
+                            <li><strong>自動バックアップ</strong>: 一定間隔（分単位）または毎日指定時刻に自動でバックアップを実行。保持件数を超えると古いバックアップから自動削除されます</li>
+                            <li><strong>バックアップ履歴</strong>: 過去のバックアップ一覧を表示。個別にダウンロード・削除が可能です</li>
                         </ul>
                     </div>
                 </div>
@@ -1896,7 +1906,7 @@
                         <ul style="margin:0;padding-left:20px;font-size:0.88rem;color:#444;line-height:1.8">
                             <li>セッション基本情報（タイトル・時間・部屋・カテゴリ・必要人数）</li>
                             <li>登壇者情報（写真・名前・所属・肩書き・プロフィール）※全体セッションを除く</li>
-                            <li>LT登壇者一覧（LTセッションの場合）</li>
+                            <li>LT登壇者・パネリスト一覧（LT・パネルディスカッションの場合）</li>
                             <li>セッション説明・備考</li>
                             <li>担当スタッフの確認・追加・削除（ロック解除時）</li>
                             <li>全体セッションの場合は「全員」の設定・解除が可能</li>
