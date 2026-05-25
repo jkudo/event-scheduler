@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import UPLOAD_DIR
@@ -120,7 +120,7 @@ def _seed_all():
 
         # --- デフォルトセッショングループ ---
         if db.query(SessionGroup).count() == 0:
-            grp = SessionGroup(label="Day 1", date="", order=1, color="#1a73e8")
+            grp = SessionGroup(label="セッション", date="", order=1, color="#1a73e8")
             db.add(grp)
             db.commit()
 
@@ -239,6 +239,15 @@ def _seed_all():
 
 
 _seed_all()
+
+@app.get("/setup.html", response_class=HTMLResponse)
+def setup_page():
+    from .auth_middleware import is_setup_complete
+    if is_setup_complete():
+        return RedirectResponse(url="/login.html", status_code=302)
+    html = Path("frontend/setup.html").read_text(encoding="utf-8")
+    return HTMLResponse(content=html)
+
 
 @app.get("/login.html", response_class=HTMLResponse)
 def login_page():

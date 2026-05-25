@@ -33,7 +33,32 @@ GEOIP_ENABLED = os.environ.get("GEOIP_ENABLED", "0") == "1"
 IPINFO_TOKEN = os.environ.get("IPINFO_TOKEN", "")
 
 # Paths that bypass authentication
-PUBLIC_PATHS = {"/auth/login", "/auth/verify", "/auth/logout", "/auth/debug"}
+PUBLIC_PATHS = {"/auth/login", "/auth/verify", "/auth/logout", "/auth/debug", "/auth/setup"}
+
+# ---------------------------------------------------------------------------
+# Setup completion check (cached)
+# ---------------------------------------------------------------------------
+_setup_done: bool | None = None
+
+
+def is_setup_complete() -> bool:
+    global _setup_done
+    if _setup_done is not None:
+        return _setup_done
+    from .database import SessionLocal
+    from .models import AppSetting
+    db = SessionLocal()
+    try:
+        row = db.query(AppSetting).filter(AppSetting.key == "setup_completed").first()
+        _setup_done = (row is not None and row.value == "1")
+    finally:
+        db.close()
+    return _setup_done
+
+
+def mark_setup_complete():
+    global _setup_done
+    _setup_done = True
 
 
 # ---------------------------------------------------------------------------
@@ -136,9 +161,18 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if path in PUBLIC_PATHS:
             return await call_next(request)
 
-        # Allow static assets on login page
-        if path in ("/login.html", "/robots.txt"):
+        # Allow static assets on login/setup page
+        if path in ("/login.html", "/setup.html", "/robots.txt"):
             return await call_next(request)
+
+        # Redirect to setup if not yet completed
+        if not is_setup_complete():
+            if path.startswith("/api/"):
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Setup not completed"},
+                )
+            return RedirectResponse(url="/setup.html", status_code=302)
 
         # GeoIP check (before auth, blocks entire access)
         if GEOIP_ENABLED:

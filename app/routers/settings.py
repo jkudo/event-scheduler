@@ -68,12 +68,19 @@ class ChangePasswordRequest(BaseModel):
 
 
 @router.post("/change-password")
-def change_password(body: ChangePasswordRequest):
+def change_password(body: ChangePasswordRequest, db: Session = Depends(get_db)):
     """Change the application login password."""
-    app_password = os.environ.get("APP_PASSWORD", "password")
-    if app_password and body.current_password != app_password:
+    # 環境変数 > DB > デフォルト の優先順で現在のパスワードを取得
+    if os.environ.get("APP_PASSWORD"):
+        current = os.environ["APP_PASSWORD"]
+    else:
+        row = db.query(AppSetting).filter(AppSetting.key == "login_password").first()
+        current = row.value if row and row.value else "password"
+
+    if body.current_password != current:
         raise HTTPException(status_code=403, detail="現在のパスワードが正しくありません")
 
-    # Update environment variable (runtime only, persists until restart)
+    # DB と環境変数の両方を更新
+    _set(db, "login_password", body.new_password)
     os.environ["APP_PASSWORD"] = body.new_password
-    return {"status": "ok", "message": "パスワードを変更しました（次回デプロイまで有効）"}
+    return {"status": "ok", "message": "パスワードを変更しました"}
