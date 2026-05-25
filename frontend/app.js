@@ -945,10 +945,11 @@ createApp({
             if (slackName && !slackName.startsWith('@')) slackName = '@' + slackName;
             const payload = { name: staffForm.name, slack_name: slackName, role: staffForm.role, experience_count: staffForm.experience_count, english_ok: staffForm.english_ok };
             if (staffForm.editId) {
-                await fetch(API + `/api/staffs/${staffForm.editId}`, {
+                const res = await fetch(API + `/api/staffs/${staffForm.editId}`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                if (!res.ok) { alert('スタッフの更新に失敗しました'); return; }
                 if (newStaffPhotoFile.value) {
                     const fd = new FormData();
                     fd.append('photo', newStaffPhotoFile.value);
