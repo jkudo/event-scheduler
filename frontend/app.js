@@ -7,6 +7,7 @@ const app = createApp({
         const SLOT_MIN = 5; // 5分刻み
 
         const tab = ref('all-matrix');
+        const sidebarOpen = ref(false);
         const rooms = ref([]);
         const sessions = ref([]);
         const staffs = ref([]);
@@ -624,6 +625,7 @@ const app = createApp({
 
         async function switchTab(name) {
             tab.value = name;
+            sidebarOpen.value = false;
             if (name === 'rooms') await loadRooms();
             if (name === 'venue-maps') await loadVenueMaps();
             if (name === 'staffs') { await loadSessions(); await loadStaffs(); await loadSchedule(); }
@@ -1722,6 +1724,13 @@ const app = createApp({
         //  ドラッグ & ドロップ（Googleカレンダー風）
         // ====================================================================
         const DRAG_THRESHOLD = 10; // px — 明確なドラッグ意図が必要
+        // タッチ/マウス共通: 座標取得
+        function _evXY(e) {
+            if (e.touches && e.touches.length) return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+            if (e.changedTouches && e.changedTouches.length) return { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY };
+            return { clientX: e.clientX, clientY: e.clientY };
+        }
+        const _isTouch = (e) => e.type && e.type.startsWith('touch');
 
         const drag = reactive({
             active: false,    // ドラッグ中（閾値を超えた後）
@@ -1795,18 +1804,19 @@ const app = createApp({
         }
 
         function onDragStart(e, entry) {
-            if (e.button !== 0) return;
+            if (!_isTouch(e) && e.button !== 0) return;
             if (matrixLocked.value) return;
             e.preventDefault();
 
+            const { clientX, clientY } = _evXY(e);
             const sessionEl = e.currentTarget;
             const rect = sessionEl.getBoundingClientRect();
             const edgeThreshold = 8;
-            const relY = e.clientY - rect.top;
+            const relY = clientY - rect.top;
 
             let mode = 'move';
             if (relY <= edgeThreshold) mode = 'resize-top';
-            else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
+            else if (rect.bottom - clientY <= edgeThreshold) mode = 'resize-bottom';
 
             const gridEl = sessionEl.closest('.tl-grid');
             const colBounds = _computeColBounds(gridEl);
@@ -1826,20 +1836,24 @@ const app = createApp({
             drag.curStartRow = startRow;
             drag.curEndRow = endRow;
             drag.curColIdx = ci;
-            drag.startMouseY = e.clientY;
-            drag.startMouseX = e.clientX;
+            drag.startMouseY = clientY;
+            drag.startMouseX = clientX;
             drag.gridEl = gridEl;
             drag.colWidths = colBounds;
 
             document.addEventListener('mousemove', onDragMove);
             document.addEventListener('mouseup', onDragEnd);
+            document.addEventListener('touchmove', onDragMove, { passive: false });
+            document.addEventListener('touchend', onDragEnd);
         }
 
         function onDragMove(e) {
             if (!drag.pending && !drag.active) return;
+            if (_isTouch(e)) e.preventDefault();
 
-            const dx = e.clientX - drag.startMouseX;
-            const dy = e.clientY - drag.startMouseY;
+            const { clientX, clientY } = _evXY(e);
+            const dx = clientX - drag.startMouseX;
+            const dy = clientY - drag.startMouseY;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             // 閾値チェック
@@ -1855,25 +1869,21 @@ const app = createApp({
             if (drag.mode === 'move') {
                 const newStart = drag.origStartRow + rowDelta;
                 const span = drag.origEndRow - drag.origStartRow;
-                // 行の範囲チェック（row 2 が最初のデータ行）
                 if (newStart >= 2) {
                     drag.curStartRow = newStart;
                     drag.curEndRow = newStart + span;
                 }
-                // 列はマウスX位置から判定
-                drag.curColIdx = _colFromMouseX(e.clientX, drag.gridEl, drag.colWidths);
+                drag.curColIdx = _colFromMouseX(clientX, drag.gridEl, drag.colWidths);
             } else if (drag.mode === 'resize-top') {
                 const newStart = drag.origStartRow + rowDelta;
                 if (newStart >= 2 && newStart < drag.origEndRow - 1) {
                     drag.curStartRow = newStart;
                 }
-                // リサイズ時は列を変えない
             } else if (drag.mode === 'resize-bottom') {
                 const newEnd = drag.origEndRow + rowDelta;
                 if (newEnd > drag.origStartRow + 1) {
                     drag.curEndRow = newEnd;
                 }
-                // リサイズ時は列を変えない
             }
         }
 
@@ -1886,6 +1896,8 @@ const app = createApp({
         async function _doDragEnd(cfg, rooms, mouseupHandler) {
             document.removeEventListener('mousemove', onDragMove);
             document.removeEventListener('mouseup', mouseupHandler);
+            document.removeEventListener('touchmove', onDragMove);
+            document.removeEventListener('touchend', mouseupHandler);
 
             if (!drag.active) {
                 drag.pending = false;
@@ -1973,18 +1985,19 @@ const app = createApp({
 
         // グループ担当用ドラッグ開始
         function onGrpDragStart(e, gid, entry) {
-            if (e.button !== 0) return;
+            if (!_isTouch(e) && e.button !== 0) return;
             if (groupLocks[gid]) return;
             e.preventDefault();
 
+            const { clientX, clientY } = _evXY(e);
             const sessionEl = e.currentTarget;
             const rect = sessionEl.getBoundingClientRect();
             const edgeThreshold = 8;
-            const relY = e.clientY - rect.top;
+            const relY = clientY - rect.top;
 
             let mode = 'move';
             if (relY <= edgeThreshold) mode = 'resize-top';
-            else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
+            else if (rect.bottom - clientY <= edgeThreshold) mode = 'resize-bottom';
 
             const gridEl = sessionEl.closest('.tl-grid');
             const colBounds = _computeColBounds(gridEl);
@@ -2005,14 +2018,16 @@ const app = createApp({
             drag.curStartRow = startRow;
             drag.curEndRow = endRow;
             drag.curColIdx = ci;
-            drag.startMouseY = e.clientY;
-            drag.startMouseX = e.clientX;
+            drag.startMouseY = clientY;
+            drag.startMouseX = clientX;
             drag.gridEl = gridEl;
             drag.colWidths = colBounds;
-            drag._grpId = gid; // グループID保持
+            drag._grpId = gid;
 
             document.addEventListener('mousemove', onDragMove);
             document.addEventListener('mouseup', onGrpDragEnd);
+            document.addEventListener('touchmove', onDragMove, { passive: false });
+            document.addEventListener('touchend', onGrpDragEnd);
         }
 
         async function onGrpDragEnd() {
@@ -2113,16 +2128,17 @@ const app = createApp({
             return { ...catSessionStyle(catKey, entry), opacity: catSessionOpacity(catKey, entry), ...allSessionBg(catKey), cursor: 'grab' };
         }
         function onCatDragStart(e, catKey, entry) {
-            if (e.button !== 0) return;
+            if (!_isTouch(e) && e.button !== 0) return;
             if (categoryLocks[catKey]) return;
             e.preventDefault();
+            const { clientX, clientY } = _evXY(e);
             const sessionEl = e.currentTarget;
             const rect = sessionEl.getBoundingClientRect();
             const edgeThreshold = 8;
-            const relY = e.clientY - rect.top;
+            const relY = clientY - rect.top;
             let mode = 'move';
             if (relY <= edgeThreshold) mode = 'resize-top';
-            else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
+            else if (rect.bottom - clientY <= edgeThreshold) mode = 'resize-bottom';
             const gridEl = sessionEl.closest('.tl-grid');
             const colBounds = _computeColBounds(gridEl);
             const cfg = catGridConfig(catKey);
@@ -2136,10 +2152,12 @@ const app = createApp({
                 pending: true, active: false, mode, sessionId: entry.session.id,
                 origStartRow: startRow, origEndRow: endRow, origColIdx: ci,
                 curStartRow: startRow, curEndRow: endRow, curColIdx: ci,
-                startMouseY: e.clientY, startMouseX: e.clientX, gridEl, colWidths: colBounds,
+                startMouseY: clientY, startMouseX: clientX, gridEl, colWidths: colBounds,
             });
             document.addEventListener('mousemove', onDragMove);
             document.addEventListener('mouseup', onCatDragEnd);
+            document.addEventListener('touchmove', onDragMove, { passive: false });
+            document.addEventListener('touchend', onCatDragEnd);
         }
         async function onCatDragEnd() {
             const catKey = drag._catKey;
@@ -2253,16 +2271,17 @@ const app = createApp({
             return { ...ovSessionStyle(entry), opacity: overallSessionOpacity(entry), ...allSessionBg('overall'), cursor: 'grab' };
         }
         function onOvDragStart(e, entry) {
-            if (e.button !== 0) return;
+            if (!_isTouch(e) && e.button !== 0) return;
             if (overallLocked.value) return;
             e.preventDefault();
+            const { clientX, clientY } = _evXY(e);
             const sessionEl = e.currentTarget;
             const rect = sessionEl.getBoundingClientRect();
             const edgeThreshold = 8;
-            const relY = e.clientY - rect.top;
+            const relY = clientY - rect.top;
             let mode = 'move';
             if (relY <= edgeThreshold) mode = 'resize-top';
-            else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
+            else if (rect.bottom - clientY <= edgeThreshold) mode = 'resize-bottom';
             const gridEl = sessionEl.closest('.tl-grid');
             const colBounds = _computeColBounds(gridEl);
             const cfg = ovGridConfig();
@@ -2275,10 +2294,12 @@ const app = createApp({
                 pending: true, active: false, mode, sessionId: entry.session.id,
                 origStartRow: startRow, origEndRow: endRow, origColIdx: ci,
                 curStartRow: startRow, curEndRow: endRow, curColIdx: ci,
-                startMouseY: e.clientY, startMouseX: e.clientX, gridEl, colWidths: colBounds,
+                startMouseY: clientY, startMouseX: clientX, gridEl, colWidths: colBounds,
             });
             document.addEventListener('mousemove', onDragMove);
             document.addEventListener('mouseup', onOvDragEnd);
+            document.addEventListener('touchmove', onDragMove, { passive: false });
+            document.addEventListener('touchend', onOvDragEnd);
         }
         async function onOvDragEnd() {
             await _doDragEnd(ovGridConfig(), ovGridRooms(), onOvDragEnd);
@@ -2509,7 +2530,7 @@ const app = createApp({
         onMounted(async () => { await loadSessionGroups(); await loadCategories(); loadRooms(); loadStaffs(); loadSessions().then(() => loadSchedule()); loadSettings(); });
 
         return {
-            tab, rooms, sessions, staffs, schedule, staffAssignments, staffAssignmentsWithAll,
+            tab, sidebarOpen, rooms, sessions, staffs, schedule, staffAssignments, staffAssignmentsWithAll,
             scheduleMsg, scheduleMsgError, sessPhotoPreview, sessPhoto,
             roomForm, sessForm, staffForm, roleDropdownOpen, prefForms, availForms, ltTalks,
             venueMaps, venueMapForm, venueMapPreview, venueMapInput, mapModal,

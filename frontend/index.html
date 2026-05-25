@@ -11,8 +11,11 @@
 
 <div id="app">
     <div class="app-layout">
+        <!-- ハンバーガーボタン（モバイル用） -->
+        <button class="hamburger-btn" @click="sidebarOpen = !sidebarOpen" aria-label="メニュー">&#9776;</button>
+        <div class="sidebar-overlay" :class="{ open: sidebarOpen }" @click="sidebarOpen = false"></div>
         <!-- 左サイドバー -->
-        <nav class="sidebar">
+        <nav class="sidebar" :class="{ open: sidebarOpen }"
             <h1 class="sidebar-title">{{ appTitle }}</h1>
             <button class="sidebar-item" :class="{ active: tab === 'all-matrix' }" @click="switchTab('all-matrix')">全体スケジュール</button>
             <button class="sidebar-item" :class="{ active: tab === 'staff-detail' }" @click="switchTab('staff-detail')">スタッフ別詳細</button>
@@ -1917,6 +1920,7 @@
              class="tl-session"
              :style="entryStyle(entry)"
              @mousedown="$emit('dragstart', $event, entry)"
+             @touchstart="$emit('dragstart', $event, entry)"
              @click="$emit('select', entry.session.id)">
             <div class="tl-session-time" :style="{ color: color }">
                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
