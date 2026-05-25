@@ -504,43 +504,13 @@
             <h3 style="margin-top:0">配置マトリクス</h3>
             <p v-if="!overallDateFiltered().length">全体スケジュールがまだ登録されていません。</p>
             <template v-else-if="overallDateTab !== 0">
-                <div class="tl-wrapper">
-                    <div class="tl-grid" :style="ovGridStyle()">
-                        <div class="tl-corner">時間</div>
-                        <div v-for="([rid, rname], ci) in ovGridRooms()" :key="'ovrh'+rid"
-                             class="tl-room-header" :style="{gridColumn: ci+2, background: '#e65100'}">
-                            {{ rname }}
-                        </div>
-                        <template v-for="(lbl, i) in ovGridLabels()" :key="'ovt'+i">
-                            <div class="tl-time-label"
-                                 :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
-                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
-                                {{ lbl.text }}
-                            </div>
-                            <div v-for="([rid], ci) in ovGridRooms()" :key="'ovbg'+i+'-'+rid"
-                                 class="tl-bg-cell"
-                                 :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
-                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
-                            </div>
-                        </template>
-                        <div v-for="entry in overallDateFiltered()" :key="'ovs'+entry.session.id"
-                             class="tl-session"
-                             :style="{ ...ovSessionStyle(entry), opacity: overallSessionOpacity(entry), ...allSessionBg('overall'), cursor: 'pointer' }"
-                             @click="toggleSessionDetail(entry.session.id)">
-                            <div class="tl-session-time" style="color:#e65100">
-                                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
-                            </div>
-                            <div class="tl-session-title">{{ entry.session.title }}</div>
-                            <div class="tl-session-staff">
-                                <span v-if="entry.session.required_staff === -1" class="badge" style="background:#e65100;color:#fff">全員</span>
-                                <template v-else-if="entry.assigned_staff.length">
-                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
-                                </template>
-                                <span v-else class="badge warn">未配置</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <tl-grid
+                    :grid-style="ovGridStyle()" :rooms="ovGridRooms()" :labels="ovGridLabels()"
+                    :entries="overallDateFiltered()" color="#e65100"
+                    :entry-style="e => ({ ...ovSessionStyle(e), opacity: overallSessionOpacity(e), ...allSessionBg('overall'), cursor: 'pointer' })"
+                    :fmt-short="fmtShort"
+                    @select="toggleSessionDetail">
+                </tl-grid>
             </template>
             <!-- 全日程: タイムライン -->
             <template v-else>
@@ -662,47 +632,14 @@
             <h3 style="margin-top:0">配置マトリクス</h3>
             <p v-if="!grpDateFiltered(grp.id).length">セッションがまだ登録されていません。</p>
             <template v-else-if="grpDateTabs[grp.id] !== 0">
-                <div class="tl-wrapper">
-                    <div class="tl-grid" :style="grpGridStyle(grp.id)">
-                        <div class="tl-corner">時間</div>
-                        <div v-for="([rid, rname], ci) in grpGridRooms(grp.id)" :key="'grh'+grp.id+'-'+rid"
-                             class="tl-room-header" :style="{gridColumn: ci+2, background: grp.color}">
-                            {{ rname }}
-                        </div>
-                        <template v-for="(lbl, i) in grpGridLabels(grp.id)" :key="'gt'+grp.id+'-'+i">
-                            <div class="tl-time-label"
-                                 :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
-                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
-                                {{ lbl.text }}
-                            </div>
-                            <div v-for="([rid], ci) in grpGridRooms(grp.id)" :key="'gbg'+grp.id+'-'+i+'-'+rid"
-                                 class="tl-bg-cell"
-                                 :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
-                                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
-                            </div>
-                        </template>
-                        <div v-for="entry in grpDateFiltered(grp.id)" :key="'gs'+grp.id+'-'+entry.session.id"
-                             class="tl-session"
-                             :style="groupLocks[grp.id] ? { ...grpSessionStyle(grp.id, entry), opacity: groupSessionOpacity(grp.id, entry), cursor: 'pointer' } : grpDragSessionStyle(grp.id, entry)"
-                             @mousedown="!groupLocks[grp.id] && onGrpDragStart($event, grp.id, entry)"
-                             @click="toggleSessionDetail(entry.session.id)">
-                            <div class="tl-session-time">
-                                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
-                            </div>
-                            <div class="tl-session-title">{{ entry.session.title }}</div>
-                            <div v-if="entry.session.category === 'lt' && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
-                                <span v-for="t in entry.session.lt_talks" :key="t.id" style="display:block;font-size:0.7rem">{{ t.speaker }} - {{ t.title }}</span>
-                            </div>
-                            <div v-else class="tl-session-speaker">{{ entry.session.speaker }}</div>
-                            <div class="tl-session-staff">
-                                <template v-if="entry.assigned_staff.length">
-                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
-                                </template>
-                                <span v-else class="badge warn">未配置</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <tl-grid
+                    :grid-style="grpGridStyle(grp.id)" :rooms="grpGridRooms(grp.id)" :labels="grpGridLabels(grp.id)"
+                    :entries="grpDateFiltered(grp.id)" :color="grp.color || '#1a73e8'" :show-speaker="true"
+                    :entry-style="e => groupLocks[grp.id] ? { ...grpSessionStyle(grp.id, e), opacity: groupSessionOpacity(grp.id, e), cursor: 'pointer' } : grpDragSessionStyle(grp.id, e)"
+                    :fmt-short="fmtShort"
+                    @dragstart="(ev, entry) => { if (!groupLocks[grp.id]) onGrpDragStart(ev, grp.id, entry); }"
+                    @select="toggleSessionDetail">
+                </tl-grid>
             </template>
             <!-- 全日程: タイムライン表示 -->
             <template v-else>
@@ -882,41 +819,13 @@
 
                 <!-- グループ別: マトリクス表示 -->
                 <template v-if="catGroupTabs[cat.key] !== 0">
-                    <div class="tl-wrapper">
-                        <div class="tl-grid" :style="catGridStyle(cat.key)">
-                            <div class="tl-corner">時間</div>
-                            <div v-for="([rid, rname], ci) in catGridRooms(cat.key)" :key="'ctrh'+cat.key+rid"
-                                 class="tl-room-header" :style="{gridColumn: ci+2, background: cat.color}">
-                                {{ rname }}
-                            </div>
-                            <template v-for="(lbl, i) in catGridLabels(cat.key)" :key="'ctl'+cat.key+i">
-                                <div class="tl-time-label"
-                                     :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
-                                     :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
-                                    {{ lbl.text }}
-                                </div>
-                                <div v-for="([rid], ci) in catGridRooms(cat.key)" :key="'ctbg'+cat.key+i+'-'+rid"
-                                     class="tl-bg-cell"
-                                     :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
-                                     :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
-                                </div>
-                            </template>
-                            <div v-for="entry in catGroupFiltered(cat.key)" :key="'cts'+cat.key+entry.session.id"
-                                 class="tl-session" :style="{...catSessionStyle(cat.key, entry), opacity: catSessionOpacity(cat.key, entry), ...allSessionBg(cat.key), cursor: 'pointer'}"
-                                 @click="toggleSessionDetail(entry.session.id)">
-                                <div class="tl-session-time" :style="{ color: cat.color }">
-                                    {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
-                                </div>
-                                <div class="tl-session-title">{{ entry.session.title }}</div>
-                                <div class="tl-session-staff">
-                                    <template v-if="entry.assigned_staff.length">
-                                        <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
-                                    </template>
-                                    <span v-else class="badge warn">未配置</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <tl-grid
+                        :grid-style="catGridStyle(cat.key)" :rooms="catGridRooms(cat.key)" :labels="catGridLabels(cat.key)"
+                        :entries="catGroupFiltered(cat.key)" :color="cat.color || '#1a73e8'"
+                        :entry-style="e => ({...catSessionStyle(cat.key, e), opacity: catSessionOpacity(cat.key, e), ...allSessionBg(cat.key), cursor: 'pointer'})"
+                        :fmt-short="fmtShort"
+                        @select="toggleSessionDetail">
+                    </tl-grid>
                 </template>
 
                 <!-- 全日程: タイムライン表示 -->
@@ -1980,6 +1889,52 @@
         </div>
     </div>
 </div>
+
+<!-- タイムライングリッド共通コンポーネントテンプレート -->
+<script type="text/x-template" id="tl-grid-template">
+<div class="tl-wrapper">
+    <div class="tl-grid" :style="gridStyle">
+        <div class="tl-corner">時間</div>
+        <div v-for="([rid, rname], ci) in rooms" :key="'rh'+rid"
+             class="tl-room-header" :style="{gridColumn: ci+2, background: color}">
+            {{ rname }}
+        </div>
+        <template v-for="(lbl, i) in labels" :key="'t'+i">
+            <div class="tl-time-label"
+                 :class="{ 'hour-mark': lbl.isHour, 'quarter-mark': lbl.isQuarter }"
+                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span }">
+                {{ lbl.text }}
+            </div>
+            <div v-for="([rid], ci) in rooms" :key="'bg'+i+'-'+rid"
+                 class="tl-bg-cell"
+                 :class="{ 'hour-mark': lbl.isHour, 'half-mark': lbl.isHalf, 'quarter-mark': lbl.isQuarter }"
+                 :style="{ gridRow: lbl.gridRow + ' / span ' + lbl.span, gridColumn: ci+2 }">
+            </div>
+        </template>
+        <div v-for="entry in entries" :key="'s'+entry.session.id"
+             class="tl-session"
+             :style="entryStyle(entry)"
+             @mousedown="$emit('dragstart', $event, entry)"
+             @click="$emit('select', entry.session.id)">
+            <div class="tl-session-time" :style="{ color: color }">
+                {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
+            </div>
+            <div class="tl-session-title">{{ entry.session.title }}</div>
+            <div v-if="showSpeaker && entry.session.category === 'lt' && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
+                <span v-for="t in entry.session.lt_talks" :key="t.id" style="display:block;font-size:0.7rem">{{ t.speaker }} - {{ t.title }}</span>
+            </div>
+            <div v-else-if="showSpeaker && entry.session.speaker && entry.session.speaker !== '-' && entry.session.speaker !== 'スタッフ'" class="tl-session-speaker">{{ entry.session.speaker }}</div>
+            <div class="tl-session-staff">
+                <span v-if="entry.session.required_staff === -1" class="badge" style="background:#e65100;color:#fff">全員</span>
+                <template v-else-if="entry.assigned_staff.length">
+                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
+                </template>
+                <span v-else class="badge warn">未配置</span>
+            </div>
+        </div>
+    </div>
+</div>
+</script>
 
 <script src="app.js"></script>
 </body>

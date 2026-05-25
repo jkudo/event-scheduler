@@ -1,6 +1,6 @@
 const { createApp, ref, reactive, computed, onMounted } = Vue;
 
-createApp({
+const app = createApp({
     setup() {
         const API = '';
         const STATIC_LABELS = { general: '一般', tech: '技術', workshop: 'ワークショップ', keynote: '基調講演', lt: 'LT', session: 'セッション', overall: '全体' };
@@ -2462,5 +2462,23 @@ createApp({
             matrixSessionOpacity, _hasStaff, CAT_BG,
         };
     }
-}).mount('#app');
+});
+
+// タイムライングリッド共通コンポーネント
+app.component('tl-grid', {
+    template: '#tl-grid-template',
+    props: {
+        gridStyle: { type: Object, default: () => ({}) },
+        rooms: { type: Array, default: () => [] },
+        labels: { type: Array, default: () => [] },
+        entries: { type: Array, default: () => [] },
+        color: { type: String, default: '#1a73e8' },
+        entryStyle: { type: Function, required: true },
+        fmtShort: { type: Function, required: true },
+        showSpeaker: { type: Boolean, default: false },
+    },
+    emits: ['select', 'dragstart'],
+});
+
+app.mount('#app');
 
