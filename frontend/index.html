@@ -118,7 +118,7 @@
         <!-- ===== 動的セッショングループ管理 ===== -->
         <template v-for="grp in sessionGroups" :key="'grpm-'+grp.id">
         <div class="panel" :class="{ active: tab === 'grp-'+grp.id+'-manage' }">
-            <h2>{{ grp.label }}管理</h2>
+            <h2>{{ grp.label }}管理 <span style="font-size:0.85rem;font-weight:normal;color:#666">({{ groupSessions(grp.id).length }}件)</span></h2>
 
             <!-- 日程タブ -->
             <div v-if="grpDates(grp.id).length > 1" class="tab-bar">
@@ -274,7 +274,7 @@
 
         <!-- ===== スタッフ管理 ===== -->
         <div class="panel" :class="{ active: tab === 'staffs' }">
-            <h2>スタッフ管理</h2>
+            <h2>スタッフ管理 <span style="font-size:0.85rem;font-weight:normal;color:#666">({{ staffs.length }}名)</span></h2>
             <!-- 写真アップロード -->
             <div style="margin-bottom:12px;display:flex;align-items:center;gap:16px">
                 <div>
