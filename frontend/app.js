@@ -5,8 +5,11 @@ const app = createApp({
         const API = '';
         const DEFAULT_SESSION_CATS = [
             { key: 'general', label: '一般' }, { key: 'tech', label: '技術' },
-            { key: 'workshop', label: 'ワークショップ' }, { key: 'keynote', label: '基調講演' }, { key: 'lt', label: 'LT' },
+            { key: 'workshop', label: 'ワークショップ' }, { key: 'keynote', label: '基調講演' },
+            { key: 'panel', label: 'パネルディスカッション' }, { key: 'lt', label: 'LT' },
         ];
+        const MULTI_SPEAKER_CATS = ['lt', 'panel'];
+        function isMultiSpeakerCat(cat) { return MULTI_SPEAKER_CATS.includes(cat); }
         const extraSessionCats = ref([]);
         const sessionCatOptions = computed(() => [...DEFAULT_SESSION_CATS, ...extraSessionCats.value]);
         const STATIC_LABELS = { session: 'セッション', overall: '全体' };
@@ -276,7 +279,7 @@ const app = createApp({
 
                 for (const s of sessList) {
                     const time = `${fmtTime(s.start_time)}〜${fmtTime(s.end_time)}`;
-                    if (s.category === 'lt' && s.lt_talks && s.lt_talks.length) {
+                    if (isMultiSpeakerCat(s.category) && s.lt_talks && s.lt_talks.length) {
                         const talks = s.lt_talks.map(t => {
                             const info = [t.speaker_title, t.speaker_org].filter(Boolean).join(' / ');
                             const speaker = info ? `${t.speaker}（${info}）` : t.speaker;
@@ -316,7 +319,7 @@ const app = createApp({
                 const room = roomMap[s.room_id] || '';
                 const time = `${fmtTime(s.start_time)}〜${fmtTime(s.end_time)}`;
 
-                if (s.category === 'lt' && s.lt_talks && s.lt_talks.length) {
+                if (isMultiSpeakerCat(s.category) && s.lt_talks && s.lt_talks.length) {
                     md += `## ${s.title}\n`;
                     md += `${time} / ${room}\n\n`;
                     for (const t of s.lt_talks) {
@@ -964,7 +967,7 @@ const app = createApp({
             const fd = new FormData();
             fd.append('title', sessForm.title);
             // LT/受付/懇親会の場合、speakerは自動設定
-            if (sessForm.category === 'lt' && ltTalks.length) {
+            if (isMultiSpeakerCat(sessForm.category) && ltTalks.length) {
                 fd.append('speaker', ltTalks.map(t => t.speaker).filter(Boolean).join(', '));
             } else if (dynamicCatKeys.value.includes(sessForm.category)) {
                 fd.append('speaker', '-');
@@ -989,7 +992,7 @@ const app = createApp({
 
             const sessionId = await _saveSession(fd, sessForm.editId);
             if (!sessionId) return;
-            if (sessForm.category === 'lt' && ltTalks.length) {
+            if (isMultiSpeakerCat(sessForm.category) && ltTalks.length) {
                 await _saveLtTalks(sessionId, ltTalks);
             }
             cancelEditSession();
@@ -1606,7 +1609,7 @@ const app = createApp({
             const talks = form._ltTalks || [];
             const fd = new FormData();
             fd.append('title', form.title);
-            if (form.category === 'lt' && talks.length) {
+            if (isMultiSpeakerCat(form.category) && talks.length) {
                 fd.append('speaker', talks.map(t => t.speaker).filter(Boolean).join(', '));
             } else if (dynamicCatKeys.value.includes(form.category)) {
                 fd.append('speaker', '-');
@@ -1632,7 +1635,7 @@ const app = createApp({
 
             const sessionId = await _saveSession(fd, form.editId);
             if (!sessionId) return;
-            if (form.category === 'lt' && talks.length) {
+            if (isMultiSpeakerCat(form.category) && talks.length) {
                 await _saveLtTalks(sessionId, talks);
             }
             cancelEditGroupSession(gid);
@@ -2679,6 +2682,7 @@ const app = createApp({
             cancelEditRoom, editRoom, submitRoom, deleteRoom,
             onVenueMapChange, cancelEditVenueMap, editVenueMap, submitVenueMap, deleteVenueMap,
             sessDetailSession, sessDetailEntry, sessDetailLocked, toggleSessionDetail, toggleSessDetailLock,
+            isMultiSpeakerCat,
             onPhotoChange, onLTTalkPhoto, autoSetLTEndTime, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
             calcStaffMsg, calcStaffSummary, calcRequiredStaff,
             newStaffAvails, newAvailForm, addNewStaffAvail,

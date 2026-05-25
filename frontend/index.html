@@ -140,7 +140,7 @@
                 <div class="form-group"><label>タイトル <span class="req">必須</span></label><input v-model="groupSessForms[grp.id].title" placeholder="例: Kubernetes実践入門"></div>
             </div>
             <!-- 通常セッション: 登壇者情報 -->
-            <template v-if="!['lt', ...dynamicCatKeys].includes(groupSessForms[grp.id].category)">
+            <template v-if="!isMultiSpeakerCat(groupSessForms[grp.id].category) && !dynamicCatKeys.includes(groupSessForms[grp.id].category)">
                 <div class="form-row">
                     <div class="form-group"><label>登壇者名 <span class="req">必須</span></label><input v-model="groupSessForms[grp.id].speaker" placeholder="例: 山田 太郎"></div>
                     <div class="form-group"><label>ふりがな</label><input v-model="groupSessForms[grp.id].speaker_kana" placeholder="例: やまだ たろう"></div>
@@ -152,7 +152,7 @@
                 <div class="form-group"><label>プロフィール</label><textarea v-model="groupSessForms[grp.id].speaker_profile" rows="2" placeholder="例: 10年以上のクラウドインフラ経験を持つエンジニア。"></textarea></div>
             </template>
             <!-- 登壇者写真 -->
-            <template v-if="!['lt', ...dynamicCatKeys].includes(groupSessForms[grp.id].category)">
+            <template v-if="!isMultiSpeakerCat(groupSessForms[grp.id].category) && !dynamicCatKeys.includes(groupSessForms[grp.id].category)">
                 <div class="form-row">
                     <div class="form-group">
                         <label>登壇者写真</label>
@@ -195,8 +195,8 @@
             <div class="form-group"><label>備考</label><textarea v-model="groupSessForms[grp.id].notes" rows="2" placeholder="例: プロジェクター2台使用。講演者用に水を準備。"></textarea></div>
 
             <!-- LTセッション: 登壇者リスト -->
-            <div v-if="groupSessForms[grp.id].category === 'lt' && groupSessForms[grp.id]._ltTalks" class="lt-talks-list">
-                <h4>LT登壇者一覧</h4>
+            <div v-if="isMultiSpeakerCat(groupSessForms[grp.id].category) && groupSessForms[grp.id]._ltTalks" class="lt-talks-list">
+                <h4>{{ groupSessForms[grp.id].category === 'panel' ? 'パネリスト一覧' : 'LT登壇者一覧' }}</h4>
                 <div v-for="(talk, idx) in groupSessForms[grp.id]._ltTalks" :key="idx" class="lt-talk-item" style="flex-direction:column;align-items:stretch">
                     <div style="display:flex;align-items:center;gap:8px">
                         <span class="lt-num">{{ idx + 1 }}</span>
@@ -227,8 +227,8 @@
                 </div>
                 <button class="btn btn-sm" @click="addLTTalk(grp.id)" style="margin-top:4px">＋ 登壇者を追加</button>
             </div>
-            <div v-if="groupSessForms[grp.id].category === 'lt' && !groupSessForms[grp.id]._ltTalks">
-                <button class="btn btn-sm" @click="addLTTalk(grp.id)" style="margin-bottom:8px">＋ LT登壇者を追加</button>
+            <div v-if="isMultiSpeakerCat(groupSessForms[grp.id].category) && !groupSessForms[grp.id]._ltTalks">
+                <button class="btn btn-sm" @click="addLTTalk(grp.id)" style="margin-bottom:8px">＋ {{ groupSessForms[grp.id].category === 'panel' ? 'パネリストを追加' : 'LT登壇者を追加' }}</button>
             </div>
             <div style="display:flex;gap:8px">
                 <button class="btn" :style="{ background: grp.color }" @click="submitGroupSession(grp.id)">{{ groupSessForms[grp.id].editId ? '更新' : '追加' }}</button>
@@ -243,8 +243,8 @@
                     <tr>
                         <td>{{ s.id }}</td>
                         <td style="text-align:center">
-                            <template v-if="s.category === 'lt' && s.lt_talks && s.lt_talks.length">
-                                <span style="font-size:0.8rem">LT ({{ s.lt_talks.length }}名)</span>
+                            <template v-if="isMultiSpeakerCat(s.category) && s.lt_talks && s.lt_talks.length">
+                                <span style="font-size:0.8rem">{{ s.lt_talks.length }}名</span>
                             </template>
                             <template v-else>
                                 <img v-if="s.speaker_photo" :src="s.speaker_photo" :alt="s.speaker" class="speaker-photo">
@@ -989,8 +989,8 @@
                                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
                             </div>
                             <div class="tl-session-title">{{ entry.session.title }}</div>
-                            <div v-if="entry.session.category === 'lt' && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
-                                <span v-for="t in entry.session.lt_talks" :key="t.id" style="display:block;font-size:0.7rem">{{ t.speaker }} - {{ t.title }}</span>
+                            <div v-if="isMultiSpeakerCat(entry.session.category) && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
+                                <span v-for="t in entry.session.lt_talks" :key="t.id" style="display:block;font-size:0.7rem">{{ t.speaker }}{{ t.title ? ' - ' + t.title : '' }}</span>
                             </div>
                             <div v-else-if="entry.session.speaker && entry.session.speaker !== '-' && entry.session.speaker !== 'スタッフ'" class="tl-session-speaker">{{ entry.session.speaker }}</div>
                             <div class="tl-session-staff">
@@ -1934,9 +1934,9 @@
             <template v-if="dynamicCatKeys.includes(sessDetailSession.category)">
                 <!-- 動的カテゴリは登壇者情報なし -->
             </template>
-            <template v-else-if="sessDetailSession.category === 'lt' && sessDetailSession.lt_talks && sessDetailSession.lt_talks.length">
+            <template v-else-if="isMultiSpeakerCat(sessDetailSession.category) && sessDetailSession.lt_talks && sessDetailSession.lt_talks.length">
                 <div style="margin-bottom:16px">
-                    <strong style="font-size:0.9rem;color:#555">LT登壇者一覧</strong>
+                    <strong style="font-size:0.9rem;color:#555">{{ sessDetailSession.category === 'panel' ? 'パネリスト一覧' : 'LT登壇者一覧' }}</strong>
                     <div v-for="(t, idx) in sessDetailSession.lt_talks" :key="t.id" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0">
                         <span style="font-weight:700;color:#1a73e8;min-width:24px">{{ idx + 1 }}.</span>
                         <img v-if="t.speaker_photo" :src="t.speaker_photo" :alt="t.speaker" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">
@@ -2074,8 +2074,8 @@
                 {{ fmtShort(entry.session.start_time) }} - {{ fmtShort(entry.session.end_time) }}
             </div>
             <div class="tl-session-title">{{ entry.session.title }}</div>
-            <div v-if="showSpeaker && entry.session.category === 'lt' && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
-                <span v-for="t in entry.session.lt_talks" :key="t.id" style="display:block;font-size:0.7rem">{{ t.speaker }} - {{ t.title }}</span>
+            <div v-if="showSpeaker && isMultiSpeakerCat(entry.session.category) && entry.session.lt_talks && entry.session.lt_talks.length" class="tl-session-speaker">
+                <span v-for="t in entry.session.lt_talks" :key="t.id" style="display:block;font-size:0.7rem">{{ t.speaker }}{{ t.title ? ' - ' + t.title : '' }}</span>
             </div>
             <div v-else-if="showSpeaker && entry.session.speaker && entry.session.speaker !== '-' && entry.session.speaker !== 'スタッフ'" class="tl-session-speaker">{{ entry.session.speaker }}</div>
             <div class="tl-session-staff">
