@@ -2098,6 +2098,54 @@ const app = createApp({
             return (categorySessions.value[catKey] || []).find(e => e.session.id === sid) || null;
         }
 
+        // カテゴリ担当用ドラッグ
+        function catDragSessionStyle(catKey, entry) {
+            if (drag.active && drag.sessionId === entry.session.id) {
+                return {
+                    gridRow: `${drag.curStartRow} / ${drag.curEndRow}`,
+                    gridColumn: `${drag.curColIdx + 2}`,
+                    opacity: 0.85, zIndex: 50,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+                    transition: 'none',
+                    cursor: drag.mode === 'move' ? 'grabbing' : 'ns-resize',
+                };
+            }
+            return { ...catSessionStyle(catKey, entry), opacity: catSessionOpacity(catKey, entry), ...allSessionBg(catKey), cursor: 'grab' };
+        }
+        function onCatDragStart(e, catKey, entry) {
+            if (e.button !== 0) return;
+            if (categoryLocks[catKey]) return;
+            e.preventDefault();
+            const sessionEl = e.currentTarget;
+            const rect = sessionEl.getBoundingClientRect();
+            const edgeThreshold = 8;
+            const relY = e.clientY - rect.top;
+            let mode = 'move';
+            if (relY <= edgeThreshold) mode = 'resize-top';
+            else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
+            const gridEl = sessionEl.closest('.tl-grid');
+            const colBounds = _computeColBounds(gridEl);
+            const cfg = catGridConfig(catKey);
+            const rms = catGridRooms(catKey);
+            const startRow = _timeToRow(cfg, entry.session.start_time);
+            const endRow = _timeToRow(cfg, entry.session.end_time);
+            const ci = rms.findIndex(([rid]) => rid === entry.session.room_id);
+            dragDidMove = false;
+            drag._catKey = catKey;
+            Object.assign(drag, {
+                pending: true, active: false, mode, sessionId: entry.session.id,
+                origStartRow: startRow, origEndRow: endRow, origColIdx: ci,
+                curStartRow: startRow, curEndRow: endRow, curColIdx: ci,
+                startMouseY: e.clientY, startMouseX: e.clientX, gridEl, colWidths: colBounds,
+            });
+            document.addEventListener('mousemove', onDragMove);
+            document.addEventListener('mouseup', onCatDragEnd);
+        }
+        async function onCatDragEnd() {
+            const catKey = drag._catKey;
+            await _doDragEnd(catGridConfig(catKey), catGridRooms(catKey), onCatDragEnd);
+        }
+
         // --- 全体スケジュール担当 ---
         const overallLocked = ref(true);
         const overallStaffFilter = ref(0);
@@ -2189,6 +2237,52 @@ const app = createApp({
         function ovTimeToRow(dt) { return _timeToRow(ovGridConfig(), dt); }
         function ovGridLabels() { return _buildGridLabels(ovGridConfig()); }
         function ovSessionStyle(entry) { return _buildSessionStyle(ovGridConfig(), ovGridRooms(), entry); }
+
+        // 全体スケジュール担当用ドラッグ
+        function ovDragSessionStyle(entry) {
+            if (drag.active && drag.sessionId === entry.session.id) {
+                return {
+                    gridRow: `${drag.curStartRow} / ${drag.curEndRow}`,
+                    gridColumn: `${drag.curColIdx + 2}`,
+                    opacity: 0.85, zIndex: 50,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+                    transition: 'none',
+                    cursor: drag.mode === 'move' ? 'grabbing' : 'ns-resize',
+                };
+            }
+            return { ...ovSessionStyle(entry), opacity: overallSessionOpacity(entry), ...allSessionBg('overall'), cursor: 'grab' };
+        }
+        function onOvDragStart(e, entry) {
+            if (e.button !== 0) return;
+            if (overallLocked.value) return;
+            e.preventDefault();
+            const sessionEl = e.currentTarget;
+            const rect = sessionEl.getBoundingClientRect();
+            const edgeThreshold = 8;
+            const relY = e.clientY - rect.top;
+            let mode = 'move';
+            if (relY <= edgeThreshold) mode = 'resize-top';
+            else if (rect.bottom - e.clientY <= edgeThreshold) mode = 'resize-bottom';
+            const gridEl = sessionEl.closest('.tl-grid');
+            const colBounds = _computeColBounds(gridEl);
+            const cfg = ovGridConfig();
+            const rms = ovGridRooms();
+            const startRow = _timeToRow(cfg, entry.session.start_time);
+            const endRow = _timeToRow(cfg, entry.session.end_time);
+            const ci = rms.findIndex(([rid]) => rid === entry.session.room_id);
+            dragDidMove = false;
+            Object.assign(drag, {
+                pending: true, active: false, mode, sessionId: entry.session.id,
+                origStartRow: startRow, origEndRow: endRow, origColIdx: ci,
+                curStartRow: startRow, curEndRow: endRow, curColIdx: ci,
+                startMouseY: e.clientY, startMouseX: e.clientX, gridEl, colWidths: colBounds,
+            });
+            document.addEventListener('mousemove', onDragMove);
+            document.addEventListener('mouseup', onOvDragEnd);
+        }
+        async function onOvDragEnd() {
+            await _doDragEnd(ovGridConfig(), ovGridRooms(), onOvDragEnd);
+        }
 
         // --- 全体スケジュール（表示用） ---
         const allGroupTab = ref(0); // 0=全日程, 日付文字列=日別
@@ -2443,7 +2537,7 @@ const app = createApp({
             categorySessions, catDates, catKeyDates, catGroupTabs, catGroupFiltered, catTimelineByGroup, filteredCategorySessions, catSessionOpacity,
             cancelEditCategory, editCategory, submitCategory, deleteCategory, autoAssignCategory, clearCategoryAssignments,
             catSelectedSessions, autoAssignCategorySelected, toggleCatSessionSelect, toggleCatSelectAll,
-            catGridConfig, catGridRooms, catGridStyle, catGridLabels, catSessionStyle, catSelectedSession, catSelectedEntry,
+            catGridConfig, catGridRooms, catGridStyle, catGridLabels, catSessionStyle, catDragSessionStyle, onCatDragStart, catSelectedSession, catSelectedEntry,
             roleOptions,
             assignStaffSelect, availableStaffs, addAssignment, removeAssignment, setAllStaff, unsetAllStaff, addAssignmentOrAll,
             selectedSessions, toggleSessionSelect, toggleSelectAll,
@@ -2465,7 +2559,7 @@ const app = createApp({
             overallSchedule, overallDateFiltered, filteredOverallSchedule, overallSessionOpacity, overallDates,
             toggleOverallSessionSelect, toggleOverallSelectAll,
             autoAssignOverall, autoAssignOverallSelected, clearOverallAssignments,
-            ovGridConfig, ovGridRooms, ovGridStyle, ovGridLabels, ovSessionStyle,
+            ovGridConfig, ovGridRooms, ovGridStyle, ovGridLabels, ovSessionStyle, ovDragSessionStyle, onOvDragStart,
             allGroupTab, allStaffFilter, allSchedule, allTimelineByGroup, allConfig, allColumns, allGridStyle, allLabels, allSessionStyle, allSessionBg, allSessionOpacity,
             allSelectedSession, allSelectedEntry, allAssignMsg,
             allOvForm, cancelAllOverall, submitAllOverall,

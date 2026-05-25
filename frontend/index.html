@@ -507,8 +507,9 @@
                 <tl-grid
                     :grid-style="ovGridStyle()" :rooms="ovGridRooms()" :labels="ovGridLabels()"
                     :entries="overallDateFiltered()" color="#e65100"
-                    :entry-style="e => ({ ...ovSessionStyle(e), opacity: overallSessionOpacity(e), ...allSessionBg('overall'), cursor: 'pointer' })"
+                    :entry-style="e => overallLocked ? { ...ovSessionStyle(e), opacity: overallSessionOpacity(e), ...allSessionBg('overall'), cursor: 'pointer' } : ovDragSessionStyle(e)"
                     :fmt-short="fmtShort"
+                    @dragstart="(ev, entry) => { if (!overallLocked) onOvDragStart(ev, entry); }"
                     @select="toggleSessionDetail">
                 </tl-grid>
             </template>
@@ -822,8 +823,9 @@
                     <tl-grid
                         :grid-style="catGridStyle(cat.key)" :rooms="catGridRooms(cat.key)" :labels="catGridLabels(cat.key)"
                         :entries="catGroupFiltered(cat.key)" :color="cat.color || '#1a73e8'"
-                        :entry-style="e => ({...catSessionStyle(cat.key, e), opacity: catSessionOpacity(cat.key, e), ...allSessionBg(cat.key), cursor: 'pointer'})"
+                        :entry-style="e => categoryLocks[cat.key] ? {...catSessionStyle(cat.key, e), opacity: catSessionOpacity(cat.key, e), ...allSessionBg(cat.key), cursor: 'pointer'} : catDragSessionStyle(cat.key, e)"
                         :fmt-short="fmtShort"
+                        @dragstart="(ev, entry) => { if (!categoryLocks[cat.key]) onCatDragStart(ev, cat.key, entry); }"
                         @select="toggleSessionDetail">
                     </tl-grid>
                 </template>
