@@ -661,17 +661,19 @@ createApp({
         }
         async function submitRoom() {
             const payload = { name: roomForm.name, capacity: roomForm.capacity || 0, floor: roomForm.floor };
+            let res;
             if (roomForm.editId) {
-                await fetch(API + `/api/rooms/${roomForm.editId}`, {
+                res = await fetch(API + `/api/rooms/${roomForm.editId}`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
             } else {
-                await fetch(API + '/api/rooms/', {
+                res = await fetch(API + '/api/rooms/', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
             }
+            if (!res.ok) { alert('部屋の保存に失敗しました'); return; }
             cancelEditRoom();
             await loadRooms();
         }
