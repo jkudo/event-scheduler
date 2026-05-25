@@ -2418,13 +2418,13 @@ const app = createApp({
             maxT = Math.ceil(maxT / slotMs) * slotMs;
             return { minTime: minT, maxTime: maxT, totalSlots: (maxT - minT) / slotMs, slotMs };
         });
-        // 全体スケジュール（overall）があるか
-        const hasOverall = computed(() => allSchedule.value.some(e => e.session.category === 'overall'));
+        // 列構成は全日程ベースで計算（日付フィルタで列が消えないように）
+        const hasOverall = computed(() => schedule.value.some(e => e.session.category === 'overall'));
         // セッション用の部屋（動的カテゴリ/overall除外）
         const allSessionRooms = computed(() => {
             const dkeys = dynamicCatKeys.value;
             const map = new Map();
-            allSchedule.value.forEach(e => {
+            schedule.value.forEach(e => {
                 if (dkeys.includes(e.session.category) || e.session.category === 'overall') return;
                 const r = e.session.room;
                 if (r && !map.has(r.id)) map.set(r.id, r.name);
@@ -2436,7 +2436,7 @@ const app = createApp({
             const result = {};
             categories.value.forEach(c => {
                 const map = new Map();
-                allSchedule.value.forEach(e => {
+                schedule.value.forEach(e => {
                     if (e.session.category !== c.key) return;
                     const r = e.session.room;
                     if (r && !map.has(r.id)) map.set(r.id, r.name);
