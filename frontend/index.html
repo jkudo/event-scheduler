@@ -296,7 +296,7 @@
             </div>
             <div class="form-row">
                 <div class="form-group"><label>名前 <span class="req">必須</span></label><input v-model="staffForm.name" placeholder="例: 山田 太郎"></div>
-                <div class="form-group"><label>Slack名</label><input v-model="staffForm.slack_name" placeholder="例: @yamada-taro"></div>
+                <div class="form-group"><label>Slack表示名</label><input v-model="staffForm.slack_name" placeholder="例: @yamada-taro"></div>
                 <div class="form-group" style="position:relative">
                     <label>担当</label>
                     <div @click.stop="roleDropdownOpen = !roleDropdownOpen"
@@ -1579,7 +1579,7 @@
 
                     <div style="margin-bottom:20px;border:1px solid #e0e0e0;border-radius:8px;padding:16px">
                         <h4 style="margin:0 0 8px;color:#1565c0">スタッフ別詳細</h4>
-                        <p style="margin:0 0 8px;font-size:0.9rem;color:#555;line-height:1.7">スタッフごとの担当セッション一覧を表示します。プロフィール写真・Slack名・担当ロール・経験回数・活動可能時間とともに確認できます。</p>
+                        <p style="margin:0 0 8px;font-size:0.9rem;color:#555;line-height:1.7">スタッフごとの担当セッション一覧を表示します。プロフィール写真・Slack表示名・担当ロール・経験回数・活動可能時間とともに確認できます。</p>
                         <ul style="margin:0;padding-left:20px;font-size:0.88rem;color:#444;line-height:1.8">
                             <li>「全員」に設定された全体スケジュールは自動的に全スタッフの担当に含まれます</li>
                             <li>同一時間帯のセッションは 全体 → セッション → カテゴリ順 で表示されます</li>
@@ -1635,7 +1635,7 @@
                         <h4 style="margin:0 0 8px;color:#e65100">スタッフ管理</h4>
                         <p style="margin:0 0 8px;font-size:0.9rem;color:#555;line-height:1.7">運営スタッフの登録・編集を行います。</p>
                         <ul style="margin:0;padding-left:20px;font-size:0.88rem;color:#444;line-height:1.8">
-                            <li><strong>基本情報</strong>: 名前・Slack名（@自動付与）・プロフィール写真</li>
+                            <li><strong>基本情報</strong>: 名前・Slack表示名（@自動付与）・プロフィール写真</li>
                             <li><strong>担当ロール</strong>: セッション・受付案内・懇親会などの担当可能なロールを選択（複数選択可）。自動配置時にロールに基づいて適切なセッションに配置されます</li>
                             <li><strong>英語対応</strong>: 英語セッションに優先配置されます</li>
                             <li><strong>最大稼働時間</strong>: 1日の最大稼働時間を設定。自動配置時にこの時間を超えないよう調整されます</li>
@@ -1761,7 +1761,7 @@
                     <h3 style="margin:0 0 12px;color:#333;border-bottom:2px solid #666;padding-bottom:8px">Tips</h3>
                     <ul style="margin:0;padding-left:20px;font-size:0.92rem;line-height:2.2;color:#444">
                         <li>各担当タブの<strong>ロック/編集切替</strong>で誤操作を防止できます。ロック中は配置の変更ができません</li>
-                        <li>Slack名は入力時に<strong>@が自動付与</strong>されます（例: tanaka → @tanaka）</li>
+                        <li>Slack表示名は入力時に<strong>@が自動付与</strong>されます（例: tanaka → @tanaka）</li>
                         <li>登壇者・スタッフの写真は<strong>選択時にプレビュー表示</strong>され、保存時にアップロードされます</li>
                         <li>開始時刻を設定すると<strong>終了時刻が自動計算</strong>されます（セッション: +1時間、LT: +5分）</li>
                         <li><strong>バックアップは定期的に</strong>エクスポートすることを推奨します。ZIPにはすべてのデータと画像が含まれます</li>
