@@ -23,6 +23,10 @@ from starlette.responses import RedirectResponse, JSONResponse
 # Config
 # ---------------------------------------------------------------------------
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
+if not SESSION_SECRET:
+    import secrets
+    SESSION_SECRET = secrets.token_hex(32)
+    print("[WARNING] SESSION_SECRET not set — generated a random key. Sessions will not survive restarts.")
 COOKIE_NAME = "cs_session"
 COOKIE_MAX_AGE = 60 * 60 * 24  # 24 hours
 GEOIP_ENABLED = os.environ.get("GEOIP_ENABLED", "0") == "1"
