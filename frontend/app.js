@@ -1244,35 +1244,36 @@ createApp({
             assignStaffSelect[sessionId] = '0';
         }
 
-        async function autoAssign() {
-            if (!confirm('スタッフを自動配置します。現在の配置はすべて上書きされます。よろしいですか？')) return;
-            const ids = sessionSchedule.value.map(e => e.session.id);
+        // 共通: 自動配置ヘルパー
+        async function _doAutoAssign(ids) {
             const res = await fetch(API + '/api/assignments/auto-assign', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_ids: ids })
             });
-            if (!res.ok) { alert('自動配置に失敗しました'); return; }
+            if (!res.ok) { alert('自動配置に失敗しました'); return null; }
             const data = await res.json();
+            await loadSchedule();
+            return data;
+        }
+
+        async function autoAssign() {
+            if (!confirm('スタッフを自動配置します。現在の配置はすべて上書きされます。よろしいですか？')) return;
+            const data = await _doAutoAssign(sessionSchedule.value.map(e => e.session.id));
+            if (!data) return;
             scheduleMsg.value = { type: 'success', text: `配置完了: ${data.fully_assigned}/${data.total_sessions} セッション` };
             scheduleMsgError.value = data.understaffed && data.understaffed.length
                 ? '人員不足: ' + data.understaffed.map(u => u.session_title).join(', ') : '';
             selectedSessions.clear();
-            await loadSchedule();
         }
         async function autoAssignSelected() {
             const ids = [...selectedSessions];
             if (!confirm(`選択した${ids.length}件のセッションを再配置します。よろしいですか？`)) return;
-            const res = await fetch(API + '/api/assignments/auto-assign', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_ids: ids })
-            });
-            if (!res.ok) { alert('自動配置に失敗しました'); return; }
-            const data = await res.json();
+            const data = await _doAutoAssign(ids);
+            if (!data) return;
             scheduleMsg.value = { type: 'success', text: `再配置完了: ${data.fully_assigned}/${data.total_sessions} セッション` };
             scheduleMsgError.value = data.understaffed && data.understaffed.length
                 ? '人員不足: ' + data.understaffed.map(u => u.session_title).join(', ') : '';
             selectedSessions.clear();
-            await loadSchedule();
         }
         async function clearAssignments() {
             if (!confirm('セッション担当の配置をすべてクリアします。よろしいですか？')) return;
@@ -1456,30 +1457,19 @@ createApp({
         // グループ別自動配置
         async function autoAssignGroup(gid) {
             if (!confirm('このグループのスタッフを自動配置します。現在の配置はすべて上書きされます。よろしいですか？')) return;
-            const ids = (groupSchedule.value[gid] || []).map(e => e.session.id);
-            const res = await fetch(API + '/api/assignments/auto-assign', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_ids: ids })
-            });
-            if (!res.ok) { alert('自動配置に失敗しました'); return; }
-            const data = await res.json();
+            const data = await _doAutoAssign((groupSchedule.value[gid] || []).map(e => e.session.id));
+            if (!data) return;
             groupScheduleMsgs[gid] = `配置完了: ${data.fully_assigned}/${data.total_sessions} セッション`;
             if (groupSelectedSessions[gid]) groupSelectedSessions[gid].clear();
-            await loadSchedule();
         }
         async function autoAssignGroupSelected(gid) {
             const ids = [...(groupSelectedSessions[gid] || [])];
             if (!ids.length) return;
             if (!confirm(`選択した${ids.length}件のセッションを再配置します。よろしいですか？`)) return;
-            const res = await fetch(API + '/api/assignments/auto-assign', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_ids: ids })
-            });
-            if (!res.ok) { alert('自動配置に失敗しました'); return; }
-            const data = await res.json();
+            const data = await _doAutoAssign(ids);
+            if (!data) return;
             groupScheduleMsgs[gid] = `再配置完了: ${data.fully_assigned}/${data.total_sessions} セッション`;
             if (groupSelectedSessions[gid]) groupSelectedSessions[gid].clear();
-            await loadSchedule();
         }
         async function clearGroupAssignments(gid) {
             if (!confirm('このグループの配置をすべてクリアします。よろしいですか？')) return;
@@ -1656,15 +1646,9 @@ createApp({
             const cat = categories.value.find(c => c.key === catKey);
             const label = cat ? cat.label : catKey;
             if (!confirm(`${label}スタッフを自動配置します。現在の${label}配置は上書きされます。よろしいですか？`)) return;
-            const ids = (categorySessions.value[catKey] || []).map(e => e.session.id);
-            const res = await fetch(API + '/api/assignments/auto-assign', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_ids: ids })
-            });
-            if (!res.ok) { alert('自動配置に失敗しました'); return; }
-            const data = await res.json();
+            const data = await _doAutoAssign((categorySessions.value[catKey] || []).map(e => e.session.id));
+            if (!data) return;
             categoryAssignMsgs[catKey] = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
-            await loadSchedule();
         }
         async function clearCategoryAssignments(catKey) {
             const cat = categories.value.find(c => c.key === catKey);
@@ -1682,15 +1666,10 @@ createApp({
             const ids = [...(catSelectedSessions[catKey] || [])];
             if (!ids.length) return;
             if (!confirm(`選択した${ids.length}件を再配置します。よろしいですか？`)) return;
-            const res = await fetch(API + '/api/assignments/auto-assign', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_ids: ids })
-            });
-            if (!res.ok) { alert('自動配置に失敗しました'); return; }
-            const data = await res.json();
+            const data = await _doAutoAssign(ids);
+            if (!data) return;
             categoryAssignMsgs[catKey] = `再配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
             if (catSelectedSessions[catKey]) catSelectedSessions[catKey].clear();
-            await loadSchedule();
         }
         function toggleCatSessionSelect(catKey, id) {
             if (!catSelectedSessions[catKey]) catSelectedSessions[catKey] = new Set();
@@ -2311,28 +2290,17 @@ createApp({
         }
         async function autoAssignOverall() {
             if (!confirm('全体スケジュールを自動配置します。よろしいですか？')) return;
-            const ids = overallDateFiltered().map(e => e.session.id);
-            const res = await fetch(API + '/api/assignments/auto-assign', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_ids: ids })
-            });
-            if (!res.ok) { alert('自動配置に失敗しました'); return; }
-            const data = await res.json();
+            const data = await _doAutoAssign(overallDateFiltered().map(e => e.session.id));
+            if (!data) return;
             overallAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
-            await loadSchedule();
         }
         async function autoAssignOverallSelected() {
             const ids = [...overallSelectedSessions];
             if (!ids.length) return;
-            const res = await fetch(API + '/api/assignments/auto-assign', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_ids: ids })
-            });
-            if (!res.ok) { alert('自動配置に失敗しました'); return; }
-            const data = await res.json();
+            const data = await _doAutoAssign(ids);
+            if (!data) return;
             overallAssignMsg.value = `再配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
             overallSelectedSessions.clear();
-            await loadSchedule();
         }
         async function clearOverallAssignments() {
             if (!confirm('全体スケジュールの配置をクリアしますか？')) return;
@@ -2473,15 +2441,9 @@ createApp({
 
         async function autoAssignAll() {
             if (!confirm('全体を自動配置します。現在の配置は上書きされます。よろしいですか？')) return;
-            const ids = allSchedule.value.map(e => e.session.id);
-            const res = await fetch(API + '/api/assignments/auto-assign', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_ids: ids })
-            });
-            if (!res.ok) { alert('自動配置に失敗しました'); return; }
-            const data = await res.json();
+            const data = await _doAutoAssign(allSchedule.value.map(e => e.session.id));
+            if (!data) return;
             allAssignMsg.value = `配置完了: ${data.fully_assigned}/${data.total_sessions} 件`;
-            await loadSchedule();
         }
         const overallSessions = computed(() => {
             let list = sessions.value.filter(s => s.category === 'overall');
