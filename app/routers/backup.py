@@ -144,7 +144,7 @@ def create_backup_zip(db: Session) -> bytes:
 def export_backup(db: Session = Depends(get_db)):
     """全データを ZIP でエクスポート（data.json + 画像ファイル）"""
     zip_bytes = create_backup_zip(db)
-    now = datetime.now().strftime("%Y%m%d_%H%M")
+    now = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"conf_backup_{now}.zip"
     return StreamingResponse(
         io.BytesIO(zip_bytes),

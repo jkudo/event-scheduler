@@ -752,7 +752,7 @@ const app = createApp({
                 if (!res.ok) { alert('ダウンロードに失敗しました'); return; }
                 const blob = await res.blob();
                 const d = new Date(createdAt);
-                const ts = d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2) + '_' + ('0'+d.getHours()).slice(-2) + ('0'+d.getMinutes()).slice(-2);
+                const ts = d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2) + '_' + ('0'+d.getHours()).slice(-2) + ('0'+d.getMinutes()).slice(-2) + ('0'+d.getSeconds()).slice(-2);
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = 'conf_backup_' + ts + '.zip';
