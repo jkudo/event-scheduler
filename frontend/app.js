@@ -963,11 +963,13 @@ createApp({
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (res.ok && newStaffPhotoFile.value) {
+                if (!res.ok) { alert('スタッフの作成に失敗しました'); return; }
+                if (newStaffPhotoFile.value) {
                     const created = await res.json();
                     const fd = new FormData();
                     fd.append('photo', newStaffPhotoFile.value);
-                    await fetch(API + `/api/staffs/${created.id}/photo`, { method: 'POST', body: fd });
+                    const resPhoto = await fetch(API + `/api/staffs/${created.id}/photo`, { method: 'POST', body: fd });
+                    if (!resPhoto.ok) { alert('スタッフ写真のアップロードに失敗しました'); }
                 }
             }
             cancelEditStaff();
