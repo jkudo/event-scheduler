@@ -1034,26 +1034,32 @@ createApp({
         }
         async function addPref(staffId) {
             const f = prefForms[staffId];
-            await fetch(API + `/api/staffs/${staffId}/preferred-sessions`, {
+            const res = await fetch(API + `/api/staffs/${staffId}/preferred-sessions`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: f.session_id, priority: f.priority })
             });
+            if (!res.ok) { alert('希望セッションの追加に失敗しました'); return; }
             await loadStaffs();
         }
         async function removePref(staffId, prefId) {
-            await fetch(API + `/api/staffs/${staffId}/preferred-sessions/${prefId}`, { method: 'DELETE' }); await loadStaffs();
+            const res = await fetch(API + `/api/staffs/${staffId}/preferred-sessions/${prefId}`, { method: 'DELETE' });
+            if (!res.ok) { alert('希望セッションの削除に失敗しました'); return; }
+            await loadStaffs();
         }
         async function addAvail(staffId) {
             const f = availForms[staffId];
             if (!f.start || !f.end) return;
-            await fetch(API + `/api/staffs/${staffId}/availabilities`, {
+            const res = await fetch(API + `/api/staffs/${staffId}/availabilities`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ start_time: f.start + ':00', end_time: f.end + ':00' })
             });
+            if (!res.ok) { alert('活動可能時間の追加に失敗しました'); return; }
             await loadStaffs();
         }
         async function removeAvail(staffId, availId) {
-            await fetch(API + `/api/staffs/${staffId}/availabilities/${availId}`, { method: 'DELETE' }); await loadStaffs();
+            const res = await fetch(API + `/api/staffs/${staffId}/availabilities/${availId}`, { method: 'DELETE' });
+            if (!res.ok) { alert('活動可能時間の削除に失敗しました'); return; }
+            await loadStaffs();
         }
 
         // --- スケジュール (手動配置) ---
