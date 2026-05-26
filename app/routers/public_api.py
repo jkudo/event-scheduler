@@ -247,8 +247,11 @@ def _fire_webhook(db: Session, payload: dict) -> dict | None:
             )
             # 204 = success for workflow_dispatch
             success = resp.status_code == 204
-            logger.info("GitHub dispatch to %s — status %s", dispatch_url, resp.status_code)
-            results["github_dispatch"] = {"status": resp.status_code, "success": success}
+            logger.info("GitHub dispatch to %s — status %s body=%s", dispatch_url, resp.status_code, resp.text[:200])
+            result = {"status": resp.status_code, "success": success}
+            if not success:
+                result["detail"] = resp.text[:200]
+            results["github_dispatch"] = result
         except Exception as exc:
             logger.warning("GitHub dispatch to %s failed: %s", dispatch_url, exc)
             results["github_dispatch"] = {"success": False, "error": str(exc)}
