@@ -17,7 +17,7 @@
         <!-- 左サイドバー -->
         <nav class="sidebar" :class="{ open: sidebarOpen }">
             <h1 class="sidebar-title">{{ appTitle }}</h1>
-            <button class="sidebar-item" :class="{ active: tab === 'all-matrix' }" @click="switchTab('all-matrix')">全体スケジュール</button>
+            <button class="sidebar-item" :class="{ active: tab === 'all-matrix' }" @click="switchTab('all-matrix')">スケジュール</button>
             <button class="sidebar-item" :class="{ active: tab === 'staff-detail' }" @click="switchTab('staff-detail')">スタッフ別詳細</button>
             <button class="sidebar-item" :class="{ active: tab === 'venue-view' }" @click="switchTab('venue-view')">会場</button>
             <div class="sidebar-section">イベント設定</div>
@@ -124,16 +124,16 @@
 
             <!-- 日程タブ -->
             <div v-if="grpDates(grp.id).length > 1" class="tab-bar">
+                <button class="tab-btn"
+                    :style="grpDateTabs[grp.id] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="grpDateTabs[grp.id] = 0">
+                    全日程
+                </button>
                 <button v-for="date in grpDates(grp.id)" :key="'grpm-dtab-'+grp.id+'-'+date"
                     class="tab-btn"
                     :style="grpDateTabs[grp.id] === date ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="grpDateTabs[grp.id] = date">
                     {{ date }}
-                </button>
-                <button class="tab-btn"
-                    :style="grpDateTabs[grp.id] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="grpDateTabs[grp.id] = 0">
-                    全日程
                 </button>
             </div>
 
@@ -484,16 +484,16 @@
 
             <!-- 日程タブ -->
             <div v-if="overallDates().length > 1" class="tab-bar">
+                <button class="tab-btn"
+                    :style="overallDateTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="overallDateTab = 0">
+                    全日程
+                </button>
                 <button v-for="date in overallDates()" :key="'ov-dtab-'+date"
                     class="tab-btn"
                     :style="overallDateTab === date ? {background:'#e65100', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="overallDateTab = date">
                     {{ date }}
-                </button>
-                <button class="tab-btn"
-                    :style="overallDateTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="overallDateTab = 0">
-                    全日程
                 </button>
             </div>
 
@@ -613,16 +613,16 @@
 
             <!-- 日程タブ -->
             <div v-if="grpDates(grp.id).length > 1" class="tab-bar">
+                <button class="tab-btn"
+                    :style="grpDateTabs[grp.id] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="grpDateTabs[grp.id] = 0">
+                    全日程
+                </button>
                 <button v-for="date in grpDates(grp.id)" :key="'grp-dtab-'+grp.id+'-'+date"
                     class="tab-btn"
                     :style="grpDateTabs[grp.id] === date ? {background: grp.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="grpDateTabs[grp.id] = date">
                     {{ date }}
-                </button>
-                <button class="tab-btn"
-                    :style="grpDateTabs[grp.id] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="grpDateTabs[grp.id] = 0">
-                    全日程
                 </button>
             </div>
 
@@ -728,16 +728,16 @@
 
             <!-- 日程タブ -->
             <div v-if="catKeyDates(cat.key).length > 1" class="tab-bar">
+                <button class="tab-btn"
+                    :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="catGroupTabs[cat.key] = 0">
+                    全日程
+                </button>
                 <button v-for="date in catKeyDates(cat.key)" :key="'catm-tab-'+cat.key+'-'+date"
                     class="tab-btn"
                     :style="catGroupTabs[cat.key] === date ? {background: cat.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="catGroupTabs[cat.key] = date">
                     {{ date }}
-                </button>
-                <button class="tab-btn"
-                    :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="catGroupTabs[cat.key] = 0">
-                    全日程
                 </button>
             </div>
 
@@ -802,16 +802,16 @@
 
             <!-- 日程タブ -->
             <div v-if="catKeyDates(cat.key).length > 1" class="tab-bar">
+                <button class="tab-btn"
+                    :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="catGroupTabs[cat.key] = 0">
+                    全日程
+                </button>
                 <button v-for="date in catKeyDates(cat.key)" :key="'cat-tab-'+cat.key+'-'+date"
                     class="tab-btn"
                     :style="catGroupTabs[cat.key] === date ? {background: cat.color || '#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="catGroupTabs[cat.key] = date">
                     {{ date }}
-                </button>
-                <button class="tab-btn"
-                    :style="catGroupTabs[cat.key] === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="catGroupTabs[cat.key] = 0">
-                    全日程
                 </button>
             </div>
 
@@ -921,16 +921,16 @@
 
             <!-- 日程タブ -->
             <div v-if="catDates.length > 1" class="tab-bar">
+                <button class="tab-btn"
+                    :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="allGroupTab = 0">
+                    全日程
+                </button>
                 <button v-for="date in catDates" :key="'all-tab-'+date"
                     class="tab-btn"
                     :style="allGroupTab === date ? {background:'#1a73e8', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="allGroupTab = date">
                     {{ date }}<span v-if="dateGroupLabels(date).length" style="font-weight:400;margin-left:6px;font-size:0.8rem">({{ dateGroupLabels(date).join(', ') }})</span>
-                </button>
-                <button class="tab-btn"
-                    :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="allGroupTab = 0">
-                    全日程
                 </button>
             </div>
 
@@ -1122,16 +1122,16 @@
 
             <!-- 日程タブ -->
             <div v-if="catDates.length > 1" class="tab-bar">
+                <button class="tab-btn"
+                    :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
+                    @click="allGroupTab = 0">
+                    全日程
+                </button>
                 <button v-for="date in catDates" :key="'ovm-tab-'+date"
                     class="tab-btn"
                     :style="allGroupTab === date ? {background:'#e65100', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
                     @click="allGroupTab = date">
                     {{ date }}<span v-if="dateGroupLabels(date).length" style="font-weight:400;margin-left:6px;font-size:0.8rem">({{ dateGroupLabels(date).join(', ') }})</span>
-                </button>
-                <button class="tab-btn"
-                    :style="allGroupTab === 0 ? {background:'#333', color:'#fff'} : {background:'#f5f5f5', color:'#666'}"
-                    @click="allGroupTab = 0">
-                    全日程
                 </button>
             </div>
 

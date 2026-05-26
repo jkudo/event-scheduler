@@ -49,7 +49,7 @@ const app = createApp({
                 if (!(c.key in categoryAssignMsgs)) categoryAssignMsgs[c.key] = '';
                 if (!(c.key in categoryStaffFilters)) categoryStaffFilters[c.key] = 0;
                 const ckDates = catKeyDates(c.key);
-                if (!(c.key in catGroupTabs)) catGroupTabs[c.key] = ckDates.length ? ckDates[0] : 0;
+                if (!(c.key in catGroupTabs)) catGroupTabs[c.key] = 0;
                 if (!(c.key in catSelectedSessions)) catSelectedSessions[c.key] = new Set();
             });
             if (!catSettingForm.editId) catSettingForm.order = nextCatOrder();
@@ -158,26 +158,6 @@ const app = createApp({
         async function loadVenueMaps() { venueMaps.value = await (await fetch(API + '/api/venue-maps/')).json(); }
         async function loadSessions() {
             sessions.value = await (await fetch(API + '/api/sessions/')).json();
-            // セッション読み込み後、カテゴリタブのデフォルトを最初の日付に設定
-            categories.value.forEach(c => {
-                const ckd = catKeyDates(c.key);
-                if (ckd.length && catGroupTabs[c.key] === 0) catGroupTabs[c.key] = ckd[0];
-            });
-            // グループ担当の日付タブもデフォルト設定（未設定 or 0 の場合は最初の日付に）
-            sessionGroups.value.forEach(g => {
-                if (!grpDateTabs[g.id]) {
-                    const gDates = grpDates(g.id);
-                    grpDateTabs[g.id] = gDates.length ? gDates[0] : 0;
-                }
-            });
-            // 全体スケジュールのデフォルトタブ（未設定 or 0 の場合は最初の日付に）
-            const dates = catDates.value;
-            if (!allGroupTab.value && dates.length) {
-                allGroupTab.value = dates[0];
-            }
-            if (!overallDateTab.value && dates.length) {
-                overallDateTab.value = dates[0];
-            }
         }
         async function loadStaffs() {
             const data = await (await fetch(API + '/api/staffs/')).json();
@@ -189,19 +169,6 @@ const app = createApp({
         }
         async function loadSchedule() {
             schedule.value = ((await (await fetch(API + '/api/assignments/schedule')).json()).schedule || []);
-            // schedule読み込み後もタブのデフォルト設定を確認
-            const dates = catDates.value;
-            if (dates.length) {
-                sessionGroups.value.forEach(g => {
-                    if (!grpDateTabs[g.id]) grpDateTabs[g.id] = dates[0];
-                });
-                categories.value.forEach(c => {
-                    const ckd = catKeyDates(c.key);
-                    if (!catGroupTabs[c.key] && ckd.length) catGroupTabs[c.key] = ckd[0];
-                });
-                if (!allGroupTab.value) allGroupTab.value = dates[0];
-                if (!overallDateTab.value) overallDateTab.value = dates[0];
-            }
             // 詳細ポップアップのセッションを最新データに更新
             if (sessDetailSession.value) {
                 const entry = schedule.value.find(e => e.session.id === sessDetailSession.value.id);
@@ -846,6 +813,7 @@ const app = createApp({
             Object.assign(roomForm, { editId: r.id, name: r.name, capacity: r.capacity, floor: r.floor });
         }
         async function submitRoom() {
+            if (!roomForm.name) { alert('未入力の項目があります: 部屋名'); return; }
             const payload = { name: roomForm.name, capacity: roomForm.capacity || 0, floor: roomForm.floor };
             let res;
             if (roomForm.editId) {
@@ -1000,6 +968,13 @@ const app = createApp({
             if (sessPhoto.value) sessPhoto.value.value = '';
         }
         async function submitSession() {
+            const missing = [];
+            if (!sessForm.title) missing.push('セッション名');
+            if (!dynamicCatKeys.value.includes(sessForm.category) && !sessForm.speaker) missing.push('スピーカー');
+            if (!sessForm.start_time) missing.push('開始時間');
+            if (!sessForm.end_time) missing.push('終了時間');
+            if (!sessForm.room_id) missing.push('部屋');
+            if (missing.length) { alert('未入力の項目があります: ' + missing.join('、')); return; }
             const fd = new FormData();
             fd.append('title', sessForm.title);
             // LT/受付/懇親会の場合、speakerは自動設定
@@ -1099,6 +1074,7 @@ const app = createApp({
         });
 
         async function submitStaff() {
+            if (!staffForm.name) { alert('未入力の項目があります: スタッフ名'); return; }
             if (staffForm.experience_count === null || staffForm.experience_count === '' || staffForm.experience_count < 0) { alert('過去参加回数を入力してください'); return; }
             let slackName = (staffForm.slack_name || '').trim();
             if (slackName && !slackName.startsWith('@')) slackName = '@' + slackName;
@@ -1642,6 +1618,13 @@ const app = createApp({
         }
         async function submitGroupSession(gid) {
             const form = groupSessForms[gid];
+            const missing = [];
+            if (!form.title) missing.push('セッション名');
+            if (!dynamicCatKeys.value.includes(form.category) && !form.speaker) missing.push('スピーカー');
+            if (!form.start_time) missing.push('開始時間');
+            if (!form.end_time) missing.push('終了時間');
+            if (!form.room_id) missing.push('部屋');
+            if (missing.length) { alert('未入力の項目があります: ' + missing.join('、')); return; }
             const talks = form._ltTalks || [];
             const fd = new FormData();
             fd.append('title', form.title);
@@ -1797,6 +1780,14 @@ const app = createApp({
         }
         async function submitCategory(catKey) {
             const form = categoryForms[catKey];
+            const cat = categories.value.find(c => c.key === catKey);
+            const catLabel = cat ? cat.label : catKey;
+            const missing = [];
+            if (!form.title) missing.push(catLabel + '名');
+            if (!form.start_time) missing.push('開始時間');
+            if (!form.end_time) missing.push('終了時間');
+            if (!form.room_id) missing.push('部屋');
+            if (missing.length) { alert('未入力の項目があります: ' + missing.join('、')); return; }
             const fd = new FormData();
             fd.append('title', form.title);
             fd.append('speaker', '-');
