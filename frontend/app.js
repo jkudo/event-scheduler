@@ -815,9 +815,12 @@ const app = createApp({
             _stopAbPolling();
             _abPollTimer = setInterval(async () => {
                 if (tab.value !== 'auto-backup') { _stopAbPolling(); return; }
+                const prev = abStatus.last_run;
                 await loadAbStatus();
-                await loadAbHistory();
-            }, 30000);
+                if (abStatus.last_run !== prev) {
+                    await loadAbHistory();
+                }
+            }, 10000);
         }
         function _stopAbPolling() {
             if (_abPollTimer) { clearInterval(_abPollTimer); _abPollTimer = null; }
