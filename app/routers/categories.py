@@ -1,0 +1,75 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..models import Category, Session as SessionModel
+from ..schemas import CategoryCreate, CategoryResponse
+
+router = APIRouter(prefix="/api/categories", tags=["categories"])
+
+
+@router.get("/", response_model=list[CategoryResponse])
+def list_categories(db: Session = Depends(get_db)):
+    return db.query(Category).order_by(Category.order, Category.id).all()
+
+
+@router.post("/", response_model=CategoryResponse, status_code=201)
+def create_category(data: CategoryCreate, db: Session = Depends(get_db)):
+    # Auto-generate key if not provided
+    if data.key:
+        key = data.key
+    else:
+        # Generate unique key: cat_1, cat_2, ...
+        n = 1
+        while True:
+            key = f"cat_{n}"
+            if not db.query(Category).filter(Category.key == key).first():
+                break
+            n += 1
+    existing = db.query(Category).filter(Category.key == key).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Key '{key}' は既に使用されています")
+    # Shift existing items with order >= data.order
+    db.query(Category).filter(Category.order >= data.order).update(
+        {Category.order: Category.order + 1}, synchronize_session=False
+    )
+    cat = Category(key=key, label=data.label, color=data.color, order=data.order)
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.put("/{category_id}", response_model=CategoryResponse)
+def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db)):
+    cat = db.query(Category).filter(Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    dup = db.query(Category).filter(Category.key == data.key, Category.id != category_id).first()
+    if dup:
+        raise HTTPException(status_code=400, detail=f"Key '{data.key}' は既に使用されています")
+    if data.key:
+        cat.key = data.key
+    cat.label = data.label
+    cat.color = data.color
+    if cat.order != data.order:
+        # Shift others to make room
+        db.query(Category).filter(Category.order >= data.order, Category.id != category_id).update(
+            {Category.order: Category.order + 1}, synchronize_session=False
+        )
+    cat.order = data.order
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.delete("/{category_id}", status_code=204)
+def delete_category(category_id: int, db: Session = Depends(get_db)):
+    cat = db.query(Category).filter(Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    count = db.query(SessionModel).filter(SessionModel.category == cat.key).count()
+    if count > 0:
+        raise HTTPException(status_code=400, detail=f"このカテゴリには {count} 件のセッションがあるため削除できません。先にセッションを削除してください。")
+    db.delete(cat)
+    db.commit()

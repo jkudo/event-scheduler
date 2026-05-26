@@ -1,0 +1,92 @@
+"""Application settings API: title, password, etc."""
+
+import os
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from ..config import reload_tz
+from ..database import get_db
+from ..models import AppSetting
+
+router = APIRouter(prefix="/api/settings", tags=["settings"])
+
+# Defaults
+DEFAULTS = {
+    "app_title": "Event Scheduler",
+    "allow_overlap": "0",
+}
+
+
+def _get(db: Session, key: str) -> str:
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
+    if row:
+        return row.value
+    return DEFAULTS.get(key, "")
+
+
+def _set(db: Session, key: str, value: str):
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
+    if row:
+        row.value = value
+    else:
+        db.add(AppSetting(key=key, value=value))
+    db.commit()
+
+
+@router.get("/")
+def get_settings(db: Session = Depends(get_db)):
+    """Get all application settings."""
+    return {
+        "app_title": _get(db, "app_title"),
+        "allow_overlap": _get(db, "allow_overlap"),
+        "session_categories": _get(db, "session_categories"),
+        "timezone": _get(db, "timezone") or "Asia/Tokyo",
+    }
+
+
+class UpdateSettingsRequest(BaseModel):
+    app_title: str | None = None
+    allow_overlap: str | None = None
+    session_categories: str | None = None
+    timezone: str | None = None
+
+
+@router.put("/")
+def update_settings(body: UpdateSettingsRequest, db: Session = Depends(get_db)):
+    """Update application settings."""
+    if body.app_title is not None:
+        _set(db, "app_title", body.app_title)
+    if body.allow_overlap is not None:
+        _set(db, "allow_overlap", body.allow_overlap)
+    if body.session_categories is not None:
+        _set(db, "session_categories", body.session_categories)
+    if body.timezone is not None:
+        _set(db, "timezone", body.timezone)
+        reload_tz()
+    return {"status": "ok"}
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+def change_password(body: ChangePasswordRequest, db: Session = Depends(get_db)):
+    """Change the application login password."""
+    # 環境変数 > DB > デフォルト の優先順で現在のパスワードを取得
+    if os.environ.get("APP_PASSWORD"):
+        current = os.environ["APP_PASSWORD"]
+    else:
+        row = db.query(AppSetting).filter(AppSetting.key == "login_password").first()
+        current = row.value if row and row.value else "password"
+
+    if body.current_password != current:
+        raise HTTPException(status_code=403, detail="現在のパスワードが正しくありません")
+
+    # DB と環境変数の両方を更新
+    _set(db, "login_password", body.new_password)
+    os.environ["APP_PASSWORD"] = body.new_password
+    return {"status": "ok", "message": "パスワードを変更しました"}
