@@ -811,43 +811,39 @@ const app = createApp({
             sidebarOpen.value = false;
             if (name === 'rooms') await loadRooms();
             if (name === 'venue-maps') await loadVenueMaps();
-            if (name === 'staffs') { await loadSessions(); await loadStaffs(); await loadSchedule(); }
-            if (name === 'all-matrix') { await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); }
-            if (name === 'staff-detail') { await loadStaffs(); await loadSessions(); await loadSchedule(); await loadStaffAssignments(); }
-            if (name === 'overall-manage') { await loadSessions(); }
+            if (name === 'staffs') await Promise.all([loadSessions(), loadStaffs(), loadSchedule()]);
+            if (name === 'all-matrix') await Promise.all([loadRooms(), loadStaffs(), loadSessions(), loadSchedule()]);
+            if (name === 'staff-detail') await Promise.all([loadStaffs(), loadSessions(), loadSchedule(), loadStaffAssignments()]);
+            if (name === 'overall-manage') await loadSessions();
             // 動的セッショングループのタブ
             for (const g of sessionGroups.value) {
                 if (name === 'grp-' + g.id + '-manage') {
-                    await loadRooms(); await loadSessions();
+                    await Promise.all([loadRooms(), loadSessions()]);
                     if (groupSessForms[g.id] && !groupSessForms[g.id].room_id && rooms.value.length) groupSessForms[g.id].room_id = rooms.value[0].id;
                     break;
                 }
                 if (name === 'grp-' + g.id + '-assign') {
-                    await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule(); await loadStaffAssignments();
+                    await Promise.all([loadRooms(), loadStaffs(), loadSessions(), loadSchedule(), loadStaffAssignments()]);
                     break;
                 }
             }
             // 動的カテゴリの管理・担当タブ
             for (const c of categories.value) {
                 if (name === c.key + '-manage') {
-                    await loadRooms(); await loadSessions(); await loadSchedule();
+                    await Promise.all([loadRooms(), loadSessions(), loadSchedule()]);
                     if (categoryForms[c.key] && !categoryForms[c.key].room_id && rooms.value.length) categoryForms[c.key].room_id = rooms.value[0].id;
                     break;
                 }
                 if (name === c.key) {
-                    await loadRooms(); await loadStaffs(); await loadSessions(); await loadSchedule();
+                    await Promise.all([loadRooms(), loadStaffs(), loadSessions(), loadSchedule()]);
                     if (categoryForms[c.key] && !categoryForms[c.key].room_id && rooms.value.length) categoryForms[c.key].room_id = rooms.value[0].id;
                     break;
                 }
             }
             if (name === 'venue-view') await loadVenueMaps();
-            if (name === 'io') { await loadRooms(); await loadSessions(); }
-            if (name === 'auto-backup') {
-                await loadAbSettings(); await loadAbHistory(); await loadAbStatus();
-            }
-            if (name === 'public-api') {
-                await loadPubApiSettings(); await loadPubHistory();
-            }
+            if (name === 'io') await Promise.all([loadRooms(), loadSessions()]);
+            if (name === 'auto-backup') await Promise.all([loadAbSettings(), loadAbHistory(), loadAbStatus()]);
+            if (name === 'public-api') await Promise.all([loadPubApiSettings(), loadPubHistory()]);
             // セッション管理 or バックアップタブならポーリング開始
             if (name === 'auto-backup' || /^grp-\d+-manage$/.test(name)) {
                 _startTabPolling();
