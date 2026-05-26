@@ -222,6 +222,10 @@
                                 <button type="button" class="btn" style="background:#607d8b;font-size:0.75rem;padding:4px 10px" @click="$event.target.parentElement.querySelector('input[type=file]').click()">ファイルを選択</button>
                                 <img v-if="talk.photoPreview" :src="talk.photoPreview" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
                                 <img v-else-if="talk.speaker_photo" :src="talk.speaker_photo" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+                                <label style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-size:0.8rem;white-space:nowrap;cursor:pointer">
+                                    <input type="checkbox" :checked="talk.is_representative" @change="toggleRepresentative(groupSessForms[grp.id]._ltTalks, idx)">
+                                    {{ groupSessForms[grp.id].category === 'panel' ? 'モデレーター' : '司会者' }}
+                                </label>
                             </div>
                         </div>
                         <button class="del-btn" @click="groupSessForms[grp.id]._ltTalks.splice(idx, 1)">✕</button>
@@ -2168,6 +2172,7 @@ setInterval(checkUpdate, 60000);</code></pre>
                         <div>
                             <strong>{{ t.speaker }}</strong>
                             <span v-if="t.speaker_kana" style="color:#888;font-size:0.8rem;margin-left:4px">({{ t.speaker_kana }})</span>
+                            <span v-if="t.is_representative" class="badge" style="background:#ff9800;color:#fff;font-size:0.7rem;margin-left:6px;padding:1px 6px">{{ sessDetailSession.category === 'panel' ? 'モデレーター' : '司会者' }}</span>
                             <span v-if="t.speaker_org || t.speaker_title" style="color:#666;font-size:0.85rem"> / {{ [t.speaker_title, t.speaker_org].filter(Boolean).join(' / ') }}</span>
                             <br><span style="color:#555;font-size:0.85rem">{{ t.title }}</span>
                             <br v-if="t.start_time"><span v-if="t.start_time" style="color:#888;font-size:0.8rem">{{ fmt(t.start_time) }} - {{ fmtShort(t.end_time) }}</span>

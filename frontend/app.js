@@ -993,9 +993,9 @@ const app = createApp({
         function addLTTalk(gid) {
             if (gid !== undefined) {
                 if (!groupSessForms[gid]._ltTalks) groupSessForms[gid]._ltTalks = reactive([]);
-                groupSessForms[gid]._ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', start_time: '', end_time: '', photoFile: null, photoPreview: '' });
+                groupSessForms[gid]._ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', start_time: '', end_time: '', photoFile: null, photoPreview: '', is_representative: 0 });
             } else {
-                ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', start_time: '', end_time: '', photoFile: null, photoPreview: '' });
+                ltTalks.push({ title: '', speaker: '', speaker_kana: '', speaker_org: '', speaker_title: '', speaker_photo: '', start_time: '', end_time: '', photoFile: null, photoPreview: '', is_representative: 0 });
             }
         }
         function onLTTalkPhoto(event, gidOrIdx, idx) {
@@ -1018,6 +1018,11 @@ const app = createApp({
                 const pad = n => String(n).padStart(2, '0');
                 talk.end_time = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
             }
+        }
+        function toggleRepresentative(talks, idx) {
+            const current = talks[idx].is_representative;
+            talks.forEach(t => t.is_representative = 0);
+            if (!current) talks[idx].is_representative = 1;
         }
         function cancelEditSession() {
             Object.assign(sessForm, {
@@ -1045,7 +1050,8 @@ const app = createApp({
                 s.lt_talks.forEach(t => ltTalks.push({
                     title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana || '',
                     speaker_org: t.speaker_org || '', speaker_title: t.speaker_title || '',
-                    speaker_photo: t.speaker_photo || '', photoFile: null, photoPreview: ''
+                    speaker_photo: t.speaker_photo || '', photoFile: null, photoPreview: '',
+                    is_representative: t.is_representative || 0
                 }));
             }
             sessPhotoPreview.value = '';
@@ -1474,7 +1480,8 @@ const app = createApp({
                 title: t.title, speaker: t.speaker, speaker_kana: t.speaker_kana || '',
                 speaker_org: t.speaker_org || '', speaker_title: t.speaker_title || '',
                 speaker_photo: t.speaker_photo || '',
-                start_time: t.start_time || '', end_time: t.end_time || '', order: i
+                start_time: t.start_time || '', end_time: t.end_time || '', order: i,
+                is_representative: t.is_representative || 0
             }));
             const res = await fetch(API + `/api/sessions/${sessionId}/lt-talks`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -1692,7 +1699,8 @@ const app = createApp({
                     speaker_photo: t.speaker_photo || '',
                     start_time: t.start_time ? toLocalInput(t.start_time) : '',
                     end_time: t.end_time ? toLocalInput(t.end_time) : '',
-                    photoFile: null, photoPreview: ''
+                    photoFile: null, photoPreview: '',
+                    is_representative: t.is_representative || 0
                 }));
             }
         }
@@ -2794,7 +2802,7 @@ const app = createApp({
             onVenueMapChange, cancelEditVenueMap, editVenueMap, submitVenueMap, deleteVenueMap,
             sessDetailSession, sessDetailEntry, sessDetailLocked, toggleSessionDetail, toggleSessDetailLock,
             isMultiSpeakerCat,
-            onPhotoChange, onLTTalkPhoto, autoSetLTEndTime, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
+            onPhotoChange, onLTTalkPhoto, autoSetLTEndTime, toggleRepresentative, cancelEditSession, editSession, submitSession, deleteSession, addLTTalk,
             calcStaffMsg, calcStaffSummary, calcRequiredStaff,
             newStaffAvails, newAvailForm, addNewStaffAvail,
             newStaffPrefs, newPrefForm, addNewStaffPref, sessionTitle,

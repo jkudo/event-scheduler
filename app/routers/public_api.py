@@ -243,6 +243,7 @@ def publish_snapshot(db: Session = Depends(get_db)):
                     "start_time": t.start_time or "",
                     "end_time": t.end_time or "",
                     "order": t.order,
+                    "is_representative": t.is_representative or 0,
                 }
                 for t in (s.lt_talks or [])
             ],
