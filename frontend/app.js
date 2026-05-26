@@ -759,10 +759,23 @@ const app = createApp({
                 _pubMsg('APIキーを再生成しました');
             } catch (e) { _pubMsg('再生成に失敗しました', true); }
         }
+        async function clearGithubToken() {
+            if (!confirm('GitHub Personal Access Tokenを削除しますか？')) return;
+            try {
+                await fetch(API + '/api/public-api/settings/clear-github-token', { method: 'POST' });
+                pubApi.github_token_set = false;
+                pubApi.github_token_input = '';
+                _pubMsg('トークンを削除しました');
+            } catch (e) { _pubMsg('削除に失敗しました', true); }
+        }
         async function publishSnapshot() {
             _pubMsg('パブリッシュ中...', false);
             try {
-                const res = await fetch(API + '/api/public-api/publish', { method: 'POST' });
+                const res = await fetch(API + '/api/public-api/publish', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ base_url: window.location.origin })
+                });
                 if (res.ok) {
                     const data = await res.json();
                     pubApi.active_snapshot = data.snapshot_id;
@@ -774,7 +787,7 @@ const app = createApp({
                             msg += w.webhook.success ? ' / Webhook送信済み' : ' / Webhook送信失敗';
                         }
                         if (w.github_dispatch) {
-                            msg += w.github_dispatch.success ? ' / GitHub Actions発火済み' : ' / GitHub Actions発火失敗';
+                            msg += w.github_dispatch.success ? ' / GitHub Actions実行済み' : ' / GitHub Actions実行失敗';
                         }
                     }
                     _pubMsg(msg);
@@ -2850,7 +2863,7 @@ const app = createApp({
             abSettings, abStatus, abHistory, abMsg, abDownload,
             loadAbSettings, loadAbStatus, loadAbHistory, saveAbSettings, triggerBackupNow, deleteBackupEntry, downloadBackupEntry,
             pubApi, pubHistory, pubMsg, pubMsgError, pubApiUrl,
-            loadPubApiSettings, savePubApiSettings, regenerateApiKey, publishSnapshot, loadPubHistory, activateSnapshot, deleteSnapshot, copyApiUrl, copyApiKey,
+            loadPubApiSettings, savePubApiSettings, regenerateApiKey, clearGithubToken, publishSnapshot, loadPubHistory, activateSnapshot, deleteSnapshot, copyApiUrl, copyApiKey,
         };
     }
 });

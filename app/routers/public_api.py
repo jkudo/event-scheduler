@@ -212,6 +212,13 @@ def regenerate_api_key(db: Session = Depends(get_db)):
     return {"key": new_key, "key_masked": new_key[:4] + "..." + new_key[-4:]}
 
 
+@admin_router.post("/settings/clear-github-token")
+def clear_github_token(db: Session = Depends(get_db)):
+    _set(db, "public_api_github_token", "")
+    db.commit()
+    return {"status": "ok"}
+
+
 # --- Webhook ---
 
 def _fire_webhook(db: Session, payload: dict, *, base_url: str = "") -> dict | None:
@@ -264,8 +271,12 @@ def _fire_webhook(db: Session, payload: dict, *, base_url: str = "") -> dict | N
 
 # --- Publish ---
 
+class PublishRequest(BaseModel):
+    base_url: str = ""
+
+
 @admin_router.post("/publish")
-def publish_snapshot(request: Request, db: Session = Depends(get_db)):
+def publish_snapshot(body: PublishRequest = PublishRequest(), db: Session = Depends(get_db)):
     """Create a snapshot of current schedule data."""
     now = app_now()
     snapshot_id = now.strftime("%Y%m%d_%H%M%S")
@@ -355,13 +366,12 @@ def publish_snapshot(request: Request, db: Session = Depends(get_db)):
     db.commit()
 
     # Fire webhook (non-blocking — failures are logged, not raised)
-    base_url = str(request.base_url).rstrip("/")
     webhook_result = _fire_webhook(db, {
         "event": "schedule_published",
         "snapshot_id": snapshot_id,
         "published_at": now.isoformat(),
         "session_count": len(sessions),
-    }, base_url=base_url)
+    }, base_url=body.base_url.rstrip("/"))
 
     result = {
         "status": "ok",
