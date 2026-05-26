@@ -59,7 +59,7 @@
             <table>
                 <thead><tr><th>ID</th><th>部屋名</th><th>階</th><th>定員</th><th></th></tr></thead>
                 <tbody>
-                    <tr v-for="r in rooms" :key="r.id">
+                    <tr v-for="r in rooms" :key="r.id" :style="roomForm.editId === r.id ? 'background:#fff3e0;outline:2px solid #ff9800' : ''"
                         <td>{{ r.id }}</td><td>{{ r.name }}</td><td>{{ r.floor }}F</td><td>{{ r.capacity }}</td>
                         <td>
                             <button class="btn btn-sm edit-btn" @click="editRoom(r)" style="margin-right:4px">編集</button>
@@ -97,7 +97,7 @@
             </div>
 
             <div v-if="!venueMaps.length" style="color:#888;font-size:0.9rem">地図が登録されていません。</div>
-            <div v-for="m in venueMaps" :key="m.id" style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:12px">
+            <div v-for="m in venueMaps" :key="m.id" style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:12px" :style="venueMapForm.editId === m.id ? 'background:#fff3e0;outline:2px solid #ff9800' : ''"
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                     <h3 style="margin:0">{{ m.title }}</h3>
                     <div>
@@ -246,7 +246,7 @@
                 <thead><tr><th>ID</th><th>登壇者</th><th>タイトル</th><th>時間</th><th>部屋</th><th>カテゴリ</th><th>必要人数</th><th>英語</th><th></th></tr></thead>
                 <tbody>
                     <template v-for="s in groupSessions(grp.id)" :key="s.id">
-                    <tr>
+                    <tr :style="groupSessForms[grp.id].editId === s.id ? 'background:#fff3e0;outline:2px solid #ff9800' : ''">
                         <td>{{ s.id }}</td>
                         <td style="text-align:center">
                             <template v-if="isMultiSpeakerCat(s.category) && s.lt_talks && s.lt_talks.length">
@@ -429,7 +429,7 @@
             </div>
 
             <div style="margin-top:20px">
-                <div v-for="s in staffs" :key="s.id" class="staff-detail-card">
+                <div v-for="s in staffs" :key="s.id" class="staff-detail-card" :style="staffForm.editId === s.id ? 'background:#fff3e0;outline:2px solid #ff9800' : ''"
                     <div style="display:flex;justify-content:space-between;align-items:center">
                         <div style="display:flex;align-items:center;gap:10px">
                             <img v-if="s.photo" :src="s.photo" :alt="s.name" class="speaker-photo"
@@ -777,7 +777,7 @@
             <table v-else>
                 <thead><tr><th>{{ cat.label }}名</th><th>時間</th><th>場所</th><th>英語</th><th>必要人数</th><th>操作</th></tr></thead>
                 <tbody>
-                    <tr v-for="e in catGroupFiltered(cat.key)" :key="'catm-'+cat.key+'-'+e.session.id">
+                    <tr v-for="e in catGroupFiltered(cat.key)" :key="'catm-'+cat.key+'-'+e.session.id" :style="categoryForms[cat.key]?.editId === e.session.id ? 'background:#fff3e0;outline:2px solid #ff9800' : ''"
                         <td><strong>{{ e.session.title }}</strong></td>
                         <td>{{ fmt(e.session.start_time) }} - {{ fmt(e.session.end_time) }}</td>
                         <td>{{ e.session.room ? e.session.room.name : '' }}</td>
@@ -1163,7 +1163,7 @@
             <table v-else>
                 <thead><tr><th>タイトル</th><th>時間</th><th>備考</th><th>操作</th></tr></thead>
                 <tbody>
-                    <tr v-for="s in overallSessions" :key="'ov-'+s.id">
+                    <tr v-for="s in overallSessions" :key="'ov-'+s.id" :style="allOvForm.editId === s.id ? 'background:#fff3e0;outline:2px solid #ff9800' : ''"
                         <td><strong>{{ s.title }}</strong></td>
                         <td>{{ fmt(s.start_time) }} - {{ fmt(s.end_time) }}</td>
                         <td style="font-size:0.85rem;color:#666">{{ s.notes || '-' }}</td>
@@ -1402,7 +1402,7 @@
                 </div>
 
                 <!-- 追加カテゴリ一覧 -->
-                <div v-for="(ec, idx) in extraSessionCats" :key="'excat-'+ec.key" style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:#fff;border-radius:6px;margin-bottom:6px;border:1px solid #e0e0e0">
+                <div v-for="(ec, idx) in extraSessionCats" :key="'excat-'+ec.key" style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;margin-bottom:6px;border:1px solid #e0e0e0" :style="sessCatForm.editIdx === idx ? 'background:#fff3e0;outline:2px solid #ff9800' : 'background:#fff'"
                     <span style="font-weight:600;flex:1">{{ ec.label }}</span>
                     <span style="font-size:0.8rem;color:#888">{{ ec.key }}</span>
                     <button class="btn btn-sm edit-btn" @click="editSessCat(idx)" style="padding:4px 10px;font-size:0.8rem">編集</button>
@@ -1430,7 +1430,7 @@
                 <p style="margin:0 0 12px;font-size:0.85rem;color:#555">セッショングループを追加・編集できます。各グループはセッション管理ページと担当ページのセットとして機能します。</p>
 
                 <!-- 既存グループ一覧 -->
-                <div v-for="grp in sessionGroups" :key="'grpsettings-'+grp.id" style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fff;border-radius:6px;margin-bottom:8px;border:1px solid #e0e0e0">
+                <div v-for="grp in sessionGroups" :key="'grpsettings-'+grp.id" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:6px;margin-bottom:8px;border:1px solid #e0e0e0" :style="grpSettingForm.editId === grp.id ? 'background:#fff3e0;outline:2px solid #ff9800' : 'background:#fff'"
                     <span :style="{width:'16px',height:'16px',borderRadius:'50%',background:grp.color,flexShrink:0}"></span>
                     <span style="font-weight:600;flex:1">{{ grp.label }}</span>
                     <span style="font-size:0.8rem;color:#888">order: {{ grp.order }}</span>
@@ -1467,7 +1467,7 @@
                 <p style="margin:0 0 12px;font-size:0.85rem;color:#555">受付案内・懇親会などの担当カテゴリを追加・編集できます。各カテゴリは管理ページと担当ページのセットとして機能します。</p>
 
                 <!-- 既存カテゴリ一覧 -->
-                <div v-for="cat in categories" :key="'catsettings-'+cat.id" style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fff;border-radius:6px;margin-bottom:8px;border:1px solid #e0e0e0">
+                <div v-for="cat in categories" :key="'catsettings-'+cat.id" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:6px;margin-bottom:8px;border:1px solid #e0e0e0" :style="catSettingForm.editId === cat.id ? 'background:#fff3e0;outline:2px solid #ff9800' : 'background:#fff'"
                     <span :style="{width:'16px',height:'16px',borderRadius:'50%',background:cat.color,flexShrink:0}"></span>
                     <span style="font-weight:600;flex:1">{{ cat.label }}</span>
                     <span style="font-size:0.8rem;color:#888">order: {{ cat.order }}</span>
