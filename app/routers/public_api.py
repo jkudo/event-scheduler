@@ -54,12 +54,18 @@ def _set(db: Session, key: str, value: str):
 public_router = APIRouter(tags=["public-api"])
 
 
+def _get_multi(db: Session, keys: list[str]) -> dict[str, str]:
+    """Batch-load multiple AppSetting keys in a single query."""
+    rows = db.query(AppSetting).filter(AppSetting.key.in_(keys)).all()
+    return {r.key: r.value for r in rows}
+
+
 def _validate_api_key(request: Request, db: Session):
     """Validate API key from query param or header."""
-    enabled = _get(db, "public_api_enabled", "0")
-    if enabled != "1":
+    settings = _get_multi(db, ["public_api_enabled", "public_api_key"])
+    if settings.get("public_api_enabled", "0") != "1":
         raise HTTPException(status_code=404, detail="Public API is disabled")
-    stored_key = _get(db, "public_api_key", "")
+    stored_key = settings.get("public_api_key", "")
     if not stored_key:
         raise HTTPException(status_code=404, detail="Public API is not configured")
     provided = request.query_params.get("key") or request.headers.get("x-api-key") or ""
@@ -154,13 +160,14 @@ class PublicApiSettingsRequest(BaseModel):
 
 @admin_router.get("/settings")
 def get_public_api_settings(db: Session = Depends(get_db)):
-    key = _get(db, "public_api_key", "")
+    s = _get_multi(db, ["public_api_key", "public_api_enabled", "public_api_cors_origins", "public_api_active_snapshot"])
+    key = s.get("public_api_key", "")
     return {
-        "enabled": _get(db, "public_api_enabled", "0") == "1",
+        "enabled": s.get("public_api_enabled", "0") == "1",
         "key": key,
         "key_masked": (key[:4] + "..." + key[-4:]) if len(key) >= 8 else key,
-        "cors_origins": _get(db, "public_api_cors_origins", "*"),
-        "active_snapshot": _get(db, "public_api_active_snapshot", ""),
+        "cors_origins": s.get("public_api_cors_origins", "*"),
+        "active_snapshot": s.get("public_api_active_snapshot", ""),
     }
 
 
@@ -192,8 +199,7 @@ def publish_snapshot(db: Session = Depends(get_db)):
     snapshot_id = now.strftime("%Y%m%d_%H%M%S")
 
     # Build snapshot data
-    app_title_row = db.query(AppSetting).filter(AppSetting.key == "app_title").first()
-    event_title = app_title_row.value if app_title_row and app_title_row.value else "Event Scheduler"
+    event_title = _get(db, "app_title", "Event Scheduler")
 
     groups = [
         {"id": g.id, "label": g.label, "date": g.date, "order": g.order, "color": g.color}
