@@ -1,14 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
 from .database import Base
-
-staff_skills = Table(
-    "staff_skills",
-    Base.metadata,
-    Column("staff_id", Integer, ForeignKey("staffs.id"), primary_key=True),
-    Column("skill", String, primary_key=True),
-)
 
 
 class VenueMap(Base):
