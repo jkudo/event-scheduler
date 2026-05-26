@@ -18,19 +18,10 @@ from ..auth_middleware import (
 )
 from ..database import get_db
 from ..models import AppSetting
+from ..password import hash_password, verify_password as check_password, is_hashed
 from ..security import record_login_failure, clear_login_failures
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _get_login_password(db: Session) -> str:
-    """環境変数 > DB設定 > デフォルト の優先順でログインパスワードを取得"""
-    if os.environ.get("APP_PASSWORD"):
-        return os.environ["APP_PASSWORD"]
-    row = db.query(AppSetting).filter(AppSetting.key == "login_password").first()
-    if row and row.value:
-        return row.value
-    return "password"
 
 
 class LoginRequest(BaseModel):
@@ -42,14 +33,24 @@ async def verify_password(body: LoginRequest, request: Request, db: Session = De
     """Verify password and set session cookie."""
     client_ip = _get_client_ip(request)
 
-    app_password = _get_login_password(db)
-
-    if body.password != app_password:
-        record_login_failure(client_ip)
-        return JSONResponse(
-            status_code=401,
-            content={"detail": "パスワードが正しくありません"},
-        )
+    # Environment variable takes precedence (plaintext comparison)
+    if os.environ.get("APP_PASSWORD"):
+        if body.password != os.environ["APP_PASSWORD"]:
+            record_login_failure(client_ip)
+            return JSONResponse(status_code=401, content={"detail": "パスワードが正しくありません"})
+    else:
+        row = db.query(AppSetting).filter(AppSetting.key == "login_password").first()
+        stored = row.value if row and row.value else "password"
+        if not check_password(body.password, stored):
+            record_login_failure(client_ip)
+            return JSONResponse(status_code=401, content={"detail": "パスワードが正しくありません"})
+        # Migrate plaintext to hash on successful login
+        if not is_hashed(stored):
+            if row:
+                row.value = hash_password(body.password)
+            else:
+                db.add(AppSetting(key="login_password", value=hash_password(body.password)))
+            db.commit()
 
     # Successful login — clear failure records
     clear_login_failures(client_ip)
@@ -107,8 +108,8 @@ def initial_setup(body: SetupRequest, db: Session = Depends(get_db)):
         else:
             db.add(AppSetting(key=key, value=value))
 
-    _set("login_password", body.login_password)
-    _set("reset_password", body.admin_password)
+    _set("login_password", hash_password(body.login_password))
+    _set("reset_password", hash_password(body.admin_password))
     if body.app_title:
         _set("app_title", body.app_title)
     if body.timezone:

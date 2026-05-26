@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..config import UPLOAD_DIR, now as app_now
 from ..database import get_db
+from ..password import hash_password, verify_password, is_hashed
 from ..models import (
     Session as SessionModel, Staff, Assignment, Room, VenueMap,
     LTTalk, StaffSkill, StaffPreferredSession, StaffAvailability, Category, SessionGroup,
@@ -348,14 +349,21 @@ async def import_backup(file: UploadFile = File(...), db: Session = Depends(get_
 RESET_PASSWORD_DEFAULT = os.environ.get("RESET_PASSWORD", "password")
 
 
-def _get_reset_password(db: Session) -> str:
-    """環境変数 > DB設定 > デフォルト の優先順で管理者パスワードを取得"""
+def _verify_reset_password(db: Session, password: str) -> bool:
+    """環境変数 > DB設定 > デフォルト の優先順で管理者パスワードを検証"""
     if os.environ.get("RESET_PASSWORD"):
-        return os.environ["RESET_PASSWORD"]
+        return password == os.environ["RESET_PASSWORD"]
     row = db.query(AppSetting).filter(AppSetting.key == "reset_password").first()
-    if row and row.value:
-        return row.value
-    return RESET_PASSWORD_DEFAULT
+    stored = row.value if row and row.value else RESET_PASSWORD_DEFAULT
+    result = verify_password(password, stored)
+    # Migrate plaintext to hash on successful verify
+    if result and not is_hashed(stored):
+        if row:
+            row.value = hash_password(password)
+        else:
+            db.add(AppSetting(key="reset_password", value=hash_password(password)))
+        db.commit()
+    return result
 
 
 class ResetRequest(BaseModel):
@@ -365,7 +373,7 @@ class ResetRequest(BaseModel):
 @router.post("/reset")
 def reset_all_data(body: ResetRequest, db: Session = Depends(get_db)):
     """全データを削除して初期化する（パスワード必須）"""
-    if body.password != _get_reset_password(db):
+    if not _verify_reset_password(db, body.password):
         return JSONResponse(status_code=403, content={"detail": "パスワードが正しくありません"})
 
     try:
@@ -405,14 +413,14 @@ class ChangeResetPasswordRequest(BaseModel):
 @router.post("/reset-password")
 def change_reset_password(body: ChangeResetPasswordRequest, db: Session = Depends(get_db)):
     """管理者パスワードを変更する"""
-    if body.current_password != _get_reset_password(db):
+    if not _verify_reset_password(db, body.current_password):
         return JSONResponse(status_code=403, content={"detail": "現在のパスワードが正しくありません"})
     if not body.new_password:
         return JSONResponse(status_code=400, content={"detail": "新しいパスワードを入力してください"})
     row = db.query(AppSetting).filter(AppSetting.key == "reset_password").first()
     if row:
-        row.value = body.new_password
+        row.value = hash_password(body.new_password)
     else:
-        db.add(AppSetting(key="reset_password", value=body.new_password))
+        db.add(AppSetting(key="reset_password", value=hash_password(body.new_password)))
     db.commit()
     return {"status": "ok", "message": "管理者パスワードを変更しました"}

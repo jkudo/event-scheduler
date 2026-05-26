@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..config import reload_tz
 from ..database import get_db
+from ..password import hash_password, verify_password, is_hashed
 from ..models import AppSetting
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -76,17 +77,16 @@ class ChangePasswordRequest(BaseModel):
 @router.post("/change-password")
 def change_password(body: ChangePasswordRequest, db: Session = Depends(get_db)):
     """Change the application login password."""
-    # 環境変数 > DB > デフォルト の優先順で現在のパスワードを取得
     if os.environ.get("APP_PASSWORD"):
         current = os.environ["APP_PASSWORD"]
+        if body.current_password != current:
+            raise HTTPException(status_code=403, detail="現在のパスワードが正しくありません")
     else:
         row = db.query(AppSetting).filter(AppSetting.key == "login_password").first()
-        current = row.value if row and row.value else "password"
+        stored = row.value if row and row.value else "password"
+        if not verify_password(body.current_password, stored):
+            raise HTTPException(status_code=403, detail="現在のパスワードが正しくありません")
 
-    if body.current_password != current:
-        raise HTTPException(status_code=403, detail="現在のパスワードが正しくありません")
-
-    # DB と環境変数の両方を更新
-    _set(db, "login_password", body.new_password)
+    _set(db, "login_password", hash_password(body.new_password))
     os.environ["APP_PASSWORD"] = body.new_password
     return {"status": "ok", "message": "パスワードを変更しました"}
