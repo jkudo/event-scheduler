@@ -1,16 +1,13 @@
-import uuid
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
-from ..config import UPLOAD_DIR
 from ..database import get_db
 from ..models import Session as SessionModel, Room, LTTalk, Staff
 from ..schemas import SessionResponse, LTTalkCreate, LTTalkResponse
-from ..utils import is_staff_available
+from ..utils import is_staff_available, save_upload
 
 
 def _parse_dt(value: str) -> datetime:
@@ -51,14 +48,7 @@ async def create_session(
 ):
     photo_path = ""
     if speaker_photo and speaker_photo.filename:
-        ext = Path(speaker_photo.filename).suffix.lower()
-        if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
-            raise HTTPException(status_code=400, detail="対応していない画像形式です。jpg, png, gif, webp のみ対応しています。")
-        filename = f"{uuid.uuid4().hex}{ext}"
-        save_path = UPLOAD_DIR / filename
-        content = await speaker_photo.read()
-        save_path.write_bytes(content)
-        photo_path = f"/uploads/{filename}"
+        photo_path = await save_upload(speaker_photo)
 
     parsed_start = _parse_dt(start_time)
     parsed_end = _parse_dt(end_time)
@@ -145,19 +135,7 @@ async def update_session(
     session.group_id = group_id
 
     if speaker_photo and speaker_photo.filename:
-        ext = Path(speaker_photo.filename).suffix.lower()
-        if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
-            raise HTTPException(status_code=400, detail="対応していない画像形式です。jpg, png, gif, webp のみ対応しています。")
-        # 古い写真を削除
-        if session.speaker_photo:
-            old_path = Path("." + session.speaker_photo)
-            if old_path.exists():
-                old_path.unlink()
-        filename = f"{uuid.uuid4().hex}{ext}"
-        save_path = UPLOAD_DIR / filename
-        content = await speaker_photo.read()
-        save_path.write_bytes(content)
-        session.speaker_photo = f"/uploads/{filename}"
+        session.speaker_photo = await save_upload(speaker_photo, session.speaker_photo or "")
 
     db.commit()
     db.refresh(session, ["room", "lt_talks"])
@@ -334,18 +312,7 @@ async def upload_lt_talk_photo(session_id: int, talk_id: int, photo: UploadFile 
     talk = db.query(LTTalk).filter(LTTalk.id == talk_id, LTTalk.session_id == session_id).first()
     if not talk:
         raise HTTPException(status_code=404, detail="LT Talk not found")
-    ext = Path(photo.filename).suffix.lower()
-    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
-        raise HTTPException(status_code=400, detail="対応していない画像形式です。")
-    if talk.speaker_photo:
-        old_path = Path("." + talk.speaker_photo)
-        if old_path.exists():
-            old_path.unlink()
-    filename = f"lt_{uuid.uuid4().hex}{ext}"
-    save_path = UPLOAD_DIR / filename
-    content = await photo.read()
-    save_path.write_bytes(content)
-    talk.speaker_photo = f"/uploads/{filename}"
+    talk.speaker_photo = await save_upload(photo, talk.speaker_photo or "", prefix="lt_")
     db.commit()
     db.refresh(talk)
     return talk

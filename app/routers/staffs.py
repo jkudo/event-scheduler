@@ -1,11 +1,8 @@
-import uuid
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
 
-from ..config import UPLOAD_DIR
 from ..database import get_db
+from ..utils import save_upload
 from ..models import Staff, StaffSkill, StaffPreferredSession, StaffAvailability
 from ..models import Session as SessionModel
 from ..schemas import (
@@ -84,19 +81,7 @@ async def upload_staff_photo(staff_id: int, photo: UploadFile = File(...), db: S
     staff = db.query(Staff).filter(Staff.id == staff_id).first()
     if not staff:
         raise HTTPException(status_code=404, detail="Staff not found")
-    ext = Path(photo.filename).suffix.lower()
-    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
-        raise HTTPException(status_code=400, detail="対応していない画像形式です。jpg, png, gif, webp のみ対応しています。")
-    # 古い写真を削除
-    if staff.photo:
-        old_path = Path("." + staff.photo)
-        if old_path.exists():
-            old_path.unlink()
-    filename = f"staff_{uuid.uuid4().hex}{ext}"
-    save_path = UPLOAD_DIR / filename
-    content = await photo.read()
-    save_path.write_bytes(content)
-    staff.photo = f"/uploads/{filename}"
+    staff.photo = await save_upload(photo, staff.photo or "", prefix="staff_")
     db.commit()
     return db.query(Staff).options(*STAFF_EAGER).filter(Staff.id == staff_id).first()
 
