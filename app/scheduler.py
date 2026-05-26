@@ -20,6 +20,35 @@ scheduler_state = {
 }
 
 
+def recalc_next_run():
+    """設定変更時に next_run を即座に再計算"""
+    db = SessionLocal()
+    try:
+        enabled = _get_setting(db, "autobackup_enabled", "0") == "1"
+        if not enabled:
+            scheduler_state["next_run"] = None
+            return
+        schedule_type = _get_setting(db, "autobackup_schedule_type", "interval")
+        if schedule_type == "daily":
+            daily_time = _get_setting(db, "autobackup_daily_time", "03:00")
+            scheduler_state["next_run"] = _calc_next_daily(daily_time).isoformat()
+        else:
+            interval_minutes = int(_get_setting(db, "autobackup_interval_minutes", "720"))
+            interval_seconds = max(interval_minutes * 60, 600)
+            last = scheduler_state.get("last_run")
+            if last:
+                next_ts = last + interval_seconds
+                if next_ts < time.time():
+                    next_ts = time.time() + interval_seconds
+            else:
+                next_ts = time.time() + interval_seconds
+            scheduler_state["next_run"] = datetime.fromtimestamp(
+                next_ts, tz=app_now().tzinfo
+            ).isoformat()
+    finally:
+        db.close()
+
+
 def _restore_last_run():
     """サーバー起動時にmetadataから最終バックアップ時刻を復元"""
     metadata = _read_metadata()

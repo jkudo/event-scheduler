@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..config import BACKUP_DIR
 from ..database import get_db
 from ..models import AppSetting
-from ..scheduler import scheduler_state, run_backup, _read_metadata, _write_metadata
+from ..scheduler import scheduler_state, run_backup, recalc_next_run, _read_metadata, _write_metadata
 
 router = APIRouter(prefix="/api/backup/auto", tags=["auto-backup"])
 
@@ -59,6 +59,7 @@ def update_auto_backup_settings(body: AutoBackupSettingsRequest, db: Session = D
     _set(db, "autobackup_daily_time", body.daily_time)
     _set(db, "autobackup_retention_count", str(retention))
     db.commit()
+    recalc_next_run()
     return {"status": "ok"}
 
 
