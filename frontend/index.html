@@ -1850,7 +1850,7 @@ setInterval(checkUpdate, 60000);</code></pre>
                     <ol style="margin:0 0 12px 0;font-size:0.85rem;color:#333;padding-left:20px;line-height:1.8">
                         <li>対象リポジトリに <code>workflow_dispatch</code> トリガーのワークフローを作成（下記の例を参照）</li>
                         <li>GitHub Settings → Developer settings → <strong>Fine-grained personal access tokens</strong> でトークンを発行<br>
-                            必要な権限: 対象リポジトリに対して <strong>Actions: Read and write</strong>、<strong>Contents: Read and write</strong></li>
+                            必要な権限: 対象リポジトリに対して <strong>Actions: Read and write</strong></li>
                         <li>Dispatch URLを取得して入力:<br>
                             <code>https://api.github.com/repos/<strong>{owner}</strong>/<strong>{repo}</strong>/actions/workflows/<strong>{workflow_file}</strong>/dispatches</code><br>
                             <small style="color:#666">例: <code>https://api.github.com/repos/myorg/myrepo/actions/workflows/update-schedule.yml/dispatches</code></small></li>
