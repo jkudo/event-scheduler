@@ -19,6 +19,21 @@ scheduler_state = {
     "error": None,
 }
 
+
+def _restore_last_run():
+    """サーバー起動時にmetadataから最終バックアップ時刻を復元"""
+    metadata = _read_metadata()
+    if not metadata:
+        return
+    metadata.sort(key=lambda x: x.get("created_at", ""))
+    latest = metadata[-1]
+    try:
+        ts = datetime.fromisoformat(latest["created_at"]).timestamp()
+        scheduler_state["last_run"] = ts
+        scheduler_state["last_result"] = latest
+    except (ValueError, KeyError):
+        pass
+
 METADATA_FILE = BACKUP_DIR / "metadata.json"
 
 
@@ -122,6 +137,7 @@ def _calc_next_daily(daily_time: str) -> datetime:
 async def backup_scheduler_loop():
     """Main scheduler loop — runs as asyncio background task."""
     scheduler_state["running"] = True
+    _restore_last_run()
     print("[scheduler] Auto-backup scheduler started")
 
     try:
@@ -155,12 +171,13 @@ async def backup_scheduler_loop():
                     scheduler_state["last_run"] = time.time()
                     scheduler_state["last_result"] = result
                     scheduler_state["error"] = None
-                    scheduler_state["next_run"] = _calc_next_daily(daily_time).isoformat()
                     print(f"[scheduler] Daily backup completed: {result.get('filename')} ({result.get('status')})")
                 except Exception as e:
                     scheduler_state["error"] = str(e)
                     scheduler_state["last_run"] = time.time()
                     print(f"[scheduler] Daily backup failed: {e}")
+                # 次回予定を即座に更新
+                scheduler_state["next_run"] = _calc_next_daily(daily_time).isoformat()
                 await asyncio.sleep(60)  # avoid re-trigger within same minute
             else:
                 # Interval mode
@@ -171,18 +188,24 @@ async def backup_scheduler_loop():
                     elapsed = time.time() - last
                     if elapsed < interval_seconds:
                         remaining = interval_seconds - elapsed
-                        scheduler_state["next_run"] = datetime.fromtimestamp(time.time() + remaining, tz=app_now().tzinfo).isoformat()
+                        scheduler_state["next_run"] = datetime.fromtimestamp(
+                            last + interval_seconds, tz=app_now().tzinfo
+                        ).isoformat()
                         await asyncio.sleep(min(remaining, 30))
                         continue
 
-                scheduler_state["next_run"] = None
+                # next_run を先にセットしてからバックアップ実行
+                scheduler_state["next_run"] = datetime.fromtimestamp(
+                    time.time() + interval_seconds, tz=app_now().tzinfo
+                ).isoformat()
                 try:
                     result = await asyncio.get_event_loop().run_in_executor(None, run_backup, "auto")
                     scheduler_state["last_run"] = time.time()
                     scheduler_state["last_result"] = result
                     scheduler_state["error"] = None
+                    # バックアップ完了後に正確な next_run を再計算
                     scheduler_state["next_run"] = datetime.fromtimestamp(
-                        time.time() + interval_seconds, tz=app_now().tzinfo
+                        scheduler_state["last_run"] + interval_seconds, tz=app_now().tzinfo
                     ).isoformat()
                     print(f"[scheduler] Backup completed: {result.get('filename')} ({result.get('status')})")
                 except Exception as e:
@@ -190,7 +213,7 @@ async def backup_scheduler_loop():
                     scheduler_state["last_run"] = time.time()
                     print(f"[scheduler] Backup failed: {e}")
 
-                await asyncio.sleep(interval_seconds)
+                await asyncio.sleep(30)
 
     except asyncio.CancelledError:
         print("[scheduler] Auto-backup scheduler stopped")
