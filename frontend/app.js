@@ -801,26 +801,41 @@ const app = createApp({
             if (name === 'io') { await loadRooms(); await loadSessions(); }
             if (name === 'auto-backup') {
                 await loadAbSettings(); await loadAbHistory(); await loadAbStatus();
-                _startAbPolling();
+            }
+            // セッション管理 or バックアップタブならポーリング開始
+            if (name === 'auto-backup' || /^grp-\d+-manage$/.test(name)) {
+                _startTabPolling();
             } else {
-                _stopAbPolling();
+                _stopTabPolling();
             }
         }
 
-        // --- auto-backup polling (タブ表示中のみ) ---
-        let _abPollTimer = null;
-        function _startAbPolling() {
-            _stopAbPolling();
-            _abPollTimer = setInterval(function() {
-                if (tab.value !== 'auto-backup') { _stopAbPolling(); return; }
-                var prev = abStatus.last_run;
-                loadAbStatus().then(function() {
-                    if (abStatus.last_run !== prev) { loadAbHistory(); }
-                });
+        // --- タブ自動更新ポーリング ---
+        let _tabPollTimer = null;
+        function _startTabPolling() {
+            _stopTabPolling();
+            _tabPollTimer = setInterval(function() {
+                var t = tab.value;
+                // バックアップタブ
+                if (t === 'auto-backup') {
+                    var prev = abStatus.last_run;
+                    loadAbStatus().then(function() {
+                        if (abStatus.last_run !== prev) { loadAbHistory(); }
+                    });
+                    return;
+                }
+                // セッション管理タブ（編集中はスキップ）
+                var grpMatch = t.match(/^grp-(\d+)-manage$/);
+                if (grpMatch) {
+                    var gid = parseInt(grpMatch[1]);
+                    if (groupSessForms[gid] && groupSessForms[gid].editId) return;
+                    loadSessions();
+                    return;
+                }
             }, 1000);
         }
-        function _stopAbPolling() {
-            if (_abPollTimer != null) { clearInterval(_abPollTimer); _abPollTimer = null; }
+        function _stopTabPolling() {
+            if (_tabPollTimer != null) { clearInterval(_tabPollTimer); _tabPollTimer = null; }
         }
 
         // --- 部屋 ---
@@ -1384,11 +1399,11 @@ const app = createApp({
         async function _saveSession(fd, editId) {
             if (editId) {
                 const res = await fetch(API + `/api/sessions/${editId}`, { method: 'PUT', body: fd });
-                if (!res.ok) { alert('セッションの更新に失敗しました'); return null; }
+                if (!res.ok) { const err = await res.text(); console.error('PUT error', res.status, err); alert('更新に失敗しました'); return null; }
                 return editId;
             } else {
                 const res = await fetch(API + '/api/sessions/', { method: 'POST', body: fd });
-                if (!res.ok) { alert('セッションの作成に失敗しました'); return null; }
+                if (!res.ok) { const err = await res.text(); console.error('POST error', res.status, err); alert('登録に失敗しました'); return null; }
                 return (await res.json()).id;
             }
         }
@@ -1796,7 +1811,7 @@ const app = createApp({
             fd.append('description', ''); fd.append('speaker_kana', '');
             fd.append('speaker_org', ''); fd.append('speaker_title', ''); fd.append('speaker_profile', '');
             const gid = catGroupTabs[catKey];
-            if (gid) fd.append('group_id', gid);
+            if (gid && Number.isInteger(gid)) fd.append('group_id', gid);
             const sessionId = await _saveSession(fd, form.editId);
             if (!sessionId) return;
             cancelEditCategory(catKey);
