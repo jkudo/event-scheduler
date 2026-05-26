@@ -1702,15 +1702,8 @@
                 <div style="margin-bottom:12px">
                     <label style="font-weight:600;font-size:0.85rem">CORSオリジン</label>
                     <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-                        <input v-model="pubApi.cors_origins" placeholder="* (全てのオリジンを許可)" style="width:300px">
+                        <input v-model="pubApi.cors_origins" placeholder="* (全てのオリジンを許可)" style="width:300px;padding:8px 10px">
                         <small style="color:#999">* で全許可、またはカンマ区切りでURL指定</small>
-                    </div>
-                </div>
-                <div style="margin-bottom:12px">
-                    <label style="font-weight:600;font-size:0.85rem">Webhook URL</label>
-                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-                        <input v-model="pubApi.webhook_url" placeholder="https://example.com/webhook" style="width:300px">
-                        <small style="color:#999">パブリッシュ時にPOSTで通知（空欄で無効）</small>
                     </div>
                 </div>
                 <button class="btn" @click="savePubApiSettings" style="margin-bottom:12px">設定を保存</button>
@@ -1723,6 +1716,40 @@
                         <button class="btn btn-sm btn-danger" @click="regenerateApiKey">再生成</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Webhook -->
+            <div style="background:#f8f9fa;border-radius:8px;padding:16px;margin-bottom:16px">
+                <h3 style="margin:0 0 12px 0;font-size:1rem">Webhook</h3>
+                <p style="color:#555;margin:0 0 12px 0;font-size:0.9rem">パブリッシュ時に指定URLへPOSTリクエストを送信します。</p>
+                <div style="margin-bottom:12px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <input v-model="pubApi.webhook_url" placeholder="https://example.com/webhook" style="flex:1;min-width:0;padding:8px 10px">
+                        <small style="color:#999;white-space:nowrap">空欄で無効</small>
+                    </div>
+                </div>
+                <button class="btn" @click="savePubApiSettings">設定を保存</button>
+            </div>
+
+            <!-- GitHub Actions連携 -->
+            <div style="background:#f8f9fa;border-radius:8px;padding:16px;margin-bottom:16px">
+                <h3 style="margin:0 0 12px 0;font-size:1rem">GitHub Actions連携</h3>
+                <p style="color:#555;margin:0 0 12px 0;font-size:0.9rem">パブリッシュ時にGitHub Actionsのworkflow_dispatchを発火します。</p>
+                <div style="margin-bottom:12px">
+                    <label style="font-weight:600;font-size:0.85rem">Dispatch URL</label>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                        <input v-model="pubApi.github_dispatch_url" placeholder="https://api.github.com/repos/owner/repo/actions/workflows/xxx.yml/dispatches" style="flex:1;min-width:0;padding:8px 10px">
+                    </div>
+                </div>
+                <div style="margin-bottom:12px">
+                    <label style="font-weight:600;font-size:0.85rem">Personal Access Token</label>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                        <input v-model="pubApi.github_token_input" type="password" :placeholder="pubApi.github_token_set ? '設定済み（変更する場合のみ入力）' : 'GitHub Personal Access Token'" style="flex:1;min-width:0;max-width:400px;padding:8px 10px">
+                        <small v-if="pubApi.github_token_set" style="color:#2e7d32;font-size:0.85rem">設定済み</small>
+                        <small style="color:#999">両方空欄で無効</small>
+                    </div>
+                </div>
+                <button class="btn" @click="savePubApiSettings">設定を保存</button>
             </div>
 
             <!-- パブリッシュ -->
@@ -1814,6 +1841,38 @@ setInterval(checkUpdate, 60000);</code></pre>
   "session_count": 12
 }</code></pre>
                     <p style="margin:8px 0 0 0;font-size:0.85rem;color:#666">Webhook送信が失敗してもパブリッシュ自体は成功します。外部サイトのキャッシュ更新トリガー等にご利用ください。</p>
+
+                    <h4 style="margin:16px 0 8px 0;font-size:0.95rem">GitHub Actions連携</h4>
+                    <p style="margin:0 0 8px 0;font-size:0.9rem">パブリッシュ時にGitHub Actionsの <code>workflow_dispatch</code> を自動で発火し、GitHub Pages等のキャッシュを更新できます。</p>
+                    <p style="margin:0 0 8px 0;font-size:0.9rem;font-weight:600">設定手順:</p>
+                    <ol style="margin:0 0 12px 0;font-size:0.85rem;color:#333;padding-left:20px;line-height:1.8">
+                        <li>対象リポジトリに <code>workflow_dispatch</code> トリガーのワークフローを作成</li>
+                        <li>GitHub Settings → Developer settings → Personal access tokens で <code>actions:write</code> 権限のトークンを発行</li>
+                        <li>Dispatch URLに以下の形式で入力:<br><code>https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_file}/dispatches</code></li>
+                        <li>Personal Access Tokenを入力して「設定を保存」</li>
+                    </ol>
+                    <p style="margin:0 0 8px 0;font-size:0.9rem;font-weight:600">ワークフロー例 (<code>.github/workflows/update-schedule.yml</code>):</p>
+                    <pre v-pre style="background:#263238;color:#eeffff;padding:12px;border-radius:4px;overflow-x:auto;font-size:0.85rem"><code>name: Update Schedule Cache
+on:
+  workflow_dispatch:
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch schedule
+        run: |
+          mkdir -p docs
+          curl -sf "${{ secrets.SCHEDULE_API_URL }}" \
+            -o docs/schedule.json
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/schedule.json
+          git diff --cached --quiet || \
+            git commit -m "Update schedule" && git push</code></pre>
+                    <p style="margin:8px 0 0 0;font-size:0.85rem;color:#666">リポジトリのSecrets に <code>SCHEDULE_API_URL</code>（公開APIのフルURL、例: <code>https://your-domain/public/api/schedule?key=YOUR_KEY</code>）を登録してください。GitHub Actions発火が失敗してもパブリッシュ自体は成功します。</p>
 
                     <div style="background:#fff3e0;border-radius:4px;padding:12px;margin-bottom:12px;margin-top:12px;font-size:0.85rem">
                         <strong>画像のキャッシュについて:</strong> 登壇者写真はリクエストのたびにこのサーバーから転送されます。外部サイトで表示する場合は、CDN・リバースプロキシ・サーバーサイドキャッシュ等を利用し、画像を外部サイト側でキャッシュしてください。スケジュールデータ更新時に画像URLも変わらないため、<code>snapshot_id</code> の変更を検知したタイミングでキャッシュを更新する運用を推奨します。

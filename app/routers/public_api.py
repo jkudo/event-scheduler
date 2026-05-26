@@ -161,12 +161,22 @@ class PublicApiSettingsRequest(BaseModel):
     enabled: bool = False
     cors_origins: str = "*"
     webhook_url: str = ""
+    github_dispatch_url: str = ""
+    github_token: str = ""
+
+
+_SETTINGS_KEYS = [
+    "public_api_key", "public_api_enabled", "public_api_cors_origins",
+    "public_api_active_snapshot", "public_api_webhook_url",
+    "public_api_github_dispatch_url", "public_api_github_token",
+]
 
 
 @admin_router.get("/settings")
 def get_public_api_settings(db: Session = Depends(get_db)):
-    s = _get_multi(db, ["public_api_key", "public_api_enabled", "public_api_cors_origins", "public_api_active_snapshot", "public_api_webhook_url"])
+    s = _get_multi(db, _SETTINGS_KEYS)
     key = s.get("public_api_key", "")
+    gh_token = s.get("public_api_github_token", "")
     return {
         "enabled": s.get("public_api_enabled", "0") == "1",
         "key": key,
@@ -174,6 +184,8 @@ def get_public_api_settings(db: Session = Depends(get_db)):
         "cors_origins": s.get("public_api_cors_origins", "*"),
         "active_snapshot": s.get("public_api_active_snapshot", ""),
         "webhook_url": s.get("public_api_webhook_url", ""),
+        "github_dispatch_url": s.get("public_api_github_dispatch_url", ""),
+        "github_token_set": bool(gh_token),
     }
 
 
@@ -182,6 +194,9 @@ def update_public_api_settings(body: PublicApiSettingsRequest, db: Session = Dep
     _set(db, "public_api_enabled", "1" if body.enabled else "0")
     _set(db, "public_api_cors_origins", body.cors_origins)
     _set(db, "public_api_webhook_url", body.webhook_url)
+    _set(db, "public_api_github_dispatch_url", body.github_dispatch_url)
+    if body.github_token:
+        _set(db, "public_api_github_token", body.github_token)
     # Auto-generate key on first enable
     if body.enabled and not _get(db, "public_api_key", ""):
         _set(db, "public_api_key", secrets.token_hex(16))
@@ -200,20 +215,45 @@ def regenerate_api_key(db: Session = Depends(get_db)):
 # --- Webhook ---
 
 def _fire_webhook(db: Session, payload: dict) -> dict | None:
-    """Send webhook notification. Failures are logged but never block publish.
+    """Send webhook / GitHub workflow_dispatch. Failures never block publish."""
+    results = {}
 
-    Returns a small status dict (or None if no URL configured).
-    """
+    # --- Generic webhook ---
     url = _get(db, "public_api_webhook_url", "")
-    if not url:
-        return None
-    try:
-        resp = httpx.post(url, json=payload, timeout=10)
-        logger.info("Webhook sent to %s — status %s", url, resp.status_code)
-        return {"url": url, "status": resp.status_code, "success": 200 <= resp.status_code < 300}
-    except Exception as exc:
-        logger.warning("Webhook to %s failed: %s", url, exc)
-        return {"url": url, "status": None, "success": False, "error": str(exc)}
+    if url:
+        try:
+            resp = httpx.post(url, json=payload, timeout=10)
+            logger.info("Webhook sent to %s — status %s", url, resp.status_code)
+            results["webhook"] = {"url": url, "status": resp.status_code, "success": 200 <= resp.status_code < 300}
+        except Exception as exc:
+            logger.warning("Webhook to %s failed: %s", url, exc)
+            results["webhook"] = {"url": url, "success": False, "error": str(exc)}
+
+    # --- GitHub workflow_dispatch ---
+    gh_settings = _get_multi(db, ["public_api_github_dispatch_url", "public_api_github_token"])
+    dispatch_url = gh_settings.get("public_api_github_dispatch_url", "")
+    gh_token = gh_settings.get("public_api_github_token", "")
+    if dispatch_url and gh_token:
+        try:
+            resp = httpx.post(
+                dispatch_url,
+                json={"ref": "main"},
+                headers={
+                    "Authorization": f"Bearer {gh_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+                timeout=10,
+            )
+            # 204 = success for workflow_dispatch
+            success = resp.status_code == 204
+            logger.info("GitHub dispatch to %s — status %s", dispatch_url, resp.status_code)
+            results["github_dispatch"] = {"status": resp.status_code, "success": success}
+        except Exception as exc:
+            logger.warning("GitHub dispatch to %s failed: %s", dispatch_url, exc)
+            results["github_dispatch"] = {"success": False, "error": str(exc)}
+
+    return results if results else None
 
 
 # --- Publish ---

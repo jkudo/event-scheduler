@@ -1,0 +1,29 @@
+name: Update Schedule Cache
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch schedule from Public API
+        run: |
+          mkdir -p docs
+          curl -sf "${{ secrets.SCHEDULE_API_URL }}" -o docs/schedule.json
+          echo "Fetched schedule:"
+          jq '.snapshot_id, .published_at, (.sessions | length)' docs/schedule.json
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/schedule.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update schedule cache ($(jq -r '.snapshot_id' docs/schedule.json))"
+            git push
+          fi

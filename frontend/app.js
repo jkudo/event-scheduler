@@ -726,7 +726,7 @@ const app = createApp({
         }
 
         // --- 公開API ---
-        const pubApi = reactive({ enabled: false, key: '', keyMasked: '', cors_origins: '*', active_snapshot: '', webhook_url: '' });
+        const pubApi = reactive({ enabled: false, key: '', keyMasked: '', cors_origins: '*', active_snapshot: '', webhook_url: '', github_dispatch_url: '', github_token_set: false, github_token_input: '' });
         const pubHistory = ref([]);
         const pubMsg = ref('');
         const pubMsgError = ref(false);
@@ -735,6 +735,7 @@ const app = createApp({
             try {
                 const data = await fetch(API + '/api/public-api/settings').then(r => r.json());
                 Object.assign(pubApi, data);
+                pubApi.github_token_input = '';
             } catch (e) { /* ignore */ }
         }
         async function savePubApiSettings() {
@@ -742,7 +743,7 @@ const app = createApp({
             try {
                 const res = await fetch(API + '/api/public-api/settings', {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ enabled: pubApi.enabled, cors_origins: pubApi.cors_origins, webhook_url: pubApi.webhook_url })
+                    body: JSON.stringify({ enabled: pubApi.enabled, cors_origins: pubApi.cors_origins, webhook_url: pubApi.webhook_url, github_dispatch_url: pubApi.github_dispatch_url, github_token: pubApi.github_token_input })
                 });
                 const data = await res.json();
                 Object.assign(pubApi, data);
@@ -768,9 +769,13 @@ const app = createApp({
                     await loadPubHistory();
                     let msg = 'パブリッシュしました（' + data.session_count + 'セッション）';
                     if (data.webhook) {
-                        msg += data.webhook.success
-                            ? ' / Webhook送信済み（' + data.webhook.status + '）'
-                            : ' / Webhook送信失敗' + (data.webhook.error ? '（' + data.webhook.error.substring(0, 60) + '）' : '');
+                        const w = data.webhook;
+                        if (w.webhook) {
+                            msg += w.webhook.success ? ' / Webhook送信済み' : ' / Webhook送信失敗';
+                        }
+                        if (w.github_dispatch) {
+                            msg += w.github_dispatch.success ? ' / GitHub Actions発火済み' : ' / GitHub Actions発火失敗';
+                        }
                     }
                     _pubMsg(msg);
                 } else {
