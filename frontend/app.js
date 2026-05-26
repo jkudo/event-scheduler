@@ -801,7 +801,26 @@ const app = createApp({
             }
             if (name === 'venue-view') await loadVenueMaps();
             if (name === 'io') { await loadRooms(); await loadSessions(); }
-            if (name === 'auto-backup') { await loadAbSettings(); await loadAbHistory(); await loadAbStatus(); }
+            if (name === 'auto-backup') {
+                await loadAbSettings(); await loadAbHistory(); await loadAbStatus();
+                _startAbPolling();
+            } else {
+                _stopAbPolling();
+            }
+        }
+
+        // --- auto-backup polling ---
+        let _abPollTimer = null;
+        function _startAbPolling() {
+            _stopAbPolling();
+            _abPollTimer = setInterval(async () => {
+                if (tab.value !== 'auto-backup') { _stopAbPolling(); return; }
+                await loadAbStatus();
+                await loadAbHistory();
+            }, 30000);
+        }
+        function _stopAbPolling() {
+            if (_abPollTimer) { clearInterval(_abPollTimer); _abPollTimer = null; }
         }
 
         // --- 部屋 ---
