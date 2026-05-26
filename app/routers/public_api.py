@@ -214,7 +214,7 @@ def regenerate_api_key(db: Session = Depends(get_db)):
 
 # --- Webhook ---
 
-def _fire_webhook(db: Session, payload: dict) -> dict | None:
+def _fire_webhook(db: Session, payload: dict, *, base_url: str = "") -> dict | None:
     """Send webhook / GitHub workflow_dispatch. Failures never block publish."""
     results = {}
 
@@ -230,14 +230,17 @@ def _fire_webhook(db: Session, payload: dict) -> dict | None:
             results["webhook"] = {"url": url, "success": False, "error": str(exc)}
 
     # --- GitHub workflow_dispatch ---
-    gh_settings = _get_multi(db, ["public_api_github_dispatch_url", "public_api_github_token"])
+    gh_settings = _get_multi(db, ["public_api_github_dispatch_url", "public_api_github_token", "public_api_key"])
     dispatch_url = gh_settings.get("public_api_github_dispatch_url", "")
     gh_token = gh_settings.get("public_api_github_token", "")
     if dispatch_url and gh_token:
+        # Build public API schedule URL to pass as input
+        api_key = gh_settings.get("public_api_key", "")
+        schedule_url = f"{base_url}/public/api/schedule?key={api_key}" if base_url else ""
         try:
             resp = httpx.post(
                 dispatch_url,
-                json={"ref": "main"},
+                json={"ref": "main", "inputs": {"schedule_url": schedule_url}},
                 headers={
                     "Authorization": f"Bearer {gh_token}",
                     "Accept": "application/vnd.github+json",
@@ -262,7 +265,7 @@ def _fire_webhook(db: Session, payload: dict) -> dict | None:
 # --- Publish ---
 
 @admin_router.post("/publish")
-def publish_snapshot(db: Session = Depends(get_db)):
+def publish_snapshot(request: Request, db: Session = Depends(get_db)):
     """Create a snapshot of current schedule data."""
     now = app_now()
     snapshot_id = now.strftime("%Y%m%d_%H%M%S")
@@ -352,12 +355,13 @@ def publish_snapshot(db: Session = Depends(get_db)):
     db.commit()
 
     # Fire webhook (non-blocking — failures are logged, not raised)
+    base_url = str(request.base_url).rstrip("/")
     webhook_result = _fire_webhook(db, {
         "event": "schedule_published",
         "snapshot_id": snapshot_id,
         "published_at": now.isoformat(),
         "session_count": len(sessions),
-    })
+    }, base_url=base_url)
 
     result = {
         "status": "ok",

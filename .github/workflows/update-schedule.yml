@@ -2,6 +2,10 @@ name: Update Schedule Cache
 
 on:
   workflow_dispatch:
+    inputs:
+      schedule_url:
+        description: "Public API URL (with key)"
+        required: true
 
 jobs:
   update:
@@ -12,7 +16,7 @@ jobs:
       - name: Fetch schedule from Public API
         run: |
           mkdir -p docs
-          curl -sf "${{ secrets.SCHEDULE_API_URL }}" -o docs/schedule.json
+          curl -sf "${{ inputs.schedule_url }}" -o docs/schedule.json
           echo "Fetched schedule:"
           jq '.snapshot_id, .published_at, (.sessions | length)' docs/schedule.json
 
