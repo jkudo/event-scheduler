@@ -215,11 +215,6 @@ const app = createApp({
         const speakerTemplate = ref('');
         const connpassBaseUrl = ref('');
 
-        function fmtTime(dt) {
-            const d = new Date(dt);
-            return d.toLocaleString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-        }
-
         function generateConnpassTimeline() {
             const allSess = sessions.value.filter(s => !dynamicCatKeys.value.includes(s.category) && s.category !== 'overall');
             if (!allSess.length) { connpassTimeline.value = 'セッションが登録されていません。'; return; }
@@ -245,7 +240,7 @@ const app = createApp({
                 md += '|:---:|:---|:---|\n';
 
                 for (const s of sessList) {
-                    const time = `${fmtTime(s.start_time)}〜${fmtTime(s.end_time)}`;
+                    const time = `${fmtShort(s.start_time)}〜${fmtShort(s.end_time)}`;
                     if (isMultiSpeakerCat(s.category) && s.lt_talks && s.lt_talks.length) {
                         const talks = s.lt_talks.map(t => {
                             const info = [t.speaker_title, t.speaker_org].filter(Boolean).join(' / ');
@@ -284,7 +279,7 @@ const app = createApp({
 
             for (const s of sorted) {
                 const room = roomMap[s.room_id] || '';
-                const time = `${fmtTime(s.start_time)}〜${fmtTime(s.end_time)}`;
+                const time = `${fmtShort(s.start_time)}〜${fmtShort(s.end_time)}`;
 
                 if (isMultiSpeakerCat(s.category) && s.lt_talks && s.lt_talks.length) {
                     md += `## ${s.title}\n`;
@@ -1011,14 +1006,7 @@ const app = createApp({
                 ltTalks[gidOrIdx].photoPreview = URL.createObjectURL(file);
             }
         }
-        function autoSetLTEndTime(talk) {
-            if (talk.start_time && !talk.end_time) {
-                const d = new Date(talk.start_time);
-                d.setMinutes(d.getMinutes() + 5);
-                const pad = n => String(n).padStart(2, '0');
-                talk.end_time = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-            }
-        }
+        const autoSetLTEndTime = autoSetEndTime;
         function toggleRepresentative(talks, idx) {
             const current = talks[idx].is_representative;
             talks.forEach(t => t.is_representative = 0);
