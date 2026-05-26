@@ -127,6 +127,7 @@ class LTTalk(Base):
     start_time = Column(String, default="")
     end_time = Column(String, default="")
     order = Column(Integer, default=0)
+    is_representative = Column(Integer, default=0)  # 1=司会者(LT)/モデレーター(パネル)
 
     session = relationship("Session", back_populates="lt_talks")
 
