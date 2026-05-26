@@ -1808,11 +1808,11 @@ setInterval(checkUpdate, 60000);</code></pre>
                         <thead><tr><th>形式</th><th>category</th><th>登壇者</th><th>lt_talks</th></tr></thead>
                         <tbody>
                             <tr><td>通常セッション</td><td>general, tech, keynote 等</td><td><code>speaker</code> に1名</td><td>空配列 <code>[]</code></td></tr>
-                            <tr><td>LT（ライトニングトーク）</td><td>lt</td><td><code>speaker</code> （参考値）</td><td>個別トークの配列（各トークに登壇者情報）</td></tr>
-                            <tr><td>パネルディスカッション</td><td>panel</td><td><code>speaker</code> にカンマ区切りで全員</td><td>パネリストの配列（各パネリストに詳細情報）</td></tr>
+                            <tr><td>LT（ライトニングトーク）</td><td>lt</td><td><code>speaker</code> = 司会者名</td><td>個別トークの配列（各トークに登壇者情報）</td></tr>
+                            <tr><td>パネルディスカッション</td><td>panel</td><td><code>speaker</code> = モデレーター名</td><td>パネリストの配列（各パネリストに詳細情報）</td></tr>
                         </tbody>
                     </table>
-                    <p style="margin:0 0 8px 0;font-size:0.85rem;color:#666">LT・パネルでは <code>lt_talks</code> 配列に個別の登壇者情報（名前・所属・写真等）が含まれるため、そちらを使用してください。</p>
+                    <p style="margin:0 0 8px 0;font-size:0.85rem;color:#666">LT・パネルでは <code>lt_talks</code> 配列に個別の登壇者情報（名前・所属・写真等）が含まれるため、そちらを使用してください。<code>is_representative: 1</code> の登壇者がLTの司会者 / パネルのモデレーターです（0または1名）。</p>
 
                     <p style="margin:8px 0;font-size:0.9rem;font-weight:600">通常セッション:</p>
                     <pre style="background:#263238;color:#eeffff;padding:12px;border-radius:4px;overflow-x:auto;font-size:0.85rem"><code>{
@@ -1846,7 +1846,8 @@ setInterval(checkUpdate, 60000);</code></pre>
       "speaker_photo_url": "https://...",
       "start_time": "13:00",
       "end_time": "13:10",
-      "order": 0
+      "order": 0,
+      "is_representative": 1
     },
     {
       "title": "TypeScript Tips",
@@ -1855,7 +1856,8 @@ setInterval(checkUpdate, 60000);</code></pre>
       "speaker_photo_url": "https://...",
       "start_time": "13:10",
       "end_time": "13:20",
-      "order": 1
+      "order": 1,
+      "is_representative": 0
     }
   ]
 }</code></pre>
