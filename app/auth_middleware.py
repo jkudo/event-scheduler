@@ -161,6 +161,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if path in PUBLIC_PATHS:
             return await call_next(request)
 
+        # Allow public API paths (they handle their own API key auth)
+        if path.startswith("/public/"):
+            return await call_next(request)
+
         # Allow static assets on login/setup page
         if path in ("/login.html", "/setup.html", "/robots.txt"):
             return await call_next(request)

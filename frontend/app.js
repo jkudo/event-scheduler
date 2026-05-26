@@ -730,6 +730,87 @@ const app = createApp({
             } catch (e) { alert('ダウンロードに失敗しました'); }
         }
 
+        // --- 公開API ---
+        const pubApi = reactive({ enabled: false, key: '', keyMasked: '', cors_origins: '*', active_snapshot: '' });
+        const pubHistory = ref([]);
+        const pubMsg = ref('');
+        const pubMsgError = ref(false);
+        function _pubMsg(msg, isError) { pubMsg.value = msg; pubMsgError.value = !!isError; }
+        async function loadPubApiSettings() {
+            try {
+                const data = await fetch(API + '/api/public-api/settings').then(r => r.json());
+                Object.assign(pubApi, data);
+            } catch (e) { /* ignore */ }
+        }
+        async function savePubApiSettings() {
+            _pubMsg('');
+            try {
+                const res = await fetch(API + '/api/public-api/settings', {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: pubApi.enabled, cors_origins: pubApi.cors_origins })
+                });
+                const data = await res.json();
+                Object.assign(pubApi, data);
+                _pubMsg('設定を保存しました');
+            } catch (e) { _pubMsg('保存に失敗しました', true); }
+        }
+        async function regenerateApiKey() {
+            if (!confirm('APIキーを再生成しますか？既存のキーは無効になります。')) return;
+            try {
+                const data = await fetch(API + '/api/public-api/settings/regenerate-key', { method: 'POST' }).then(r => r.json());
+                pubApi.key = data.key;
+                pubApi.keyMasked = data.key_masked;
+                _pubMsg('APIキーを再生成しました');
+            } catch (e) { _pubMsg('再生成に失敗しました', true); }
+        }
+        async function publishSnapshot() {
+            _pubMsg('パブリッシュ中...', false);
+            try {
+                const res = await fetch(API + '/api/public-api/publish', { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    pubApi.active_snapshot = data.snapshot_id;
+                    await loadPubHistory();
+                    _pubMsg('パブリッシュしました（' + data.session_count + 'セッション）');
+                } else {
+                    const err = await res.json();
+                    _pubMsg('パブリッシュに失敗しました: ' + (err.detail || ''), true);
+                }
+            } catch (e) { _pubMsg('パブリッシュに失敗しました', true); }
+        }
+        async function loadPubHistory() {
+            try {
+                pubHistory.value = await fetch(API + '/api/public-api/history').then(r => r.json());
+            } catch (e) { /* ignore */ }
+        }
+        async function activateSnapshot(id) {
+            try {
+                await fetch(API + '/api/public-api/activate/' + id, { method: 'POST' });
+                pubApi.active_snapshot = id;
+                await loadPubHistory();
+                _pubMsg('スナップショットをアクティブにしました');
+            } catch (e) { _pubMsg('切替に失敗しました', true); }
+        }
+        async function deleteSnapshot(id) {
+            if (!confirm('このスナップショットを削除しますか？')) return;
+            try {
+                const res = await fetch(API + '/api/public-api/history/' + id, { method: 'DELETE' });
+                if (!res.ok) { const err = await res.json(); _pubMsg(err.detail || '削除に失敗しました', true); return; }
+                await loadPubHistory();
+                _pubMsg('削除しました');
+            } catch (e) { _pubMsg('削除に失敗しました', true); }
+        }
+        const pubApiUrl = computed(function() {
+            return window.location.origin + '/public/api/schedule?key=' + pubApi.key;
+        });
+        function copyApiUrl() {
+            var url = window.location.origin + '/public/api/schedule?key=' + pubApi.key;
+            navigator.clipboard.writeText(url).then(function() { _pubMsg('URLをコピーしました'); });
+        }
+        function copyApiKey() {
+            navigator.clipboard.writeText(pubApi.key).then(function() { _pubMsg('APIキーをコピーしました'); });
+        }
+
         async function switchTab(name) {
             tab.value = name;
             sidebarOpen.value = false;
@@ -768,6 +849,9 @@ const app = createApp({
             if (name === 'io') { await loadRooms(); await loadSessions(); }
             if (name === 'auto-backup') {
                 await loadAbSettings(); await loadAbHistory(); await loadAbStatus();
+            }
+            if (name === 'public-api') {
+                await loadPubApiSettings(); await loadPubHistory();
             }
             // セッション管理 or バックアップタブならポーリング開始
             if (name === 'auto-backup' || /^grp-\d+-manage$/.test(name)) {
@@ -2762,6 +2846,8 @@ const app = createApp({
             matrixSessionOpacity, _hasStaff, CAT_BG,
             abSettings, abStatus, abHistory, abMsg, abDownload,
             loadAbSettings, loadAbStatus, loadAbHistory, saveAbSettings, triggerBackupNow, deleteBackupEntry, downloadBackupEntry,
+            pubApi, pubHistory, pubMsg, pubMsgError, pubApiUrl,
+            loadPubApiSettings, savePubApiSettings, regenerateApiKey, publishSnapshot, loadPubHistory, activateSnapshot, deleteSnapshot, copyApiUrl, copyApiKey,
         };
     }
 });

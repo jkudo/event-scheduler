@@ -36,6 +36,7 @@
             <button class="sidebar-item" :class="{ active: tab === 'settings' }" @click="switchTab('settings')">設定</button>
             <button class="sidebar-item" :class="{ active: tab === 'auto-backup' }" @click="switchTab('auto-backup')">バックアップ</button>
             <button class="sidebar-item" :class="{ active: tab === 'io' }" @click="switchTab('io')">エクスポート</button>
+            <button class="sidebar-item" :class="{ active: tab === 'public-api' }" @click="switchTab('public-api')">公開API</button>
             <button class="sidebar-item" :class="{ active: tab === 'help' }" @click="switchTab('help')">利用方法</button>
             <div style="padding:12px 16px;font-size:0.75rem;color:#999;text-align:center;margin-top:auto">version 0.1.1</div>
         </nav>
@@ -1675,6 +1676,200 @@
                 </div>
 
             </div>
+        </div>
+
+        <!-- ===== 公開API ===== -->
+        <div class="panel" :class="{ active: tab === 'public-api' }">
+            <h2>公開API</h2>
+            <p style="color:#666;margin-bottom:16px">イベント公式ページなど外部サイトからスケジュールデータをJSON形式で取得できるAPIです。</p>
+
+            <div v-if="pubMsg" :style="{padding:'8px 12px',borderRadius:'4px',marginBottom:'12px',background:pubMsgError?'#fdecea':'#e8f5e9',color:pubMsgError?'#c62828':'#2e7d32'}">{{ pubMsg }}</div>
+
+            <!-- 設定 -->
+            <div style="background:#f8f9fa;border-radius:8px;padding:16px;margin-bottom:16px">
+                <h3 style="margin:0 0 12px 0;font-size:1rem">API設定</h3>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                    <label style="font-weight:600;font-size:0.85rem;margin:0">公開API</label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin:0">
+                        <input type="checkbox" v-model="pubApi.enabled">
+                        <span>{{ pubApi.enabled ? '有効' : '無効' }}</span>
+                    </label>
+                </div>
+                <div style="margin-bottom:12px">
+                    <label style="font-weight:600;font-size:0.85rem">CORSオリジン</label>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                        <input v-model="pubApi.cors_origins" placeholder="* (全てのオリジンを許可)" style="width:300px">
+                        <small style="color:#999">* で全許可、またはカンマ区切りでURL指定</small>
+                    </div>
+                </div>
+                <button class="btn" @click="savePubApiSettings" style="margin-bottom:12px">設定を保存</button>
+
+                <div v-if="pubApi.key" style="margin-top:8px">
+                    <label style="font-weight:600;font-size:0.85rem">APIキー</label>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                        <code style="background:#e8eaf6;padding:4px 8px;border-radius:4px;font-size:0.85rem">{{ pubApi.key }}</code>
+                        <button class="btn btn-sm" @click="copyApiKey">コピー</button>
+                        <button class="btn btn-sm btn-danger" @click="regenerateApiKey">再生成</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- パブリッシュ -->
+            <div style="background:#e3f2fd;border-radius:8px;padding:16px;margin-bottom:16px">
+                <h3 style="margin:0 0 12px 0;font-size:1rem">パブリッシュ</h3>
+                <p style="color:#555;margin:0 0 12px 0;font-size:0.9rem">現在のスケジュールデータをスナップショットとして保存し、公開APIで配信します。</p>
+                <button class="btn" @click="publishSnapshot" style="background:#1565c0;color:#fff">パブリッシュ</button>
+
+                <div v-if="pubApi.active_snapshot && pubApi.enabled && pubApi.key" style="margin-top:12px;padding:12px;background:#fff;border-radius:4px">
+                    <label style="font-weight:600;font-size:0.85rem">公開API URL</label>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                        <code style="background:#f5f5f5;padding:4px 8px;border-radius:4px;font-size:0.8rem;word-break:break-all">{{ pubApiUrl }}</code>
+                        <button class="btn btn-sm" @click="copyApiUrl">コピー</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- パブリッシュ履歴 -->
+            <div>
+                <h3 style="margin:0 0 12px 0;font-size:1rem">パブリッシュ履歴</h3>
+                <table v-if="pubHistory.length">
+                    <thead><tr><th>日時</th><th>セッション数</th><th>ステータス</th><th></th></tr></thead>
+                    <tbody>
+                        <tr v-for="h in pubHistory" :key="h.id">
+                            <td>{{ new Date(h.published_at).toLocaleString('ja-JP') }}</td>
+                            <td>{{ h.session_count }}</td>
+                            <td>
+                                <span v-if="h.active" style="color:#1565c0;font-weight:600">アクティブ</span>
+                                <span v-else style="color:#999">—</span>
+                            </td>
+                            <td>
+                                <button v-if="!h.active" class="btn btn-sm" @click="activateSnapshot(h.id)" style="margin-right:4px">アクティブにする</button>
+                                <button v-if="!h.active" class="del-btn" @click="deleteSnapshot(h.id)">削除</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p v-else style="color:#999">まだパブリッシュされていません</p>
+            </div>
+
+            <!-- 使い方ガイド -->
+            <details style="margin-top:24px">
+                <summary style="cursor:pointer;font-weight:600;color:#1a73e8">使い方ガイド</summary>
+                <div style="margin-top:12px;background:#f8f9fa;border-radius:8px;padding:16px">
+                    <h4 style="margin:0 0 8px 0;font-size:0.95rem">推奨: キャッシュ + ポーリング更新</h4>
+                    <p style="margin:0 0 8px 0;font-size:0.9rem">外部サイトではフルデータをキャッシュし、軽量な更新確認エンドポイントをポーリングして変更時のみ再取得する方法を推奨します:</p>
+                    <pre style="background:#263238;color:#eeffff;padding:12px;border-radius:4px;overflow-x:auto;font-size:0.85rem"><code>const API_KEY = 'YOUR_API_KEY';
+const BASE = 'https://your-domain';
+let cachedData = null;
+let cachedSnapshotId = null;
+
+// 更新確認（軽量・ポーリング用）
+async function checkUpdate() {
+  const res = await fetch(BASE + '/public/api/schedule/check?key=' + API_KEY);
+  const info = await res.json();
+  if (info.snapshot_id && info.snapshot_id !== cachedSnapshotId) {
+    await loadSchedule(); // 変更あり → フルデータ再取得
+  }
+}
+
+// フルデータ取得（初回 or 更新時のみ）
+async function loadSchedule() {
+  const res = await fetch(BASE + '/public/api/schedule?key=' + API_KEY);
+  cachedData = await res.json();
+  cachedSnapshotId = cachedData.snapshot_id;
+  renderTimeline(cachedData); // 画面を更新
+}
+
+// 初回読み込み + 60秒ごとにポーリング
+loadSchedule();
+setInterval(checkUpdate, 60000);</code></pre>
+
+                    <h4 style="margin:16px 0 8px 0;font-size:0.95rem">エンドポイント一覧</h4>
+                    <table style="font-size:0.85rem;margin-bottom:12px">
+                        <thead><tr><th>エンドポイント</th><th>用途</th><th>レスポンス</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>/public/api/schedule/check?key=...</code></td><td>更新確認（ポーリング用）</td><td><code>{ snapshot_id, published_at }</code></td></tr>
+                            <tr><td><code>/public/api/schedule?key=...</code></td><td>フルデータ取得</td><td>セッション・部屋・グループ・カテゴリ全データ</td></tr>
+                            <tr><td><code>/public/api/photo/{file}?key=...</code></td><td>登壇者写真</td><td>画像ファイル</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div style="background:#fff3e0;border-radius:4px;padding:12px;margin-bottom:12px;font-size:0.85rem">
+                        <strong>画像のキャッシュについて:</strong> 登壇者写真はリクエストのたびにこのサーバーから転送されます。外部サイトで表示する場合は、CDN・リバースプロキシ・サーバーサイドキャッシュ等を利用し、画像を外部サイト側でキャッシュしてください。スケジュールデータ更新時に画像URLも変わらないため、<code>snapshot_id</code> の変更を検知したタイミングでキャッシュを更新する運用を推奨します。
+                    </div>
+
+                    <h4 style="margin:16px 0 8px 0;font-size:0.95rem">セッション形式</h4>
+                    <p style="margin:0 0 8px 0;font-size:0.9rem">セッションには3つの形式があり、<code>category</code> フィールドで判別できます。</p>
+                    <table style="font-size:0.85rem;margin-bottom:12px">
+                        <thead><tr><th>形式</th><th>category</th><th>登壇者</th><th>lt_talks</th></tr></thead>
+                        <tbody>
+                            <tr><td>通常セッション</td><td>general, tech, keynote 等</td><td><code>speaker</code> に1名</td><td>空配列 <code>[]</code></td></tr>
+                            <tr><td>LT（ライトニングトーク）</td><td>lt</td><td><code>speaker</code> （参考値）</td><td>個別トークの配列（各トークに登壇者情報）</td></tr>
+                            <tr><td>パネルディスカッション</td><td>panel</td><td><code>speaker</code> にカンマ区切りで全員</td><td>パネリストの配列（各パネリストに詳細情報）</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="margin:0 0 8px 0;font-size:0.85rem;color:#666">LT・パネルでは <code>lt_talks</code> 配列に個別の登壇者情報（名前・所属・写真等）が含まれるため、そちらを使用してください。</p>
+
+                    <p style="margin:8px 0;font-size:0.9rem;font-weight:600">通常セッション:</p>
+                    <pre style="background:#263238;color:#eeffff;padding:12px;border-radius:4px;overflow-x:auto;font-size:0.85rem"><code>{
+  "title": "Webアプリケーション設計",
+  "category": "tech",
+  "speaker": "山田太郎",
+  "speaker_org": "株式会社テック",
+  "speaker_title": "CTO",
+  "speaker_profile": "経歴...",
+  "speaker_photo_url": "https://.../public/api/photo/xxx.jpg?key=...",
+  "start_time": "2026-06-01T10:00:00",
+  "end_time": "2026-06-01T11:00:00",
+  "room_name": "Room A",
+  "lt_talks": []
+}</code></pre>
+
+                    <p style="margin:12px 0 8px 0;font-size:0.9rem;font-weight:600">LT / パネルディスカッション:</p>
+                    <pre style="background:#263238;color:#eeffff;padding:12px;border-radius:4px;overflow-x:auto;font-size:0.85rem"><code>{
+  "title": "ライトニングトーク大会",
+  "category": "lt",
+  "speaker": "佐藤一郎",
+  "start_time": "2026-06-01T13:00:00",
+  "end_time": "2026-06-01T14:00:00",
+  "room_name": "Room A",
+  "lt_talks": [
+    {
+      "title": "5分で分かるRust",
+      "speaker": "佐藤一郎",
+      "speaker_org": "OSS Corp",
+      "speaker_title": "エンジニア",
+      "speaker_photo_url": "https://...",
+      "start_time": "13:00",
+      "end_time": "13:10",
+      "order": 0
+    },
+    {
+      "title": "TypeScript Tips",
+      "speaker": "田中二郎",
+      "speaker_org": "Web Inc",
+      "speaker_photo_url": "https://...",
+      "start_time": "13:10",
+      "end_time": "13:20",
+      "order": 1
+    }
+  ]
+}</code></pre>
+
+                    <p style="margin:12px 0 8px 0;font-size:0.9rem;font-weight:600">形式の判別例:</p>
+                    <pre style="background:#263238;color:#eeffff;padding:12px;border-radius:4px;overflow-x:auto;font-size:0.85rem"><code>data.sessions.forEach(session => {
+  if (session.lt_talks.length > 0) {
+    // LT またはパネル — lt_talks 配列に個別の登壇者
+    session.lt_talks.forEach(talk => {
+      console.log(talk.speaker, talk.title);
+    });
+  } else {
+    // 通常セッション — speaker が登壇者
+    console.log(session.speaker, session.title);
+  }
+});</code></pre>
+                </div>
+            </details>
         </div>
 
         <div class="panel" :class="{ active: tab === 'help' }">

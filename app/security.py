@@ -76,6 +76,9 @@ rate_limiter.add_rule("/auth/verify", max_requests=5, window_seconds=60)
 # API: 300 requests per 60 seconds per IP
 rate_limiter.add_rule("/api/", max_requests=300, window_seconds=60)
 
+# Public API: 60 requests per 60 seconds per IP
+rate_limiter.add_rule("/public/api/", max_requests=60, window_seconds=60)
+
 
 # ---------------------------------------------------------------------------
 # Login brute-force lockout

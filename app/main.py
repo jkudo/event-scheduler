@@ -16,7 +16,7 @@ from .models import (
     StaffPreferredSession, StaffAvailability, VenueMap, Assignment, Category, SessionGroup,
     AppSetting,
 )
-from .routers import rooms, sessions, staffs, assignments, venue_maps, export, backup, auth, settings, categories, session_groups, auto_backup
+from .routers import rooms, sessions, staffs, assignments, venue_maps, export, backup, auth, settings, categories, session_groups, auto_backup, public_api
 
 Base.metadata.create_all(bind=engine)
 
@@ -100,6 +100,63 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Public API CORS middleware (runs before global CORSMiddleware for /public/ paths)
+import time as _time
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
+from starlette.responses import Response as _Response
+
+_cors_cache: dict = {"origins": "*", "ts": 0.0}
+_CORS_CACHE_TTL = 60
+
+class PublicApiCorsMiddleware(_BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        path = request.url.path
+        if not path.startswith("/public/"):
+            return await call_next(request)
+
+        # Read allowed origins (cached)
+        now = _time.time()
+        if now - _cors_cache["ts"] > _CORS_CACHE_TTL:
+            from .database import SessionLocal
+            from .models import AppSetting
+            db = SessionLocal()
+            try:
+                row = db.query(AppSetting).filter(AppSetting.key == "public_api_cors_origins").first()
+                _cors_cache["origins"] = row.value if row and row.value else "*"
+                _cors_cache["ts"] = now
+            finally:
+                db.close()
+
+        allowed = _cors_cache["origins"]
+        origin = request.headers.get("origin", "")
+
+        # Determine if origin is allowed
+        if allowed == "*":
+            allow_origin = "*"
+        elif origin:
+            allowed_list = [o.strip() for o in allowed.split(",") if o.strip()]
+            allow_origin = origin if origin in allowed_list else None
+        else:
+            allow_origin = None
+
+        # Handle OPTIONS preflight
+        if request.method == "OPTIONS" and allow_origin:
+            resp = _Response(status_code=200)
+            resp.headers["Access-Control-Allow-Origin"] = allow_origin
+            resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            resp.headers["Access-Control-Allow-Headers"] = "X-API-Key, Content-Type"
+            resp.headers["Access-Control-Max-Age"] = "3600"
+            return resp
+
+        response = await call_next(request)
+        if allow_origin:
+            response.headers["Access-Control-Allow-Origin"] = allow_origin
+            response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "X-API-Key, Content-Type"
+        return response
+
+app.add_middleware(PublicApiCorsMiddleware)
+
 # Security: headers + rate limiting + auth
 from .security import SecurityHeadersMiddleware, RateLimitMiddleware
 app.add_middleware(SecurityHeadersMiddleware)
@@ -121,6 +178,8 @@ app.include_router(settings.router)
 app.include_router(categories.router)
 app.include_router(session_groups.router)
 app.include_router(auto_backup.router)
+app.include_router(public_api.public_router)
+app.include_router(public_api.admin_router)
 
 
 def _seed_all():
