@@ -138,6 +138,11 @@ class LTTalkResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @field_validator("is_representative", mode="before")
+    @classmethod
+    def _default_is_representative(cls, v):
+        return v if v is not None else 0
+
 
 # --- Staff ---
 class StaffSkillResponse(BaseModel):
