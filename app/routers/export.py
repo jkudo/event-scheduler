@@ -11,7 +11,7 @@ from openpyxl.utils import get_column_letter
 from PIL import Image as PILImage
 from sqlalchemy.orm import Session, joinedload
 
-from ..config import UPLOAD_DIR
+from ..config import UPLOAD_DIR, now as app_now
 from ..database import get_db
 from ..models import (
     Session as SessionModel, Staff, Assignment, Room,
@@ -537,8 +537,8 @@ def export_excel(db: Session = Depends(get_db)):
     wb.save(stream)
     stream.seek(0)
 
-    now = datetime.now().strftime("%Y%m%d_%H%M")
-    filename = f"event_schedule_{now}.xlsx"
+    ts = app_now().strftime("%Y%m%d_%H%M")
+    filename = f"event_schedule_{ts}.xlsx"
 
     return StreamingResponse(
         stream,

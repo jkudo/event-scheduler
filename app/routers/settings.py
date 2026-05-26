@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..config import reload_tz
 from ..database import get_db
 from ..models import AppSetting
 
@@ -41,6 +42,7 @@ def get_settings(db: Session = Depends(get_db)):
         "app_title": _get(db, "app_title"),
         "allow_overlap": _get(db, "allow_overlap"),
         "session_categories": _get(db, "session_categories"),
+        "timezone": _get(db, "timezone") or "Asia/Tokyo",
     }
 
 
@@ -48,6 +50,7 @@ class UpdateSettingsRequest(BaseModel):
     app_title: str | None = None
     allow_overlap: str | None = None
     session_categories: str | None = None
+    timezone: str | None = None
 
 
 @router.put("/")
@@ -59,6 +62,9 @@ def update_settings(body: UpdateSettingsRequest, db: Session = Depends(get_db)):
         _set(db, "allow_overlap", body.allow_overlap)
     if body.session_categories is not None:
         _set(db, "session_categories", body.session_categories)
+    if body.timezone is not None:
+        _set(db, "timezone", body.timezone)
+        reload_tz()
     return {"status": "ok"}
 
 

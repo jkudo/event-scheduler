@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from .config import BACKUP_DIR
+from .config import BACKUP_DIR, now as app_now
 from .database import SessionLocal
 from .routers.backup import create_backup_zip
 
@@ -43,7 +43,7 @@ def _get_setting(db, key: str, default: str = "") -> str:
 
 def run_backup(trigger: str = "auto") -> dict:
     """Execute a backup synchronously. Returns metadata entry."""
-    now = datetime.now()
+    now = app_now()
     backup_id = now.strftime("%Y%m%d_%H%M%S")
     filename = f"backup_{backup_id}.zip"
     filepath = BACKUP_DIR / filename
@@ -108,7 +108,7 @@ def _enforce_retention(max_count: int):
 def _calc_next_daily(daily_time: str) -> datetime:
     """Calculate the next occurrence of a daily time (HH:MM)."""
     from datetime import timedelta
-    now = datetime.now()
+    now = app_now()
     try:
         hour, minute = map(int, daily_time.split(":"))
     except (ValueError, AttributeError):
@@ -144,7 +144,7 @@ async def backup_scheduler_loop():
                 # Daily mode: run at specific time
                 next_run = _calc_next_daily(daily_time)
                 scheduler_state["next_run"] = next_run.isoformat()
-                wait_seconds = (next_run - datetime.now()).total_seconds()
+                wait_seconds = (next_run - app_now()).total_seconds()
                 if wait_seconds > 0:
                     await asyncio.sleep(min(wait_seconds, 30))
                     if wait_seconds > 30:
@@ -171,7 +171,7 @@ async def backup_scheduler_loop():
                     elapsed = time.time() - last
                     if elapsed < interval_seconds:
                         remaining = interval_seconds - elapsed
-                        scheduler_state["next_run"] = datetime.fromtimestamp(time.time() + remaining).isoformat()
+                        scheduler_state["next_run"] = datetime.fromtimestamp(time.time() + remaining, tz=app_now().tzinfo).isoformat()
                         await asyncio.sleep(min(remaining, 30))
                         continue
 
@@ -182,7 +182,7 @@ async def backup_scheduler_loop():
                     scheduler_state["last_result"] = result
                     scheduler_state["error"] = None
                     scheduler_state["next_run"] = datetime.fromtimestamp(
-                        time.time() + interval_seconds
+                        time.time() + interval_seconds, tz=app_now().tzinfo
                     ).isoformat()
                     print(f"[scheduler] Backup completed: {result.get('filename')} ({result.get('status')})")
                 except Exception as e:

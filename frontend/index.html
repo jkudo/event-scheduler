@@ -1353,6 +1353,24 @@
                         <input v-model="settingsForm.app_title" placeholder="アプリケーションタイトル" style="width:100%">
                     </div>
                 </div>
+                <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+                    <div class="form-group" style="margin:0">
+                        <label style="font-size:0.85rem">タイムゾーン</label>
+                        <select v-model="settingsForm.timezone" style="width:240px;padding:8px 12px;border:1px solid #ccc;border-radius:6px;font-size:0.95rem">
+                            <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                            <option value="UTC">UTC</option>
+                            <option value="America/New_York">America/New_York (EST)</option>
+                            <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+                            <option value="Europe/London">Europe/London (GMT)</option>
+                            <option value="Europe/Berlin">Europe/Berlin (CET)</option>
+                            <option value="Asia/Shanghai">Asia/Shanghai (CST)</option>
+                            <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                            <option value="Asia/Seoul">Asia/Seoul (KST)</option>
+                            <option value="Australia/Sydney">Australia/Sydney (AEST)</option>
+                        </select>
+                        <div style="font-size:0.8rem;color:#666;margin-top:4px">バックアップやエクスポートのタイムスタンプに使用されます</div>
+                    </div>
+                </div>
                 <div style="margin-bottom:12px">
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                         <input type="checkbox" v-model="settingsForm.allow_overlap">

@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session, joinedload
 
-from ..config import UPLOAD_DIR
+from ..config import UPLOAD_DIR, now as app_now
 from ..database import get_db
 from ..models import (
     Session as SessionModel, Staff, Assignment, Room, VenueMap,
@@ -56,7 +56,7 @@ def create_backup_zip(db: Session) -> bytes:
 
     data = {
         "version": 4,
-        "exported_at": datetime.now().isoformat(),
+        "exported_at": app_now().isoformat(),
         "categories": [
             {"id": c.id, "key": c.key, "label": c.label, "color": c.color, "order": c.order}
             for c in categories
@@ -144,8 +144,8 @@ def create_backup_zip(db: Session) -> bytes:
 def export_backup(db: Session = Depends(get_db)):
     """全データを ZIP でエクスポート（data.json + 画像ファイル）"""
     zip_bytes = create_backup_zip(db)
-    now = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"backup_{now}.zip"
+    ts = app_now().strftime("%Y%m%d_%H%M%S")
+    filename = f"backup_{ts}.zip"
     return StreamingResponse(
         io.BytesIO(zip_bytes),
         media_type="application/zip",

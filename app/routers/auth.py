@@ -91,6 +91,7 @@ class SetupRequest(BaseModel):
     login_password: str
     admin_password: str
     app_title: str = ""
+    timezone: str = "Asia/Tokyo"
 
 
 @router.post("/setup")
@@ -110,11 +111,15 @@ def initial_setup(body: SetupRequest, db: Session = Depends(get_db)):
     _set("reset_password", body.admin_password)
     if body.app_title:
         _set("app_title", body.app_title)
+    if body.timezone:
+        _set("timezone", body.timezone)
     _set("setup_completed", "1")
     db.commit()
 
     os.environ["APP_PASSWORD"] = body.login_password
     mark_setup_complete()
+    from ..config import reload_tz
+    reload_tz()
 
     return {"status": "ok"}
 

@@ -383,7 +383,7 @@ const app = createApp({
         // --- Settings ---
         const appTitle = ref('');
         const allowOverlap = ref(false);
-        const settingsForm = reactive({ app_title: '', allow_overlap: false });
+        const settingsForm = reactive({ app_title: '', allow_overlap: false, timezone: 'Asia/Tokyo' });
         const settingsMsg = ref('');
         const pwForm = reactive({ current: '', newPw: '' });
         const pwMsg = ref('');
@@ -399,6 +399,7 @@ const app = createApp({
                 }
                 allowOverlap.value = data.allow_overlap === '1';
                 settingsForm.allow_overlap = data.allow_overlap === '1';
+                if (data.timezone) settingsForm.timezone = data.timezone;
                 if (data.session_categories) {
                     try { extraSessionCats.value = JSON.parse(data.session_categories); } catch (e) { extraSessionCats.value = []; }
                 }
@@ -412,7 +413,8 @@ const app = createApp({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         app_title: settingsForm.app_title,
-                        allow_overlap: settingsForm.allow_overlap ? '1' : '0'
+                        allow_overlap: settingsForm.allow_overlap ? '1' : '0',
+                        timezone: settingsForm.timezone
                     })
                 });
                 appTitle.value = settingsForm.app_title;
