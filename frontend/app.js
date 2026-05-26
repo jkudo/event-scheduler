@@ -726,7 +726,7 @@ const app = createApp({
         }
 
         // --- 公開API ---
-        const pubApi = reactive({ enabled: false, key: '', keyMasked: '', cors_origins: '*', active_snapshot: '' });
+        const pubApi = reactive({ enabled: false, key: '', keyMasked: '', cors_origins: '*', active_snapshot: '', webhook_url: '' });
         const pubHistory = ref([]);
         const pubMsg = ref('');
         const pubMsgError = ref(false);
@@ -742,7 +742,7 @@ const app = createApp({
             try {
                 const res = await fetch(API + '/api/public-api/settings', {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ enabled: pubApi.enabled, cors_origins: pubApi.cors_origins })
+                    body: JSON.stringify({ enabled: pubApi.enabled, cors_origins: pubApi.cors_origins, webhook_url: pubApi.webhook_url })
                 });
                 const data = await res.json();
                 Object.assign(pubApi, data);
@@ -766,7 +766,13 @@ const app = createApp({
                     const data = await res.json();
                     pubApi.active_snapshot = data.snapshot_id;
                     await loadPubHistory();
-                    _pubMsg('パブリッシュしました（' + data.session_count + 'セッション）');
+                    let msg = 'パブリッシュしました（' + data.session_count + 'セッション）';
+                    if (data.webhook) {
+                        msg += data.webhook.success
+                            ? ' / Webhook送信済み（' + data.webhook.status + '）'
+                            : ' / Webhook送信失敗' + (data.webhook.error ? '（' + data.webhook.error.substring(0, 60) + '）' : '');
+                    }
+                    _pubMsg(msg);
                 } else {
                     const err = await res.json();
                     _pubMsg('パブリッシュに失敗しました: ' + (err.detail || ''), true);

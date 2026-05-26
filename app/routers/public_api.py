@@ -1,10 +1,12 @@
 """Public API: publish snapshots and serve timeline JSON to external sites."""
 
 import json
+import logging
 import secrets
 import time
 from pathlib import Path
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
@@ -17,6 +19,8 @@ from ..models import AppSetting, Session as SessionModel, Room, SessionGroup, Ca
 SNAPSHOT_DIR = DATA_DIR / "public_snapshots"
 SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
 METADATA_FILE = SNAPSHOT_DIR / "metadata.json"
+
+logger = logging.getLogger(__name__)
 
 # --- Metadata helpers ---
 
@@ -156,11 +160,12 @@ admin_router = APIRouter(prefix="/api/public-api", tags=["public-api-admin"])
 class PublicApiSettingsRequest(BaseModel):
     enabled: bool = False
     cors_origins: str = "*"
+    webhook_url: str = ""
 
 
 @admin_router.get("/settings")
 def get_public_api_settings(db: Session = Depends(get_db)):
-    s = _get_multi(db, ["public_api_key", "public_api_enabled", "public_api_cors_origins", "public_api_active_snapshot"])
+    s = _get_multi(db, ["public_api_key", "public_api_enabled", "public_api_cors_origins", "public_api_active_snapshot", "public_api_webhook_url"])
     key = s.get("public_api_key", "")
     return {
         "enabled": s.get("public_api_enabled", "0") == "1",
@@ -168,6 +173,7 @@ def get_public_api_settings(db: Session = Depends(get_db)):
         "key_masked": (key[:4] + "..." + key[-4:]) if len(key) >= 8 else key,
         "cors_origins": s.get("public_api_cors_origins", "*"),
         "active_snapshot": s.get("public_api_active_snapshot", ""),
+        "webhook_url": s.get("public_api_webhook_url", ""),
     }
 
 
@@ -175,6 +181,7 @@ def get_public_api_settings(db: Session = Depends(get_db)):
 def update_public_api_settings(body: PublicApiSettingsRequest, db: Session = Depends(get_db)):
     _set(db, "public_api_enabled", "1" if body.enabled else "0")
     _set(db, "public_api_cors_origins", body.cors_origins)
+    _set(db, "public_api_webhook_url", body.webhook_url)
     # Auto-generate key on first enable
     if body.enabled and not _get(db, "public_api_key", ""):
         _set(db, "public_api_key", secrets.token_hex(16))
@@ -188,6 +195,25 @@ def regenerate_api_key(db: Session = Depends(get_db)):
     _set(db, "public_api_key", new_key)
     db.commit()
     return {"key": new_key, "key_masked": new_key[:4] + "..." + new_key[-4:]}
+
+
+# --- Webhook ---
+
+def _fire_webhook(db: Session, payload: dict) -> dict | None:
+    """Send webhook notification. Failures are logged but never block publish.
+
+    Returns a small status dict (or None if no URL configured).
+    """
+    url = _get(db, "public_api_webhook_url", "")
+    if not url:
+        return None
+    try:
+        resp = httpx.post(url, json=payload, timeout=10)
+        logger.info("Webhook sent to %s — status %s", url, resp.status_code)
+        return {"url": url, "status": resp.status_code, "success": 200 <= resp.status_code < 300}
+    except Exception as exc:
+        logger.warning("Webhook to %s failed: %s", url, exc)
+        return {"url": url, "status": None, "success": False, "error": str(exc)}
 
 
 # --- Publish ---
@@ -282,12 +308,23 @@ def publish_snapshot(db: Session = Depends(get_db)):
     _set(db, "public_api_active_snapshot", snapshot_id)
     db.commit()
 
-    return {
+    # Fire webhook (non-blocking — failures are logged, not raised)
+    webhook_result = _fire_webhook(db, {
+        "event": "schedule_published",
+        "snapshot_id": snapshot_id,
+        "published_at": now.isoformat(),
+        "session_count": len(sessions),
+    })
+
+    result = {
         "status": "ok",
         "snapshot_id": snapshot_id,
         "published_at": now.isoformat(),
         "session_count": len(sessions),
     }
+    if webhook_result is not None:
+        result["webhook"] = webhook_result
+    return result
 
 
 @admin_router.get("/history")

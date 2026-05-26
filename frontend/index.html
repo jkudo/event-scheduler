@@ -1706,6 +1706,13 @@
                         <small style="color:#999">* で全許可、またはカンマ区切りでURL指定</small>
                     </div>
                 </div>
+                <div style="margin-bottom:12px">
+                    <label style="font-weight:600;font-size:0.85rem">Webhook URL</label>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                        <input v-model="pubApi.webhook_url" placeholder="https://example.com/webhook" style="width:300px">
+                        <small style="color:#999">パブリッシュ時にPOSTで通知（空欄で無効）</small>
+                    </div>
+                </div>
                 <button class="btn" @click="savePubApiSettings" style="margin-bottom:12px">設定を保存</button>
 
                 <div v-if="pubApi.key" style="margin-top:8px">
@@ -1798,7 +1805,17 @@ setInterval(checkUpdate, 60000);</code></pre>
                         </tbody>
                     </table>
 
-                    <div style="background:#fff3e0;border-radius:4px;padding:12px;margin-bottom:12px;font-size:0.85rem">
+                    <h4 style="margin:16px 0 8px 0;font-size:0.95rem">Webhook通知</h4>
+                    <p style="margin:0 0 8px 0;font-size:0.9rem">Webhook URLを設定すると、パブリッシュ時に以下のJSONがPOSTされます:</p>
+                    <pre style="background:#263238;color:#eeffff;padding:12px;border-radius:4px;overflow-x:auto;font-size:0.85rem"><code>{
+  "event": "schedule_published",
+  "snapshot_id": "20260526_143000",
+  "published_at": "2026-05-26T14:30:00",
+  "session_count": 12
+}</code></pre>
+                    <p style="margin:8px 0 0 0;font-size:0.85rem;color:#666">Webhook送信が失敗してもパブリッシュ自体は成功します。外部サイトのキャッシュ更新トリガー等にご利用ください。</p>
+
+                    <div style="background:#fff3e0;border-radius:4px;padding:12px;margin-bottom:12px;margin-top:12px;font-size:0.85rem">
                         <strong>画像のキャッシュについて:</strong> 登壇者写真はリクエストのたびにこのサーバーから転送されます。外部サイトで表示する場合は、CDN・リバースプロキシ・サーバーサイドキャッシュ等を利用し、画像を外部サイト側でキャッシュしてください。スケジュールデータ更新時に画像URLも変わらないため、<code>snapshot_id</code> の変更を検知したタイミングでキャッシュを更新する運用を推奨します。
                     </div>
 
