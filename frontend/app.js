@@ -689,8 +689,6 @@ const app = createApp({
         const abHistory = ref([]);
         const abMsg = ref('');
         const abDownload = ref(false);
-        let _abPoll = null;
-
         async function loadAbSettings() {
             try {
                 const data = await fetch(API + '/api/backup/auto/settings').then(r => r.json());
@@ -809,21 +807,20 @@ const app = createApp({
             }
         }
 
-        // --- auto-backup polling ---
+        // --- auto-backup polling (タブ表示中のみ) ---
         let _abPollTimer = null;
         function _startAbPolling() {
             _stopAbPolling();
-            _abPollTimer = setInterval(async () => {
+            _abPollTimer = setInterval(function() {
                 if (tab.value !== 'auto-backup') { _stopAbPolling(); return; }
-                const prev = abStatus.last_run;
-                await loadAbStatus();
-                if (abStatus.last_run !== prev) {
-                    await loadAbHistory();
-                }
-            }, 10000);
+                var prev = abStatus.last_run;
+                loadAbStatus().then(function() {
+                    if (abStatus.last_run !== prev) { loadAbHistory(); }
+                });
+            }, 1000);
         }
         function _stopAbPolling() {
-            if (_abPollTimer) { clearInterval(_abPollTimer); _abPollTimer = null; }
+            if (_abPollTimer != null) { clearInterval(_abPollTimer); _abPollTimer = null; }
         }
 
         // --- 部屋 ---
