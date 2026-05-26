@@ -305,6 +305,7 @@ def update_lt_talks(session_id: int, talks: list[LTTalkCreate], db: Session = De
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     db.query(LTTalk).filter(LTTalk.session_id == session_id).delete()
+    rep_speaker = ""
     for i, talk in enumerate(talks):
         db.add(LTTalk(
             session_id=session_id,
@@ -317,7 +318,12 @@ def update_lt_talks(session_id: int, talks: list[LTTalkCreate], db: Session = De
             start_time=talk.start_time,
             end_time=talk.end_time,
             order=talk.order if talk.order else i,
+            is_representative=talk.is_representative,
         ))
+        if talk.is_representative:
+            rep_speaker = talk.speaker
+    # Auto-set session speaker from representative
+    session.speaker = rep_speaker
     db.commit()
     return db.query(LTTalk).filter(LTTalk.session_id == session_id).order_by(LTTalk.order).all()
 

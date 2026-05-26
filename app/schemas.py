@@ -119,6 +119,7 @@ class LTTalkCreate(BaseModel):
     start_time: str = ""
     end_time: str = ""
     order: int = 0
+    is_representative: int = 0
 
 
 class LTTalkResponse(BaseModel):
@@ -133,6 +134,7 @@ class LTTalkResponse(BaseModel):
     start_time: str
     end_time: str
     order: int
+    is_representative: int = 0
 
     model_config = {"from_attributes": True}
 
