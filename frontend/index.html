@@ -62,7 +62,7 @@
                     <tr v-for="r in rooms" :key="r.id" :style="roomForm.editId === r.id ? 'background:#fff3e0;outline:2px solid #ff9800' : ''">
                         <td>{{ r.id }}</td><td>{{ r.name }}</td><td>{{ r.floor }}F</td><td>{{ r.capacity }}</td>
                         <td>
-                            <button class="btn btn-sm edit-btn" @click="editRoom(r)" style="margin-right:4px">編集</button>
+                            <button class="btn btn-sm edit-btn" @click="editRoom(r)" style="margin-right:4px" :style="roomForm.editId === r.id ? 'background:#ff9800;color:#fff' : ''">{{ roomForm.editId === r.id ? '編集中' : '編集' }}</button>
                             <button class="del-btn" @click="deleteRoom(r.id)">削除</button>
                         </td>
                     </tr>
@@ -101,7 +101,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                     <h3 style="margin:0">{{ m.title }}</h3>
                     <div>
-                        <button class="btn btn-sm edit-btn" @click="editVenueMap(m)" style="margin-right:4px">編集</button>
+                        <button class="btn btn-sm edit-btn" @click="editVenueMap(m)" style="margin-right:4px" :style="venueMapForm.editId === m.id ? 'background:#ff9800;color:#fff' : ''">{{ venueMapForm.editId === m.id ? '編集中' : '編集' }}</button>
                         <button class="del-btn" @click="deleteVenueMap(m.id)">削除</button>
                     </div>
                 </div>
@@ -267,7 +267,7 @@
                         <td>{{ s.required_staff }}</td>
                         <td><span v-if="s.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
                         <td>
-                            <button class="btn btn-sm edit-btn" @click="editGroupSession(grp.id, s)" style="margin-right:4px">編集</button>
+                            <button class="btn btn-sm edit-btn" @click="editGroupSession(grp.id, s)" style="margin-right:4px" :style="groupSessForms[grp.id]?.editId === s.id ? 'background:#ff9800;color:#fff' : ''">{{ groupSessForms[grp.id]?.editId === s.id ? '編集中' : '編集' }}</button>
                             <button class="del-btn" @click="deleteGroupSession(grp.id, s.id)">削除</button>
                         </td>
                     </tr>
@@ -452,7 +452,7 @@
                             <div v-if="s.emergency_contact" style="font-size:0.8rem;color:#888;margin-top:2px">緊急連絡先: {{ s.emergency_contact }}</div>
                         </div>
                         <div>
-                            <button class="btn btn-sm edit-btn" @click="editStaff(s)" style="margin-right:4px">編集</button>
+                            <button class="btn btn-sm edit-btn" @click="editStaff(s)" style="margin-right:4px" :style="staffForm.editId === s.id ? 'background:#ff9800;color:#fff' : ''">{{ staffForm.editId === s.id ? '編集中' : '編集' }}</button>
                             <button class="del-btn" @click="deleteStaff(s.id)">削除</button>
                         </div>
                     </div>
@@ -784,7 +784,7 @@
                         <td><span v-if="e.session.english_required" class="badge" style="background:#e0f2f1;color:#00695c">EN</span></td>
                         <td>{{ e.session.required_staff }}</td>
                         <td>
-                            <button class="btn btn-sm edit-btn" @click="editCategory(cat.key, e.session)" style="margin-right:4px">編集</button>
+                            <button class="btn btn-sm edit-btn" @click="editCategory(cat.key, e.session)" style="margin-right:4px" :style="categoryForms[cat.key]?.editId === e.session.id ? 'background:#ff9800;color:#fff' : ''">{{ categoryForms[cat.key]?.editId === e.session.id ? '編集中' : '編集' }}</button>
                             <button class="del-btn" @click="deleteCategory(cat.key, e.session.id)">削除</button>
                         </td>
                     </tr>
@@ -1168,7 +1168,7 @@
                         <td>{{ fmt(s.start_time) }} - {{ fmt(s.end_time) }}</td>
                         <td style="font-size:0.85rem;color:#666">{{ s.notes || '-' }}</td>
                         <td>
-                            <button class="btn btn-sm edit-btn" @click="editAllEntry(s)" style="margin-right:4px">編集</button>
+                            <button class="btn btn-sm edit-btn" @click="editAllEntry(s)" style="margin-right:4px" :style="allOvForm.editId === s.id ? 'background:#ff9800;color:#fff' : ''">{{ allOvForm.editId === s.id ? '編集中' : '編集' }}</button>
                             <button class="del-btn" @click="deleteAllEntry(s.id, 'overall')">削除</button>
                         </td>
                     </tr>
@@ -1405,7 +1405,7 @@
                 <div v-for="(ec, idx) in extraSessionCats" :key="'excat-'+ec.key" style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;margin-bottom:6px;border:1px solid #e0e0e0" :style="sessCatForm.editIdx === idx ? 'background:#fff3e0;outline:2px solid #ff9800' : 'background:#fff'">
                     <span style="font-weight:600;flex:1">{{ ec.label }}</span>
                     <span style="font-size:0.8rem;color:#888">{{ ec.key }}</span>
-                    <button class="btn btn-sm edit-btn" @click="editSessCat(idx)" style="padding:4px 10px;font-size:0.8rem">編集</button>
+                    <button class="btn btn-sm edit-btn" @click="editSessCat(idx)" style="padding:4px 10px;font-size:0.8rem" :style="sessCatForm.editIdx === idx ? 'background:#ff9800;color:#fff' : ''">{{ sessCatForm.editIdx === idx ? '編集中' : '編集' }}</button>
                     <button class="del-btn" @click="deleteSessCat(idx)" style="padding:4px 10px;font-size:0.8rem">削除</button>
                 </div>
 
@@ -1434,7 +1434,7 @@
                     <span :style="{width:'16px',height:'16px',borderRadius:'50%',background:grp.color,flexShrink:0}"></span>
                     <span style="font-weight:600;flex:1">{{ grp.label }}</span>
                     <span style="font-size:0.8rem;color:#888">order: {{ grp.order }}</span>
-                    <button class="btn btn-sm edit-btn" @click="editGrpSetting(grp)" style="padding:4px 10px;font-size:0.8rem">編集</button>
+                    <button class="btn btn-sm edit-btn" @click="editGrpSetting(grp)" style="padding:4px 10px;font-size:0.8rem" :style="grpSettingForm.editId === grp.id ? 'background:#ff9800;color:#fff' : ''">{{ grpSettingForm.editId === grp.id ? '編集中' : '編集' }}</button>
                     <button class="del-btn" @click="deleteGrpSetting(grp.id)" style="padding:4px 10px;font-size:0.8rem">削除</button>
                 </div>
 
@@ -1471,7 +1471,7 @@
                     <span :style="{width:'16px',height:'16px',borderRadius:'50%',background:cat.color,flexShrink:0}"></span>
                     <span style="font-weight:600;flex:1">{{ cat.label }}</span>
                     <span style="font-size:0.8rem;color:#888">order: {{ cat.order }}</span>
-                    <button class="btn btn-sm edit-btn" @click="editCatSetting(cat)" style="padding:4px 10px;font-size:0.8rem">編集</button>
+                    <button class="btn btn-sm edit-btn" @click="editCatSetting(cat)" style="padding:4px 10px;font-size:0.8rem" :style="catSettingForm.editId === cat.id ? 'background:#ff9800;color:#fff' : ''">{{ catSettingForm.editId === cat.id ? '編集中' : '編集' }}</button>
                     <button class="del-btn" @click="deleteCatSetting(cat.id)" style="padding:4px 10px;font-size:0.8rem">削除</button>
                 </div>
 
