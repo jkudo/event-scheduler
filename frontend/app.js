@@ -843,11 +843,13 @@ const app = createApp({
             for (const g of sessionGroups.value) {
                 if (name === 'grp-' + g.id + '-manage') {
                     await Promise.all([loadRooms(), loadSessions()]);
+                    if (grpDateTabs[g.id] === undefined) grpDateTabs[g.id] = 0;
                     if (groupSessForms[g.id] && !groupSessForms[g.id].room_id && rooms.value.length) groupSessForms[g.id].room_id = rooms.value[0].id;
                     break;
                 }
                 if (name === 'grp-' + g.id + '-assign') {
                     await Promise.all([loadRooms(), loadStaffs(), loadSessions(), loadSchedule(), loadStaffAssignments()]);
+                    if (grpDateTabs[g.id] === undefined) grpDateTabs[g.id] = 0;
                     break;
                 }
             }
@@ -1653,6 +1655,12 @@ const app = createApp({
             return sess.filter(e => e.session.start_time && e.session.start_time.startsWith(tab));
         }
         function filteredGroupSchedule(gid) {
+            const filter = groupStaffFilters[gid];
+            const sess = grpDateFiltered(gid);
+            if (!filter) return sess;
+            return sess.filter(e => _hasStaff(e, filter));
+        }
+        function filteredGroupSessions(gid) {
             const filter = groupStaffFilters[gid];
             const sess = grpDateFiltered(gid);
             if (!filter) return sess;
@@ -2820,7 +2828,7 @@ const app = createApp({
             // セッショングループ
             sessionGroups, groupLocks, groupSessForms, groupStaffFilters, groupScheduleMsgs, groupSelectedSessions,
             grpDateTabs, grpDates, grpDateFiltered, dateGroupLabels,
-            groupSchedule, filteredGroupSchedule, groupSessionOpacity, groupSessions,
+            groupSchedule, filteredGroupSchedule, filteredGroupSessions, groupSessionOpacity, groupSessions,
             cancelEditGroupSession, editGroupSession, submitGroupSession, deleteGroupSession, onGroupPhotoChange,
             autoAssignGroup, autoAssignGroupSelected, clearGroupAssignments,
             toggleGroupSessionSelect, toggleGroupSelectAll,

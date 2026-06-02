@@ -642,7 +642,7 @@
             <!-- 自動配置ボタン -->
             <div v-if="!groupLocks[grp.id]" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
                 <button class="btn btn-success" @click="autoAssignGroup(grp.id)">スタッフ自動配置</button>
-                <button class="btn" @click="autoAssignGroupSelected(grp.id)" :disabled="!(groupSelectedSessions[grp.id] && groupSelectedSessions[grp.id].size)">選択分を再配置</button>
+                <button class="btn" style="background:#1a73e8" @click="autoAssignGroupSelected(grp.id)" :disabled="!(groupSelectedSessions[grp.id] && groupSelectedSessions[grp.id].size)">選択して再配置 <span v-if="groupSelectedSessions[grp.id] && groupSelectedSessions[grp.id].size">({{ groupSelectedSessions[grp.id].size }}件)</span></button>
                 <button class="btn btn-danger" @click="clearGroupAssignments(grp.id)">配置をクリア</button>
                 <span v-if="groupScheduleMsgs[grp.id]" style="font-size:0.85rem;color:#137333">{{ groupScheduleMsgs[grp.id] }}</span>
             </div>
@@ -654,6 +654,7 @@
                     <option :value="0">全員表示</option>
                     <option v-for="s in staffs" :key="s.id" :value="s.id">{{ s.name }}</option>
                 </select>
+                <span v-if="groupStaffFilters[grp.id]" style="font-size:0.85rem;color:#666">{{ filteredGroupSessions(grp.id).length }}/{{ grpDateFiltered(grp.id).length }}件</span>
             </div>
 
             <!-- タイムライングリッド -->
@@ -669,7 +670,7 @@
                     @select="toggleSessionDetail">
                 </tl-grid>
             </template>
-            <!-- 全日程: タイムライン表示 -->
+            <!-- 全��程: タイムライン表示 -->
             <template v-else>
                 <div v-for="date in grpDates(grp.id)" :key="'grp-tl-'+grp.id+'-'+date" style="margin-bottom:32px">
                     <h3 style="margin:0 0 12px;padding:8px 16px;border-radius:6px;color:#fff;font-size:1rem"
@@ -678,21 +679,21 @@
                     </h3>
                     <div style="display:flex;flex-direction:column;gap:2px">
                         <div v-for="entry in (groupSchedule[grp.id] || []).filter(e => e.session.start_time && e.session.start_time.startsWith(date))" :key="'grp-tl-e-'+entry.session.id"
-                             style="display:flex;align-items:stretch;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid #e0e0e0"
+                             style="display:flex;align-items:stretch;border-radius:6px;overflow:hidden;cursor:pointer;border:1px solid #e0e0e0;transition:opacity .2s"
                              :style="{opacity: groupSessionOpacity(grp.id, entry)}"
                              @click="toggleSessionDetail(entry.session.id)">
                             <div style="width:110px;min-width:110px;padding:8px 10px;font-size:0.8rem;font-weight:600;display:flex;align-items:center;justify-content:center;text-align:center;background:#f5f5f5;border-right:1px solid #e0e0e0">
                                 {{ fmtShort(entry.session.start_time) }}<br>-{{ fmtShort(entry.session.end_time) }}
                             </div>
-                            <div style="flex:1;padding:8px 12px">
+                            <div style="flex:1;padding:8px 12px;display:flex;flex-direction:column;justify-content:center">
                                 <div style="font-weight:600;font-size:0.9rem">{{ entry.session.title }}</div>
-                                <div style="font-size:0.8rem;color:#666;margin-top:2px">{{ entry.session.room?.name }}</div>
-                                <div style="margin-top:4px">
-                                    <template v-if="entry.assigned_staff.length">
-                                        <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id">{{ a.staff.name }}</span>
-                                    </template>
-                                    <span v-else class="badge warn">未配置</span>
-                                </div>
+                                <div v-if="entry.session.room" style="font-size:0.75rem;color:#888;margin-top:2px">{{ entry.session.room.name }}</div>
+                            </div>
+                            <div style="width:160px;min-width:160px;padding:8px;display:flex;flex-wrap:wrap;align-items:center;gap:3px;background:#fafafa;border-left:1px solid #e0e0e0">
+                                <template v-if="entry.assigned_staff.length">
+                                    <span class="badge" v-for="a in entry.assigned_staff" :key="a.assignment_id" style="font-size:0.7rem">{{ a.staff.name }}</span>
+                                </template>
+                                <span v-else class="badge warn" style="font-size:0.7rem">未配置</span>
                             </div>
                         </div>
                     </div>
