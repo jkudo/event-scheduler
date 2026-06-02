@@ -244,8 +244,8 @@
                 <button class="btn" style="background:#388e3c" @click="calcRequiredStaff()">必要スタッフ計算</button>
                 <span v-if="calcStaffMsg" style="margin-left:12px;font-size:0.9rem;color:#333">{{ calcStaffMsg }}</span>
                 <div v-if="calcStaffSummary" style="margin-top:8px;font-size:0.85rem;color:#555">
-                    <div><strong>最小: {{ calcStaffSummary.min }}名</strong> — 各セッションに最低1名配置。休憩・交代なし</div>
-                    <div style="margin-top:4px"><strong>推奨: {{ calcStaffSummary.comfortable }}名</strong> — 交代要員を含み、連続稼働を軽減。経験者と初参加者のペア配置が可能</div>
+                    <div><strong>最小: {{ calcStaffSummary.min }}名</strong> — 各セッションの指定人数を満たす。連続配置あり</div>
+                    <div style="margin-top:4px"><strong>推奨: {{ calcStaffSummary.comfortable }}名</strong> — セッション担当後に1回休憩をはさめる人数</div>
                 </div>
             </div>
             <h3>登録済み一覧</h3>
