@@ -1068,7 +1068,7 @@ const app = createApp({
         async function submitSession() {
             const missing = [];
             if (!sessForm.title) missing.push('セッション名');
-            if (!dynamicCatKeys.value.includes(sessForm.category) && !sessForm.speaker) missing.push('スピーカー');
+            if (!dynamicCatKeys.value.includes(sessForm.category) && !isMultiSpeakerCat(sessForm.category) && !sessForm.speaker) missing.push('スピーカー');
             if (!sessForm.start_time) missing.push('開始時間');
             if (!sessForm.end_time) missing.push('終了時間');
             if (!sessForm.room_id) missing.push('部屋');
@@ -1720,7 +1720,7 @@ const app = createApp({
             const form = groupSessForms[gid];
             const missing = [];
             if (!form.title) missing.push('セッション名');
-            if (!dynamicCatKeys.value.includes(form.category) && !form.speaker) missing.push('スピーカー');
+            if (!dynamicCatKeys.value.includes(form.category) && !isMultiSpeakerCat(form.category) && !form.speaker) missing.push('スピーカー');
             if (!form.start_time) missing.push('開始時間');
             if (!form.end_time) missing.push('終了時間');
             if (!form.room_id) missing.push('部屋');

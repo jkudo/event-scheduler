@@ -240,6 +240,13 @@
                 <button class="btn" :style="{ background: grp.color }" @click="submitGroupSession(grp.id)">{{ groupSessForms[grp.id].editId ? '更新' : '追加' }}</button>
                 <button v-if="groupSessForms[grp.id].editId" class="btn btn-danger" @click="cancelEditGroupSession(grp.id)">キャンセル</button>
             </div>
+            <div style="margin-top:16px;margin-bottom:16px;padding:12px 16px;background:#e8f5e9;border-radius:8px">
+                <button class="btn" style="background:#388e3c" @click="calcRequiredStaff()">必要スタッフ計算</button>
+                <span v-if="calcStaffMsg" style="margin-left:12px;font-size:0.9rem;color:#333">{{ calcStaffMsg }}</span>
+                <div v-if="calcStaffSummary" style="margin-top:8px;font-size:0.85rem;color:#555">
+                    最小: {{ calcStaffSummary.min }}名 / 推奨: {{ calcStaffSummary.comfortable }}名
+                </div>
+            </div>
             <h3>登録済み一覧</h3>
             <p v-if="!groupSessions(grp.id).length" style="color:#666">セッションがまだ登録されていません。</p>
             <table v-else>
