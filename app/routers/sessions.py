@@ -6,9 +6,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
-from ..models import Session as SessionModel, Room, LTTalk, Staff
+from ..models import Session as SessionModel, Room, LTTalk
 from ..schemas import SessionResponse, LTTalkCreate, LTTalkResponse
-from ..utils import is_staff_available, save_upload
+from ..utils import save_upload
 
 
 def _parse_dt(value: str) -> datetime:
@@ -196,44 +196,26 @@ def delete_session(session_id: int, db: Session = Depends(get_db)):
 
 @router.post("/calc-required-staff")
 def calc_required_staff(db: Session = Depends(get_db)):
-    """各セッションの必要スタッフ数を自動計算し、全体の必要人数も算出する
+    """各セッションの設定済み必要スタッフ数から全体の必要人数を算出する
 
-    ロジック:
-    - 各セッションの時間帯で、活動可能なスタッフ数を算出
-    - 同時間帯に開催される他セッション数を算出
-    - 可能スタッフ数 ÷ 同時セッション数 (小数切り捨て、最低2) を必要スタッフ数とする
     - 全体の最小必要人数: 同時開催セッションの必要スタッフ合計の最大値
-    - 休憩込み必要人数: 直前セッション終了スタッフの休憩を考慮した人数
+    - 推奨人数: セッション担当後に1回休憩をはさめる人数
     """
     REST_MINUTES = 30  # セッション終了後の休憩時間（分）
 
     sessions = db.query(SessionModel).order_by(SessionModel.start_time).all()
-    staffs = db.query(Staff).options(
-        joinedload(Staff.availabilities)
-    ).all()
 
     if not sessions:
         return {"message": "セッションがありません", "results": [], "min_total_staff": 0, "comfortable_total_staff": 0}
 
-    # --- 各セッションの必要スタッフ数を計算 ---
+    # --- 各セッションの既存設定値を使用 ---
     results = []
     for sess in sessions:
-        available_count = sum(1 for s in staffs if is_staff_available(s, sess))
-        concurrent = sum(
-            1 for other in sessions
-            if other.start_time < sess.end_time and other.end_time > sess.start_time
-        )
-        required = min(max(2, available_count // concurrent), 3) if concurrent > 0 else 2
-        sess.required_staff = required
         results.append({
             "session_id": sess.id,
             "title": sess.title,
-            "available_staff": available_count,
-            "concurrent_sessions": concurrent,
-            "required_staff": required,
+            "required_staff": sess.required_staff or 0,
         })
-
-    db.commit()
 
     # --- 全体の必要スタッフ数を計算 ---
     # 全てのセッション開始・終了時刻を収集
