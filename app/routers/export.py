@@ -305,16 +305,16 @@ def export_excel(db: Session = Depends(get_db)):
     if not all_schedule:
         _auto_width(ws5)
     else:
-        # --- 15分刻みの時間スロットを生成 ---
+        # --- 5分刻みの時間スロットを生成 ---
         from datetime import timedelta
-        SLOT_MINUTES = 15
+        SLOT_MINUTES = 5
         slot_delta = timedelta(minutes=SLOT_MINUTES)
 
         all_starts = [s.start_time for s in all_schedule]
         all_ends = [s.end_time for s in all_schedule]
         min_time = min(all_starts)
         max_time = max(all_ends)
-        # 15分単位に丸める
+        # 5分単位に丸める
         min_time = min_time.replace(minute=(min_time.minute // SLOT_MINUTES) * SLOT_MINUTES, second=0, microsecond=0)
         if max_time.minute % SLOT_MINUTES:
             max_time = max_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1 if max_time.minute > 45 else 0, minutes=((max_time.minute // SLOT_MINUTES) + 1) * SLOT_MINUTES if max_time.minute % SLOT_MINUTES else 0)
@@ -361,14 +361,14 @@ def export_excel(db: Session = Depends(get_db)):
             time_cell = ws5.cell(row=excel_row, column=1, value="")
             time_cell.border = THIN_BORDER
             time_cell.alignment = Alignment(horizontal="center", vertical="top")
-            if slot_t.minute == 0 or slot_t.minute == 30:
+            if slot_t.minute % 15 == 0:
                 time_cell.value = _fmt(slot_t)
                 time_cell.font = Font(bold=True, size=9)
 
         ws5.column_dimensions["A"].width = 8
         # 行高さ設定
         for si in range(len(slots)):
-            ws5.row_dimensions[DATA_START + si].height = 20
+            ws5.row_dimensions[DATA_START + si].height = 14
 
         # --- カテゴリ別の色定義 ---
         CAT_FILL = {
@@ -466,6 +466,8 @@ def export_excel(db: Session = Depends(get_db)):
                     content += f"\n{s.notes}"
             else:
                 content = f"{s.title}\n{time_str}"
+                if s.speaker:
+                    content += f"\n{s.speaker}"
                 if staff_names:
                     content += f"\n【{staff_names}】"
                 if not s.assignments and s.required_staff > 0:
