@@ -1,0 +1,442 @@
+[v-cloak] { display: none; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+
+/* === レイアウト === */
+.app-layout { display: flex; min-height: 100vh; }
+
+/* サイドバー */
+.sidebar {
+    width: 200px; flex-shrink: 0;
+    background: #fff; color: #333;
+    padding: 16px 0; display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0;
+    overflow-y: auto; z-index: 50;
+    border-right: 1px solid #e0e0e0;
+}
+.sidebar-title {
+    font-size: 0.95rem; font-weight: 700; color: #222;
+    padding: 6px 16px 14px; text-align: center;
+    border-bottom: 1px solid #e0e0e0; margin-bottom: 4px;
+    line-height: 1.3;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.sidebar-icon {
+    width: 40px; height: 40px; object-fit: contain; border-radius: 6px;
+}
+/* 見出しは項目と同じ文字サイズ。太さと色で区別する。クリックで開閉する */
+.sidebar-section {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; text-align: left; background: none; border: none;
+    font-family: inherit; font-size: 0.875rem; font-weight: 700;
+    color: #9aa0a6; padding: 16px 16px 4px; cursor: pointer;
+}
+.sidebar-section:hover { color: #666; }
+.sidebar-caret { font-size: 0.7rem; line-height: 1; }
+.sidebar-item {
+    display: block; width: 100%; text-align: left;
+    background: none; border: none; color: #444;
+    padding: 8px 16px; font-size: 0.875rem; line-height: 1.4; cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, color 0.15s;
+}
+/* 見出しに属する項目は一段インデントする */
+.sidebar-section ~ .sidebar-item { padding-left: 28px; }
+/* 見出しに属さない項目はインデントしない */
+.sidebar-item.sidebar-item-top { padding-left: 16px; }
+/* 見出しに属さない末尾の項目（利用方法・ログアウト）は間隔をあけて区切る。
+   閲覧ロールでは見出しが描画されないため、見出しの有無に依らない指定にする。 */
+.sidebar-item-top { margin-top: 20px; }
+.sidebar-item-top + .sidebar-item-top { margin-top: 0; }
+.sidebar-item:hover { background: #f5f5f5; color: #111; }
+.sidebar-item.active { background: #e8f0fe; color: #1a73e8; font-weight: 600; border-left-color: #1a73e8; }
+
+/* メインコンテンツ */
+.main-content {
+    flex: 1; margin-left: 200px; padding: 0;
+    min-width: 0; background: #fff;
+}
+
+.panel { display: none; background: white; padding: 24px; }
+.panel.active { display: block; }
+
+/* 印刷時はサイドバーを非表示 */
+@media print {
+    .sidebar { display: none; }
+    .main-content { margin-left: 0; padding: 0; }
+}
+
+/* ハンバーガーボタン（デスクトップでは非表示） */
+.hamburger-btn {
+    display: none;
+    position: fixed; top: 8px; left: 8px; z-index: 60;
+    background: #fff; color: #333; border: 1px solid #e0e0e0; border-radius: 6px;
+    width: 40px; height: 40px; font-size: 1.4rem; cursor: pointer;
+    align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.sidebar-overlay {
+    display: none;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 45;
+}
+
+/* 全日程タイムラインリスト */
+.tl-list { display: flex; flex-direction: column; gap: 2px; }
+.tl-list-row { display: flex; align-items: stretch; border-radius: 6px; overflow: hidden; cursor: pointer; border: 1px solid #e0e0e0; transition: opacity .2s; }
+.tl-list-time { width: 110px; min-width: 110px; padding: 8px 10px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; background: #f5f5f5; border-right: 1px solid #e0e0e0; }
+.tl-list-main { flex: 1; min-width: 0; padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; }
+.tl-list-staff { width: 160px; min-width: 160px; padding: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 3px; background: #fafafa; border-left: 1px solid #e0e0e0; }
+/* リアルタイム: 担当スタッフは残り時間のバーの下に置く */
+.tl-rt-staff { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 3px; }
+.tl-rt-staff .badge { margin: 0; }
+/* リアルタイム: 前後のセッションは1行に収め、あふれたら … で省略する */
+.tl-rt-neighbor {
+    margin-top: 6px; padding-top: 6px; border-top: 1px dashed #dcdcdc;
+    font-size: 0.75rem; color: #777;
+    display: flex; flex-direction: column; gap: 2px; min-width: 0;
+}
+.tl-rt-neighbor > span {
+    display: block; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ===== モバイル (768px以下) ===== */
+h2 { margin-bottom: 16px; font-size: 1.2rem; }
+h3 { margin: 16px 0 8px; font-size: 1rem; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+button.btn { padding: 10px 20px; background: #1a73e8; color: white; border: none;
+             border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+button.btn:hover { background: #1557b0; }
+button.btn-danger { background: #d93025; }
+button.btn-danger:hover { background: #b3261e; }
+button.btn-success { background: #0d904f; }
+button.btn-success:hover { background: #0a7a42; }
+button.btn-sm { padding: 4px 12px; font-size: 0.8rem; }
+table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 0.9rem; }
+th { background: #f8f9fa; font-weight: 600; }
+/* 表が入りきらない場合は、タイトル列を潰さずこの器を横スクロールさせる */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* スタッフ配置の一覧: 全日程では日付ごとに表が分かれるため、列幅を固定して揃える */
+/* min-width は「固定列の合計 + タイトルに残す幅」。これ以下では器が横スクロールする */
+.assign-table { table-layout: fixed; min-width: 950px; }
+.assign-table col.c-check { width: 44px; }
+.assign-table col.c-time  { width: 122px; }
+.assign-table col.c-room  { width: 180px; }
+.assign-table col.c-staff { width: 38%; }
+.assign-table td { vertical-align: top; }
+/* 担当スタッフ以外は1行に収め、あふれたら … で省略する */
+.assign-table th, .assign-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.assign-table th:last-child, .assign-table td:last-child,
+.assign-table td[colspan] { white-space: normal; overflow: visible; text-overflow: clip; }
+/* 登録済み一覧も同様に列幅を固定する。幅指定の無い列が残りを分け合う */
+.list-table { table-layout: fixed; }
+.list-table.t-room    { min-width: 620px; }
+.list-table.t-overall { min-width: 810px; }
+.list-table.t-entry   { min-width: 900px; }
+.list-table.t-session { min-width: 1236px; }
+.list-table td { vertical-align: top; }
+/* 1行に収め、あふれたら … で省略する（編集フォーム行は対象外） */
+.list-table th, .list-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-table td[colspan] { white-space: normal; overflow: visible; text-overflow: clip; }
+/* 場所と登壇者名は省略せず全体を表示する（収まらない場合は折り返す） */
+/* overflow: hidden で隣の列に重ならないようにし、break-word で語の途中では折らない */
+.assign-table td.c-room-cell, .list-table td.c-room-cell, .list-table td.c-speaker-cell {
+    white-space: normal; overflow: hidden; text-overflow: clip; overflow-wrap: break-word; }
+.list-table col.c-id       { width: 52px; }
+.list-table col.c-speaker  { width: 112px; }
+.list-table col.c-time     { width: 176px; }
+.list-table col.c-room     { width: 180px; }
+.list-table col.c-cat      { width: 178px; }
+.list-table col.c-num      { width: 82px; }
+.list-table col.c-en       { width: 68px; }
+.list-table col.c-ops      { width: 148px; }
+
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;
+         background: #e8f0fe; color: #1a73e8; margin: 2px; }
+.badge.warn { background: #fce8e6; color: #d93025; }
+.badge.pref { background: #fef7e0; color: #b06000; }
+.badge.avail { background: #e6f4ea; color: #137333; }
+/* 詳細ポップアップの登壇者写真 */
+.sd-speaker { gap: 20px; }
+.sd-speaker-photo { width: 180px; height: 180px; font-size: 3rem; }
+
+/* 絞り込み: ラベルと選択欄を1組として折り返す（ラベルだけ取り残されないように） */
+.filter-bar { display: flex; align-items: center; gap: 8px 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-item { display: flex; align-items: center; gap: 8px; }
+.filter-item label { white-space: nowrap; }
+.schedule-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.schedule-card h3 { font-size: 1rem; margin-bottom: 8px; margin-top: 0; }
+.schedule-card .meta { color: #666; font-size: 0.85rem; margin-bottom: 8px; }
+.schedule-card .staff-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.msg { padding: 12px; border-radius: 4px; margin-bottom: 12px; }
+.msg.success { background: #e6f4ea; color: #137333; }
+.msg.error { background: #fce8e6; color: #c5221f; }
+.del-btn { background: none; border: none; color: #d93025; cursor: pointer; font-size: 0.85rem; }
+.detail-section { background: #f8f9fa; border-radius: 6px; padding: 12px; margin-top: 12px; }
+.detail-section h4 { font-size: 0.9rem; margin-bottom: 8px; }
+.inline-form { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 8px; }
+.inline-form .form-group { margin-bottom: 0; }
+/* 希望の優先度は自動で決まるため選択させず、付与される番号だけを表示する */
+.pref-next { flex-shrink: 0; padding: 8px 0; font-size: 0.9rem; font-weight: 600; color: #b06000; white-space: nowrap; }
+.staff-detail-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+/* flexの中で横だけ潰れて楕円になるのを防ぐため flex-shrink: 0 を付ける */
+.speaker-photo { width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%; object-fit: cover; vertical-align: middle; }
+.speaker-photo-placeholder { width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%; background: #e0e0e0;
+    display: inline-flex; align-items: center; justify-content: center; color: #999; font-size: 1.2rem; vertical-align: middle; }
+.photo-preview { width: 80px; height: 80px; flex-shrink: 0; border-radius: 50%; object-fit: cover; }
+/* 写真未設定のプレースホルダーもプレビューと同じ大きさにする */
+.photo-preview-placeholder { width: 80px; height: 80px; min-width: 80px; font-size: 2rem; }
+.btn-sm.edit-btn { background: #f9ab00; color: #fff; }
+.btn-sm.edit-btn:hover { background: #e09900; }
+.lt-talks-list { background: #f0f7ff; border: 1px solid #b8d4f0; border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+.lt-talks-list h4 { margin: 0 0 8px; font-size: 0.9rem; color: #1a73e8; }
+.lt-talk-item { background: #fff; border: 1px solid #d0d0d0; border-radius: 4px; padding: 8px 10px; margin-bottom: 6px;
+                 display: flex; align-items: center; gap: 8px; }
+.lt-talk-item .lt-talk-fields { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+.lt-talk-item input { padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85rem; }
+.lt-talk-item .lt-num { font-weight: 700; color: #1a73e8; min-width: 20px; text-align: center; }
+.lt-talk-item .del-btn { flex-shrink: 0; }
+
+/* ===== タイムライングリッド（Excel結合セル風） ===== */
+.tl-wrapper { overflow: auto; max-height: calc(100vh - 220px); margin-bottom: 24px; }
+.tl-grid {
+    display: grid;
+    gap: 0;
+    border: 2px solid #999;
+    position: relative;
+    /* 列の合計幅までグリッドの箱を広げる。
+       箱が折り返し幅のままだと、はみ出した列の位置では
+       時間列の position: sticky が効かずに一緒にスクロールしてしまう。 */
+    width: max-content;
+    min-width: 700px;
+}
+/* ヘッダー */
+.tl-corner {
+    grid-row: 1; grid-column: 1;
+    background: #f0f0f0; font-weight: 700; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    border-right: 2px solid #999; border-bottom: 2px solid #999;
+    position: sticky; top: 0; left: 0; z-index: 6;
+}
+.tl-room-header {
+    grid-row: 1;
+    background: #1a73e8; color: #fff;
+    font-weight: 700; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px 4px;
+    border-right: 1px solid #a0c0ff; border-bottom: 2px solid #999;
+    position: sticky; top: 0; z-index: 5;
+}
+.tl-room-header:last-of-type { border-right: none; }
+/* 時間ラベル（30分ごと） */
+.tl-time-label {
+    grid-column: 1;
+    font-size: 0.75rem; font-weight: 600; color: #444;
+    padding: 2px 6px 0 6px;
+    border-right: 2px solid #999;
+    border-bottom: 1px solid #d0d0d0;
+    display: flex; align-items: flex-start;
+    background: #f8f8f8;
+    position: sticky; left: 0; z-index: 4;
+}
+.tl-time-label.hour-mark {
+    border-top: 2px solid #aaa;
+    background: #f0f0f0;
+}
+.tl-time-label.quarter-mark {
+    border-top: 1px dashed #e0e0e0;
+}
+/* 背景セル（Excel罫線風） */
+.tl-bg-cell {
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #ececec;
+    background: #fff;
+}
+.tl-bg-cell.hour-mark { border-top: 2px solid #ccc; }
+.tl-bg-cell.half-mark { border-top: 1px solid #d8d8d8; }
+.tl-bg-cell.quarter-mark { border-top: 1px dashed #e8e8e8; }
+/* セッションブロック（結合セル風） */
+.tl-session {
+    z-index: 3;
+    position: relative;
+    background: linear-gradient(135deg, #e8f0fe 0%, #d2e3fc 100%);
+    border: 2px solid #1a73e8;
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin: 1px 2px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 2px;
+    cursor: grab;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+}
+.tl-session-time {
+    font-size: 0.7rem; color: #1a73e8; font-weight: 700;
+}
+.tl-session-title {
+    font-weight: 700; font-size: 0.8rem; color: #1a237e;
+    line-height: 1.2;
+}
+.tl-session-speaker {
+    font-size: 0.75rem; color: #555;
+}
+.tl-session-staff {
+    display: flex; flex-wrap: wrap; gap: 2px; margin-top: auto;
+}
+.tl-session-staff .badge { font-size: 0.7rem; padding: 1px 6px; }
+/* ドラッグ用リサイズハンドル */
+.tl-session .drag-handle-top,
+.tl-session .drag-handle-bottom {
+    position: absolute; left: 0; right: 0; height: 8px; cursor: ns-resize; z-index: 5;
+}
+.tl-session .drag-handle-top { top: 0; border-radius: 3px 3px 0 0; }
+.tl-session .drag-handle-bottom { bottom: 0; border-radius: 0 0 3px 3px; }
+.tl-session .drag-handle-top:hover,
+.tl-session .drag-handle-bottom:hover {
+    background: rgba(26, 115, 232, 0.2);
+}
+.tl-session.dragging {
+    opacity: 0.85; z-index: 50;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+.tl-grid.dragging-active { user-select: none; }
+.tl-grid.dragging-active .tl-session:not(.dragging) { pointer-events: none; }
+/* 休憩ブロック */
+.tl-break {
+    z-index: 2;
+    background: repeating-linear-gradient(
+        -45deg, #fff8e1, #fff8e1 4px, #fff3c4 4px, #fff3c4 8px
+    );
+    border: 1px dashed #d4a017;
+    border-radius: 2px;
+    margin: 1px 2px;
+    display: flex; align-items: center; justify-content: center;
+    color: #b08000; font-weight: 700; font-size: 0.8rem;
+}
+/* 凡例 */
+.tl-legend {
+    display: flex; gap: 16px; margin-bottom: 12px; font-size: 0.8rem; align-items: center; flex-wrap: wrap;
+}
+.tl-legend-item { display: flex; align-items: center; gap: 4px; }
+.tl-legend-swatch {
+    width: 20px; height: 14px; border-radius: 2px; border: 1px solid #ccc;
+}
+
+/* 共通: タブコンテナ */
+.tab-bar {
+    display: flex; gap: 0; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0;
+}
+/* 共通: タブボタン */
+.tab-btn {
+    padding: 8px 20px; border: none; cursor: pointer; font-size: 0.9rem;
+    font-weight: 600; border-radius: 6px 6px 0 0; transition: all .2s;
+}
+/* 共通: 必須マーカー */
+.req { color: #d93025; font-size: 0.75rem; }
+/* 共通: モーダルオーバーレイ */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 100; display: flex; align-items: center; justify-content: center;
+}
+
+/* モバイル指定は後続のルールに上書きされないよう、ファイル末尾に置く */
+@media (max-width: 768px) {
+    .hamburger-btn { display: flex; }
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        width: 240px;
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-overlay.open { display: block; }
+    .main-content {
+        margin-left: 0;
+        padding: 56px 12px 16px;
+        max-width: 100%;
+    }
+    .panel { padding: 16px 12px; }
+    h2 { font-size: 1.1rem; }
+
+    /* フォーム: 縦並び */
+    .form-row { flex-direction: column; gap: 0; }
+
+    /* テーブル: 横スクロール */
+    .panel { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 500px; }
+    /* 横スクロールする前提で、タイトル列が読める幅を確保する */
+    .assign-table { min-width: 640px; }
+    .assign-table col.c-check { width: 38px; }
+    .assign-table col.c-time  { width: 96px; }
+    .assign-table col.c-room  { width: 104px; }
+    .assign-table col.c-staff { width: 32%; }
+
+    th, td { padding: 8px 6px; font-size: 0.8rem; white-space: nowrap; }
+
+    /* ボタン */
+    button.btn { padding: 10px 14px; font-size: 0.85rem; }
+
+    /* タブバー: 横スクロール */
+    .tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+    .tab-btn { white-space: nowrap; padding: 8px 14px; font-size: 0.8rem; flex-shrink: 0; }
+
+    /* タイムライン: 最小幅を下げてスクロールしやすく */
+    .tl-grid { min-width: 500px; }
+
+    /* インラインフォーム: 折り返し */
+    .inline-form { flex-wrap: wrap; }
+
+    /* スケジュールカード */
+    .schedule-card { padding: 12px; }
+
+    /* 写真 */
+    .speaker-photo, .speaker-photo-placeholder { width: 36px; height: 36px; min-width: 36px; }
+    .photo-preview { width: 60px; height: 60px; }
+    .photo-preview-placeholder { width: 60px; height: 60px; min-width: 60px; font-size: 1.5rem; }
+
+    /* 詳細ポップアップの登壇者写真は狭い画面では小さくする */
+    .sd-speaker { gap: 12px; }
+    .sd-speaker-photo { width: 72px; height: 72px; font-size: 1.6rem; }
+
+    /* 絞り込み: 狭い画面では1組ずつ縦に並べ、選択欄を幅いっぱいに */
+    .filter-bar { align-items: stretch; flex-direction: column; }
+    .filter-item { width: 100%; }
+    .filter-item select, .filter-item input { flex: 1; min-width: 0; }
+
+    /* スタッフ別詳細の担当セッション表: 狭い画面では時間とタイトルだけにする */
+    .sd-sessions { table-layout: auto !important; min-width: 0; width: 100%; }
+    /* カテゴリ・部屋を隠し、時間とタイトルだけ残す（列の並び順に依存しない） */
+    .sd-sessions .sd-extra { display: none; }
+    /* colgroup の固定幅を解除しないとタイトルが潰れるので打ち消す */
+    .sd-sessions col { width: auto !important; }
+    .sd-sessions .sd-time { width: 1%; white-space: nowrap; padding-right: 10px; }
+    /* タイトルは1行に収め、はみ出したら … で省略（max-width:0 で残り幅に収める） */
+    .sd-sessions .sd-title { width: auto; max-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sd-sessions .sd-title a { display: block; overflow: hidden; text-overflow: ellipsis; }
+
+    /* 全日程タイムラインリスト: 1行表示（横スクロール、列幅統一） */
+    .tl-list { display: table; border-collapse: separate; border-spacing: 0 2px; width: max-content; min-width: 100%; }
+    .tl-list-row { display: table-row; }
+    .tl-list-time, .tl-list-main, .tl-list-staff { display: table-cell; vertical-align: middle; padding: 6px 8px; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; }
+    .tl-list-time { width: 1%; min-width: 0; font-size: 0.7rem; white-space: nowrap; }
+    .tl-list-main > div { display: inline-block; white-space: nowrap; font-size: 0.75rem; margin: 0 6px 0 0 !important; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+    /* リアルタイムは横スクロールさせず、画面幅に収める（縦積みのカード表示） */
+    .tl-list-rt { display: flex; flex-direction: column; width: auto; min-width: 0; border-spacing: 0; }
+    .tl-list-rt .tl-list-row { display: flex; align-items: stretch; }
+    .tl-list-rt .tl-list-time,
+    .tl-list-rt .tl-list-main { display: block; border-top: none; border-bottom: none; }
+    .tl-list-rt .tl-list-time {
+        width: 76px; min-width: 76px; flex-shrink: 0; font-size: 0.7rem;
+        display: flex; align-items: center; justify-content: center; white-space: normal; text-align: center;
+    }
+    .tl-list-rt .tl-list-main { flex: 1; min-width: 0; }
+    .tl-list-rt .tl-list-main > div { display: block; white-space: normal; max-width: none; overflow: visible; margin: 0 !important; }
+    .tl-list-rt .tl-list-main > div + div { margin-top: 2px !important; }
+    .tl-list-staff { width: 1%; min-width: 0; white-space: nowrap; }
+    .tl-list-row > :first-child { border-left: 1px solid #e0e0e0; border-radius: 6px 0 0 6px; }
+    .tl-list-row > :last-child { border-right: 1px solid #e0e0e0; border-radius: 0 6px 6px 0; }
+}
