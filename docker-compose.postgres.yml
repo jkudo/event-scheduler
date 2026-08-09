@@ -1,0 +1,29 @@
+# PostgreSQL を使う場合の追加設定
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+# このファイルを使わなければ SQLite のまま動く
+services:
+  app:
+    environment:
+      DATABASE_URL: postgresql+psycopg://confscheduler:${POSTGRES_PASSWORD:-confscheduler}@db:5432/confscheduler
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: confscheduler
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-confscheduler}
+      POSTGRES_DB: confscheduler
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U confscheduler"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+volumes:
+  pgdata:

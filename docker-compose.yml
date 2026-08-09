@@ -1,0 +1,28 @@
+services:
+  app:
+    # Docker Hub から使う場合は build を消して image だけ残す
+    image: jkudo/event-scheduler:latest
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # 未設定でも起動するが、再起動のたびにログインセッションが失効する
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      # APP_PASSWORD: ""      # 設定すると画面からのパスワード変更が反映されない
+      # RESET_PASSWORD: ""    # データ初期化・復元用のパスワード（既定 password）
+      # COOKIE_SECURE: "1"    # HTTPSのリバースプロキシ配下で明示する場合
+      # GEOIP_ENABLED: "1"    # 日本国外からのアクセスを遮断する場合
+      # IPINFO_TOKEN: ""
+    volumes:
+      # scheduler.db・uploads・backups・public_snapshots が入る
+      - data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/login.html', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  data:
